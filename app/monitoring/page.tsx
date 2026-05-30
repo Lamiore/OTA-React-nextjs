@@ -15,10 +15,16 @@ export default function Monitoring() {
         description="Pantau kondisi laut real-time untuk perjalanan yang aman dan nyaman."
         imageUrl="https://commons.wikimedia.org/wiki/Special:FilePath/Liang%20Beach%20Bunaken.JPG"
       />
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-16 px-4 py-16 sm:px-6 lg:px-10 lg:py-20">
-        <CameraPanel />
-        <StatsPanel />
-        <SensorPanel />
+      <section className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-10 lg:py-20">
+        <div className="flex flex-col gap-16 lg:flex-row lg:items-start lg:gap-10">
+          <div className="w-full lg:sticky lg:top-24 lg:w-[480px] lg:shrink-0">
+            <CameraPanel />
+          </div>
+          <div className="flex flex-col gap-16 lg:min-w-0 lg:flex-1">
+            <SensorPanel />
+            <StatsPanel />
+          </div>
+        </div>
       </section>
       <BottomNav />
     </main>

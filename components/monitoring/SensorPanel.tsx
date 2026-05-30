@@ -112,7 +112,7 @@ export default function SensorPanel() {
       ),
     },
     {
-      label: 'Nutrisi (EC)',
+      label: 'EC',
       value: fmt(data?.ecValue, 2),
       unit: 'ms/cm',
       color: 'bg-amber-100 text-amber-600',
