@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { signOut, updateProfile } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import type { UserRole } from '@/lib/useAuth';
+import BookingHistory from '@/components/booking/BookingHistory';
 import Link from 'next/link';
 
 function CameraIcon() {
@@ -74,16 +76,6 @@ const menuItems = [
     ),
   },
   {
-    label: 'Notifikasi',
-    description: 'Atur preferensi pemberitahuan',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-      </svg>
-    ),
-  },
-  {
     label: 'Bantuan & Dukungan',
     description: 'FAQ dan hubungi kami',
     icon: (
@@ -100,6 +92,10 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(user.displayName ?? '');
   const [saving, setSaving] = useState(false);
+  const searchParams = useSearchParams();
+  const [view, setView] = useState<'menu' | 'riwayat'>(
+    searchParams.get('view') === 'riwayat' ? 'riwayat' : 'menu'
+  );
 
   const initials = user.displayName
     ? user.displayName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
@@ -122,6 +118,23 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
     if (!auth) return;
     await signOut(auth);
   };
+
+  if (view === 'riwayat') {
+    return (
+      <div className="w-full max-w-lg mx-auto animate-fade-in">
+        <button
+          onClick={() => setView('menu')}
+          className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-navy-soft transition-colors hover:text-navy"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Kembali
+        </button>
+        <BookingHistory />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-lg mx-auto animate-fade-in">
@@ -213,6 +226,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
         {menuItems.map((item) => (
           <button
             key={item.label}
+            onClick={item.label === 'Riwayat Booking' ? () => setView('riwayat') : undefined}
             className="w-full flex items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-shore-50"
           >
             <div className="h-10 w-10 rounded-xl bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">

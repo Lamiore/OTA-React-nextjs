@@ -4,6 +4,7 @@ import PageParallaxHero from '@/components/desktop/PageParallaxHero';
 import SensorPanel from '@/components/monitoring/SensorPanel';
 import CameraPanel from '@/components/monitoring/CameraPanel';
 import StatsPanel from '@/components/monitoring/StatsPanel';
+import HistoryPanel from '@/components/monitoring/HistoryPanel';
 
 export default function Monitoring() {
   return (
@@ -23,6 +24,7 @@ export default function Monitoring() {
           <div className="flex flex-col gap-16 lg:min-w-0 lg:flex-1">
             <SensorPanel />
             <StatsPanel />
+            <HistoryPanel />
           </div>
         </div>
       </section>

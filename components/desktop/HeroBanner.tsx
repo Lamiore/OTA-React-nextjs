@@ -3,15 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthState } from '@/lib/useAuth';
 
-function SearchIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.35-4.35" />
-    </svg>
-  );
-}
-
 export default function HeroBanner() {
   const { user } = useAuthState();
   const firstName = user?.displayName?.split(' ')[0] ?? 'Explorer';
@@ -82,15 +73,6 @@ export default function HeroBanner() {
           <p className="text-white/55 text-base leading-relaxed max-w-lg font-light">
             Temukan spot selam terbaik, pantai tersembunyi, dan pengalaman laut yang tak terlupakan di ujung utara Indonesia.
           </p>
-
-          {/* Search bar */}
-          <div className="mt-8 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/8 px-4 py-3 backdrop-blur-md max-w-md transition-all duration-300 focus-within:border-white/20 focus-within:bg-white/12">
-            <SearchIcon />
-            <input
-              placeholder="Cari destinasi, aktivitas, atau pengalaman..."
-              className="flex-1 bg-transparent text-sm text-white placeholder:text-white/35 outline-none"
-            />
-          </div>
 
           {/* Quick stats */}
           <div className="mt-10 flex items-center gap-8 sm:gap-10">
