@@ -130,7 +130,7 @@ function setConn(ok){
 }
 
 function renderChart(byHealth){
-  const order = ['Sehat','Kurang Sehat','Mengalami Pemutihan'];
+  const order = ['Sehat','Kurang Sehat','Mengalami Pemutihan','Tidak Diketahui'];
   const data = order.map(l => byHealth[l] || 0);
   const ctx = document.getElementById('healthChart');
   if(healthChart){
@@ -140,8 +140,8 @@ function renderChart(byHealth){
   }
   healthChart = new Chart(ctx, {
     type:'doughnut',
-    data:{ labels:['Sehat','Kurang Sehat','Pemutihan'],
-      datasets:[{ data, backgroundColor:['#22c55e','#facc15','#ef4444'], borderWidth:0 }] },
+    data:{ labels:['Sehat','Kurang Sehat','Pemutihan','Tidak Diketahui'],
+      datasets:[{ data, backgroundColor:['#22c55e','#facc15','#ef4444','#64748b'], borderWidth:0 }] },
     options:{ plugins:{ legend:{ labels:{ color:'#cbd5e1' } } } }
   });
 }

@@ -145,9 +145,13 @@ def video_feed():
 def predict():
     """Upload gambar satu kali. TIDAK memengaruhi statistik/history live."""
     try:
-        file = request.files['file']
+        file = request.files.get('file')
+        if file is None:
+            return jsonify({'error': 'tidak ada file yang diunggah'}), 400
         nparr = np.frombuffer(file.read(), np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            return jsonify({'error': 'file bukan gambar yang valid'}), 400
         results = upload_model.predict(img, conf=CONF, imgsz=IMG_SIZE,
                                        max_det=MAX_DET, agnostic_nms=True, verbose=False)
         counts = []
