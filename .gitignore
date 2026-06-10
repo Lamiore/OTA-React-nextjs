@@ -46,4 +46,14 @@ next-env.d.ts
 
 # backend / external projects
 /firmware/
-/Proyek_Karang/
+
+# Proyek_Karang: track source code, ignore heavy artifacts (models, datasets, venv)
+/Proyek_Karang/venv_mac/
+/Proyek_Karang/dataset/
+/Proyek_Karang/aug_dataset/
+/Proyek_Karang/train/
+/Proyek_Karang/val/
+/Proyek_Karang/runs/
+/Proyek_Karang/screenshot*/
+/Proyek_Karang/**/__pycache__/
+/Proyek_Karang/*.pt

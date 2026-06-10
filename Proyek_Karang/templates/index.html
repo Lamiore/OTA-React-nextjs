@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Deteksi Karang AI</title>
+
+    <!-- CHART JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+        }
+
+        body{
+            font-family:Arial;
+            background:#0f172a;
+            color:white;
+        }
+
+        .container{
+            width:95%;
+            margin:auto;
+            padding:20px;
+        }
+
+        h1{
+            text-align:center;
+            margin-bottom:25px;
+        }
+
+        .card{
+            background:#1e293b;
+            padding:20px;
+            border-radius:15px;
+            margin-bottom:25px;
+        }
+
+        .video-container{
+            display:flex;
+            justify-content:center;
+            flex-wrap:wrap;
+        }
+
+        img{
+            width:100%;
+            max-width:750px;
+            border-radius:15px;
+            border:3px solid #38bdf8;
+            box-shadow:0 0 20px #38bdf8;
+        }
+
+        button{
+            padding:12px 20px;
+            border:none;
+            border-radius:10px;
+            background:#38bdf8;
+            color:white;
+            font-size:16px;
+            cursor:pointer;
+            margin-top:15px;
+        }
+
+        button:hover{
+            background:#0ea5e9;
+        }
+
+        input{
+            margin-top:15px;
+        }
+
+        .hasil-box{
+            margin-top:20px;
+            background:#334155;
+            padding:15px;
+            border-radius:10px;
+        }
+
+        .history-item{
+            background:#475569;
+            padding:10px;
+            border-radius:10px;
+            margin-top:10px;
+        }
+
+        .history-title{
+            margin-top:20px;
+            color:#38bdf8;
+        }
+
+        ul{
+            margin-top:10px;
+            padding-left:20px;
+        }
+
+        li{
+            margin-top:5px;
+        }
+
+        .status-sehat{
+            color:#22c55e;
+            font-weight:bold;
+        }
+
+        .status-kurang{
+            color:#facc15;
+            font-weight:bold;
+        }
+
+        .status-bleaching{
+            color:#ef4444;
+            font-weight:bold;
+        }
+
+        #healthChart{
+            max-width:400px;
+            margin:auto;
+        }
+
+        .statistik-box{
+            margin-top:20px;
+            background:#334155;
+            padding:15px;
+            border-radius:10px;
+            line-height:2;
+        }
+
+        /* ========================= */
+        /* MOBILE RESPONSIVE */
+        /* ========================= */
+
+        @media(max-width:768px){
+
+            h1{
+                font-size:28px;
+            }
+
+            h2{
+                font-size:22px;
+            }
+
+            button{
+                width:100%;
+            }
+
+            img{
+                max-width:100%;
+            }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Deteksi Karang Real-Time AI</h1>
+
+    <!-- ====================== -->
+    <!-- REALTIME CAMERA -->
+    <!-- ====================== -->
+
+    <div class="card">
+
+        <h2>AI Coral Detection</h2>
+
+        <br>
+
+        <div class="video-container">
+
+            <div>
+
+                <img id="resultImage">
+
+            </div>
+
+        </div>
+
+        <center>
+
+            <button id="btnToggleCamera" onclick="toggleCamera()">
+                Aktifkan AI Camera
+            </button>
+
+        </center>
+
+        <!-- HASIL -->
+        <div class="hasil-box">
+
+            <h3 id="totalDeteksi">
+                Total Deteksi : 0
+            </h3>
+
+            <br>
+
+            <div id="hasil"></div>
+
+            <!-- HISTORY -->
+            <h3 class="history-title">
+                History Deteksi
+            </h3>
+
+            <div id="historyList"></div>
+
+        </div>
+
+    </div>
+
+    <!-- ====================== -->
+    <!-- STATISTIK -->
+    <!-- ====================== -->
+
+    <div class="card">
+
+        <h2>Statistik Kesehatan Karang</h2>
+
+        <br>
+
+        <canvas id="healthChart"></canvas>
+
+        <div class="statistik-box"
+             id="statistikText">
+
+            <p>🟢 Sehat : 0</p>
+            <p>🟡 Kurang Sehat : 0</p>
+            <p>🔴 Pemutihan : 0</p>
+
+        </div>
+
+        <center>
+
+            <button onclick="exportCSV()">
+                Export History CSV
+            </button>
+
+        </center>
+
+    </div>
+
+    <!-- ====================== -->
+    <!-- UPLOAD GAMBAR -->
+    <!-- ====================== -->
+
+    <div class="card">
+
+        <h2>Upload Gambar</h2>
+
+        <br>
+
+        <input type="file" id="fileInput">
+
+        <br>
+
+        <button onclick="uploadImage()">
+            Deteksi Gambar
+        </button>
+
+        <div class="hasil-box">
+
+            <div id="hasil_upload"></div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- VIDEO ASLI HIDDEN -->
+<video id="video"
+       autoplay
+       playsinline
+       style="display:none;"></video>
+
+<canvas id="canvas"
+        style="display:none;"></canvas>
+
+<script>
+
+let isDetecting = false;
+
+let healthChart;
+
+const video = document.getElementById('video');
+
+
+// ===================================
+// TOGGLE CAMERA
+// ===================================
+
+function toggleCamera(){
+    if(!isDetecting){
+        startCamera();
+    }else{
+        stopCamera();
+    }
+}
+
+
+// ===================================
+// START CAMERA
+// ===================================
+
+async function startCamera(){
+
+    try{
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+
+            video:{
+                width:640,
+                height:480
+            }
+
+        });
+
+        video.srcObject = stream;
+
+        isDetecting = true;
+
+        const btn = document.getElementById('btnToggleCamera');
+        if(btn){
+            btn.innerText = "Nonaktifkan AI Camera";
+            btn.style.background = "#ef4444";
+        }
+
+        detectRealtime();
+
+    }catch(error){
+
+        alert("Kamera gagal diakses!");
+
+        console.log(error);
+    }
+}
+
+
+// ===================================
+// STOP CAMERA
+// ===================================
+
+function stopCamera(){
+
+    isDetecting = false;
+
+    const stream = video.srcObject;
+
+    if(stream){
+
+        const tracks = stream.getTracks();
+
+        tracks.forEach(track => track.stop());
+
+        video.srcObject = null;
+    }
+
+    const btn = document.getElementById('btnToggleCamera');
+    if(btn){
+        btn.innerText = "Aktifkan AI Camera";
+        btn.style.background = "#38bdf8";
+    }
+
+    document.getElementById('resultImage').src = "";
+
+    document.getElementById('totalDeteksi').innerHTML =
+        "Total Deteksi : 0";
+
+    document.getElementById('hasil').innerHTML = "";
+}
+
+
+// ===================================
+// WARNA STATUS
+// ===================================
+
+function getStatusClass(status){
+
+    if(status === "Sehat"){
+        return "status-sehat";
+    }
+
+    else if(status === "Kurang Sehat"){
+        return "status-kurang";
+    }
+
+    else{
+        return "status-bleaching";
+    }
+}
+
+
+// ===================================
+// HISTORY DETEKSI
+// ===================================
+
+function saveHistory(data){
+
+    const historyList =
+        document.getElementById('historyList');
+
+    const now = new Date();
+
+    const time = now.toLocaleString('id-ID', {
+
+        day:'2-digit',
+        month:'2-digit',
+        year:'numeric',
+
+        hour:'2-digit',
+        minute:'2-digit',
+        second:'2-digit'
+    });
+
+    let jenis = "";
+
+    data.populasi.forEach(item => {
+
+        jenis += `
+            <li>
+                ${item.jenis}
+                -
+                <span class="${getStatusClass(item.kesehatan)}">
+                    ${item.kesehatan}
+                </span>
+            </li>
+        `;
+    });
+
+    const historyItem =
+        document.createElement('div');
+
+    historyItem.classList.add('history-item');
+
+    historyItem.innerHTML = `
+        <b>Waktu:</b> ${time}<br><br>
+
+        <b>Total:</b> ${data.total}
+
+        <ul>${jenis}</ul>
+    `;
+
+    historyList.prepend(historyItem);
+
+    // maksimal 10 history
+    if(historyList.children.length > 10){
+
+        historyList.removeChild(
+            historyList.lastChild
+        );
+    }
+}
+
+
+// ===================================
+// UPDATE CHART
+// ===================================
+
+function updateChart(data){
+
+    let sehat = 0;
+    let kurang = 0;
+    let bleaching = 0;
+
+    data.populasi.forEach(item => {
+
+        if(item.kesehatan === "Sehat"){
+            sehat++;
+        }
+
+        else if(item.kesehatan === "Kurang Sehat"){
+            kurang++;
+        }
+
+        else if(item.kesehatan === "Mengalami Pemutihan"){
+            bleaching++;
+        }
+    });
+
+    const ctx =
+        document.getElementById('healthChart');
+
+    if(healthChart){
+
+        healthChart.destroy();
+    }
+
+    healthChart = new Chart(ctx, {
+
+        type:'pie',
+
+        data:{
+
+            labels:[
+                'Sehat',
+                'Kurang Sehat',
+                'Pemutihan'
+            ],
+
+            datasets:[{
+
+                data:[
+                    sehat,
+                    kurang,
+                    bleaching
+                ],
+
+                backgroundColor:[
+                    '#22c55e',
+                    '#facc15',
+                    '#ef4444'
+                ]
+            }]
+        }
+    });
+
+    document.getElementById('statistikText').innerHTML = `
+
+        <p>🟢 Sehat : ${sehat}</p>
+
+        <p>🟡 Kurang Sehat : ${kurang}</p>
+
+        <p>🔴 Mengalami Pemutihan : ${bleaching}</p>
+    `;
+}
+
+
+// ===================================
+// DETEKSI REALTIME
+// ===================================
+
+async function detectRealtime(){
+
+    if(!isDetecting) return;
+
+    const canvas =
+        document.getElementById('canvas');
+
+    const context =
+        canvas.getContext('2d');
+
+    canvas.width = video.videoWidth;
+
+    canvas.height = video.videoHeight;
+
+    context.drawImage(video, 0, 0);
+
+    const imageData =
+        canvas.toDataURL('image/jpeg');
+
+    try{
+
+        const response =
+            await fetch('/predict_camera',{
+
+            method:'POST',
+
+            headers:{
+                'Content-Type':'application/json'
+            },
+
+            body:JSON.stringify({
+                image:imageData
+            })
+        });
+
+        const data = await response.json();
+
+        // tampilkan hasil AI
+        document.getElementById('resultImage').src =
+            'data:image/jpeg;base64,' + data.image;
+
+        // total deteksi
+        document.getElementById('totalDeteksi').innerHTML =
+            `Total Deteksi : ${data.total}`;
+
+        // hasil kesehatan
+        let hasilHTML = "";
+
+        data.populasi.forEach(item => {
+
+            hasilHTML += `
+                <p>
+                    ${item.jenis}
+                    -
+                    <span class="${getStatusClass(item.kesehatan)}">
+                        ${item.kesehatan}
+                    </span>
+                </p>
+            `;
+        });
+
+        document.getElementById('hasil').innerHTML =
+            hasilHTML;
+
+        // simpan history + update chart
+        if(data.total > 0){
+
+            saveHistory(data);
+
+            updateChart(data);
+        }
+
+    }catch(error){
+
+        console.log(error);
+    }
+
+    setTimeout(() => {
+
+        requestAnimationFrame(detectRealtime);
+
+    }, 1500);
+
+}
+
+
+// ===================================
+// UPLOAD GAMBAR
+// ===================================
+
+async function uploadImage(){
+
+    const fileInput =
+        document.getElementById('fileInput');
+
+    const formData = new FormData();
+
+    formData.append(
+        'file',
+        fileInput.files[0]
+    );
+
+    const response = await fetch('/predict',{
+
+        method:'POST',
+
+        body:formData
+    });
+
+    const data = await response.json();
+
+    let hasilUpload = "";
+
+    data.populasi.forEach(item => {
+
+        hasilUpload += `
+            <p>
+                ${item.jenis}
+                -
+                <span class="${getStatusClass(item.kesehatan)}">
+                    ${item.kesehatan}
+                </span>
+            </p>
+        `;
+    });
+
+    document.getElementById('hasil_upload').innerHTML = `
+        <h3>Total Deteksi : ${data.total}</h3>
+        <br>
+        ${hasilUpload}
+    `;
+
+    // update chart upload
+    updateChart(data);
+}
+
+
+// ===================================
+// EXPORT CSV
+// ===================================
+
+function exportCSV(){
+
+    window.location.href = '/export_csv';
+}
+
+
+// ===================================
+// AUTO-START ON PAGE LOAD
+// ===================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Jalankan kamera otomatis saat halaman dibuka
+    startCamera();
+});
+
+</script>
+
+</body>
+</html>

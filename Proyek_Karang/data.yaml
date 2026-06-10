@@ -1,0 +1,6 @@
+# Gunakan path absolut agar lebih aman
+train: C:/Proyek_Karang/train/images
+val: C:/Proyek_Karang/val/images
+
+nc: 5 # Jumlah jenis karang
+names: ['Acropora_formosa', 'Acropora_sp', 'Acropora_yongei', 'Echinophora_sp', 'Seriatopora_hystrix'] # Sesuaikan namanya
