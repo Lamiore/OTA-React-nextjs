@@ -40,7 +40,7 @@ export default function DestinationCard({
   const router = useRouter();
 
   return (
-    <div className="flex rounded-2xl border border-shore-200/80 bg-white overflow-hidden shadow-soft hover:shadow-lift transition-all duration-300">
+    <div className="flex rounded-2xl border border-shore-200/80 bg-surface overflow-hidden shadow-soft hover:shadow-lift transition-all duration-300">
       {/* Thumbnail */}
       <div
         className="w-[90px] shrink-0 flex items-center justify-center relative overflow-hidden"

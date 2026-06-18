@@ -51,7 +51,7 @@ export default function TopNav() {
           </Link>
 
           {/* Nav links - center */}
-          <nav className="hidden sm:flex items-center gap-1 rounded-full border border-shore-200/70 bg-white/60 p-1 backdrop-blur-sm">
+          <nav className="hidden sm:flex items-center gap-1 rounded-full border border-shore-200/70 bg-surface/60 p-1 backdrop-blur-sm">
             {navLinks.map(({ label, href }) => {
               const isActive = pathname === href;
               return (
@@ -62,7 +62,7 @@ export default function TopNav() {
                     'rounded-full px-4 py-1.5 text-[13px] font-medium transition-all duration-200',
                     isActive
                       ? 'bg-teal-500 text-white shadow-sm'
-                      : 'text-navy-soft hover:text-navy hover:bg-white/80'
+                      : 'text-navy-soft hover:text-navy hover:bg-surface/80'
                   )}
                 >
                   {label}
@@ -74,7 +74,7 @@ export default function TopNav() {
           {/* Right side */}
           <div className="flex items-center gap-2.5 shrink-0">
             {/* Search */}
-            <div className="hidden min-[900px]:flex items-center gap-2 rounded-full border border-shore-200 bg-white/70 px-3.5 py-2 text-navy-soft transition-colors duration-200 hover:border-shore-300 w-56 lg:w-64">
+            <div className="hidden min-[900px]:flex items-center gap-2 rounded-full border border-shore-200 bg-surface/70 px-3.5 py-2 text-navy-soft transition-colors duration-200 hover:border-shore-300 w-56 lg:w-64">
               <SearchIcon />
               <input
                 placeholder="Cari destinasi..."
@@ -86,7 +86,7 @@ export default function TopNav() {
               <>
                 {/* Notification */}
                 <button
-                  className="relative rounded-full border border-shore-200 bg-white/70 p-2 text-navy-soft transition-all duration-200 hover:border-shore-300 hover:text-navy"
+                  className="relative rounded-full border border-shore-200 bg-surface/70 p-2 text-navy-soft transition-all duration-200 hover:border-shore-300 hover:text-navy"
                   aria-label="Notifikasi"
                 >
                   <BellIcon />

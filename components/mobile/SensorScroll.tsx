@@ -103,7 +103,7 @@ export default function SensorScroll() {
           return (
             <div
               key={s.key}
-              className="min-w-[92px] shrink-0 rounded-2xl border border-shore-200/80 bg-white p-3 flex flex-col gap-2"
+              className="min-w-[92px] shrink-0 rounded-2xl border border-shore-200/80 bg-surface p-3 flex flex-col gap-2"
             >
               {/* Icon */}
               <div className="w-7 h-7 rounded-lg bg-shore-100 flex items-center justify-center text-navy-soft">

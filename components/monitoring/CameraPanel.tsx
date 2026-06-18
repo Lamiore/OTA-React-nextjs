@@ -21,7 +21,7 @@ export default function CameraPanel() {
       </div>
 
       <div className="card mt-6 overflow-hidden p-3">
-        <div className="relative flex w-full items-center justify-center overflow-hidden rounded-xl bg-navy aspect-video md:aspect-auto md:h-72">
+        <div className="relative flex w-full items-center justify-center overflow-hidden rounded-xl bg-ink aspect-video md:aspect-auto md:h-72">
           {!CAMERA_URL ? (
             <p className="px-6 text-center text-sm text-white/70">
               URL kamera belum diatur. Set <code className="text-teal-200">NEXT_PUBLIC_CAMERA_URL</code> di <code className="text-teal-200">.env.local</code>.

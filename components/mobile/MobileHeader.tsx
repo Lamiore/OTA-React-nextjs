@@ -29,7 +29,7 @@ export default function MobileHeader() {
 
   return (
     <>
-      <div className="bg-navy px-4 pt-4 pb-6">
+      <div className="bg-ink px-4 pt-4 pb-6">
         {/* Top row */}
         <div className="flex justify-between items-start mb-5">
           <div>

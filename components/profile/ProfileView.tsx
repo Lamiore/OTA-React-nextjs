@@ -8,6 +8,7 @@ import type { User } from 'firebase/auth';
 import type { UserRole } from '@/lib/useAuth';
 import BookingHistory from '@/components/booking/BookingHistory';
 import Link from 'next/link';
+import { useTheme } from '@/lib/useTheme';
 
 function CameraIcon() {
   return (
@@ -53,6 +54,32 @@ function ChevronIcon() {
   );
 }
 
+function SettingsIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" />
+    </svg>
+  );
+}
+
 const menuItems = [
   {
     label: 'Riwayat Booking',
@@ -67,13 +94,9 @@ const menuItems = [
     ),
   },
   {
-    label: 'Destinasi Tersimpan',
-    description: 'Tempat yang ingin kamu kunjungi',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
-      </svg>
-    ),
+    label: 'Pengaturan',
+    description: 'Tema tampilan & preferensi',
+    icon: <SettingsIcon />,
   },
   {
     label: 'Bantuan & Dukungan',
@@ -93,9 +116,11 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
   const [displayName, setDisplayName] = useState(user.displayName ?? '');
   const [saving, setSaving] = useState(false);
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'menu' | 'riwayat'>(
+  const [view, setView] = useState<'menu' | 'riwayat' | 'pengaturan'>(
     searchParams.get('view') === 'riwayat' ? 'riwayat' : 'menu'
   );
+  const { theme, setTheme, mounted } = useTheme();
+  const isDark = theme === 'dark';
 
   const initials = user.displayName
     ? user.displayName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
@@ -136,6 +161,66 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
     );
   }
 
+  if (view === 'pengaturan') {
+    return (
+      <div className="w-full max-w-lg mx-auto animate-fade-in">
+        <button
+          onClick={() => setView('menu')}
+          className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-navy-soft transition-colors hover:text-navy"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Kembali
+        </button>
+
+        <div className="card overflow-hidden">
+          <div className="px-5 py-4 border-b border-shore-200/80">
+            <h2 className="font-serif text-lg font-medium text-navy">Pengaturan</h2>
+            <p className="text-[11px] text-navy-soft mt-0.5">Sesuaikan tampilan aplikasi</p>
+          </div>
+
+          {/* Theme section */}
+          <div className="px-5 py-4">
+            <p className="section-label mb-3">Tampilan</p>
+
+            {/* Dark mode toggle row */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-10 w-10 rounded-xl bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
+                  {isDark ? <MoonIcon /> : <SunIcon />}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-medium text-navy">Mode Gelap</p>
+                  <p className="text-[11px] text-navy-soft mt-0.5">
+                    {mounted ? (isDark ? 'Tema gelap aktif' : 'Tema terang aktif') : ' '}
+                  </p>
+                </div>
+              </div>
+
+              {/* Toggle switch */}
+              <button
+                role="switch"
+                aria-checked={isDark}
+                aria-label="Aktifkan mode gelap"
+                onClick={() => setTheme(isDark ? 'light' : 'dark')}
+                className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 ${
+                  isDark ? 'bg-teal-500' : 'bg-shore-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 ${
+                    isDark ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-lg mx-auto animate-fade-in">
       {/* Profile card */}
@@ -156,7 +241,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
                 <span className="text-xl font-semibold text-teal-700">{initials}</span>
               </div>
             )}
-            <button className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-white border border-shore-200 flex items-center justify-center text-navy-soft hover:text-teal-600 hover:border-teal-300 transition-colors shadow-sm">
+            <button className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-surface border border-shore-200 flex items-center justify-center text-navy-soft hover:text-teal-600 hover:border-teal-300 transition-colors shadow-sm">
               <CameraIcon />
             </button>
           </div>
@@ -226,7 +311,13 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
         {menuItems.map((item) => (
           <button
             key={item.label}
-            onClick={item.label === 'Riwayat Booking' ? () => setView('riwayat') : undefined}
+            onClick={
+              item.label === 'Riwayat Booking'
+                ? () => setView('riwayat')
+                : item.label === 'Pengaturan'
+                  ? () => setView('pengaturan')
+                  : undefined
+            }
             className="w-full flex items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-shore-50"
           >
             <div className="h-10 w-10 rounded-xl bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">

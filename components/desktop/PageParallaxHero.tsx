@@ -49,8 +49,8 @@ export default function PageParallaxHero({
       />
 
       {/* Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-navy/65 via-navy/50 to-navy/75" />
-      <div className="absolute inset-0 bg-gradient-to-r from-navy/50 via-transparent to-navy/20" />
+      <div className="absolute inset-0 bg-gradient-to-b from-ink/65 via-ink/50 to-ink/75" />
+      <div className="absolute inset-0 bg-gradient-to-r from-ink/50 via-transparent to-ink/20" />
 
       {/* Content */}
       <div

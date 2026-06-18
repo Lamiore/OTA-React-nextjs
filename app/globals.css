@@ -3,6 +3,26 @@
 @tailwind utilities;
 
 :root {
+  /* Color tokens as channel triplets (consumed by tailwind.config.ts). */
+  --c-shore-50: 250 248 245;
+  --c-shore-100: 244 240 235;
+  --c-shore-200: 232 226 217;
+  --c-shore-300: 212 203 192;
+  --c-teal-50: 237 247 246;
+  --c-teal-100: 212 237 232;
+  --c-teal-200: 168 219 210;
+  --c-teal-400: 58 168 164;
+  --c-teal-500: 27 138 143;
+  --c-teal-600: 20 112 110;
+  --c-teal-700: 15 85 83;
+  --c-navy: 15 43 60;
+  --c-navy-light: 26 61 82;
+  --c-navy-soft: 122 139 149;
+  --c-seafoam: 212 237 232;
+  --c-surface: 255 255 255;
+  --c-ink: 15 43 60;
+
+  /* Semantic variables used by component classes below. */
   --bg: #FAF8F5;
   --fg: #0F2B3C;
   --surface: #FFFFFF;
@@ -18,12 +38,47 @@
   --shadow-lift: 0 4px 12px rgba(15, 43, 60, 0.06), 0 20px 48px rgba(15, 43, 60, 0.08);
 }
 
+html.dark {
+  --c-shore-50: 17 30 36;
+  --c-shore-100: 26 42 49;
+  --c-shore-200: 38 56 64;
+  --c-shore-300: 54 74 84;
+  --c-teal-50: 18 46 47;
+  --c-teal-100: 22 56 57;
+  --c-teal-200: 30 78 78;
+  --c-teal-400: 74 192 186;
+  --c-teal-500: 45 168 170;
+  --c-teal-600: 90 205 200;
+  --c-teal-700: 150 225 218;
+  --c-navy: 233 240 243;
+  --c-navy-light: 210 222 228;
+  --c-navy-soft: 138 156 166;
+  --c-seafoam: 30 78 78;
+  --c-surface: 20 31 39;
+  --c-ink: 15 43 60;
+
+  --bg: #0B1418;
+  --fg: #E9F0F3;
+  --surface: #141F27;
+  --surface-hover: #18242C;
+  --border: #263840;
+  --border-light: #1E2A31;
+  --accent: #2DA8AA;
+  --accent-hover: #3ABFBB;
+  --accent-soft: #122E2F;
+  --ink-muted: #8A9CA6;
+  --ink-subtle: #6B7C85;
+  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.36);
+  --shadow-lift: 0 4px 12px rgba(0, 0, 0, 0.36), 0 20px 48px rgba(0, 0, 0, 0.5);
+}
+
 body {
   color: var(--fg);
   background: var(--bg);
   min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 ::selection {
@@ -154,6 +209,26 @@ body {
 
 .animate-slide-in-right {
   animation: slide-in-right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Slow, decorative drift for atmospheric light accents (transform-only). */
+@keyframes hero-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(20px, -16px, 0) scale(1.1); }
+}
+
+.hero-drift {
+  animation: hero-drift 16s ease-in-out infinite;
+}
+
+/* Respect users who prefer reduced motion: drop entrance + looping motion. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-slide-in-right,
+  .hero-drift {
+    animation: none !important;
+  }
 }
 
 /* Subtle grain texture overlay */

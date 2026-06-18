@@ -135,7 +135,7 @@ export default function DestinasiPanel() {
 
       {/* Form modal */}
       {showForm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy/30 backdrop-blur-sm animate-fade-in" onClick={closeForm}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/30 backdrop-blur-sm animate-fade-in" onClick={closeForm}>
           <div className="w-full max-w-lg card p-6 max-h-[85dvh] overflow-y-auto animate-fade-up m-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-serif text-lg font-medium text-navy">
@@ -154,7 +154,7 @@ export default function DestinasiPanel() {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="Nama destinasi"
-                  className="w-full rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
                 />
               </div>
 
@@ -165,7 +165,7 @@ export default function DestinasiPanel() {
                   value={form.location}
                   onChange={(e) => setForm({ ...form, location: e.target.value })}
                   placeholder="Kota/Kabupaten"
-                  className="w-full rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
                 />
               </div>
 
@@ -177,7 +177,7 @@ export default function DestinasiPanel() {
                     value={form.emoji}
                     onChange={(e) => setForm({ ...form, emoji: e.target.value })}
                     placeholder="e.g. 🏖️"
-                    className="w-full rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                    className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
                   />
                 </div>
                 <div>
@@ -192,7 +192,7 @@ export default function DestinasiPanel() {
                     <input
                       value={form.thumbColor}
                       onChange={(e) => setForm({ ...form, thumbColor: e.target.value })}
-                      className="flex-1 rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                      className="flex-1 rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
                     />
                   </div>
                 </div>
@@ -206,7 +206,7 @@ export default function DestinasiPanel() {
                   value={form.priceStart || ''}
                   onChange={(e) => setForm({ ...form, priceStart: Number(e.target.value) })}
                   placeholder="0"
-                  className="w-full rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
                 />
               </div>
 
@@ -217,7 +217,7 @@ export default function DestinasiPanel() {
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   placeholder="Pantai, Diving, Snorkeling"
-                  className="w-full rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
                 />
               </div>
 
@@ -228,7 +228,7 @@ export default function DestinasiPanel() {
                   value={form.image}
                   onChange={(e) => setForm({ ...form, image: e.target.value })}
                   placeholder="https://..."
-                  className="w-full rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
                 />
               </div>
 
@@ -240,7 +240,7 @@ export default function DestinasiPanel() {
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Deskripsi singkat tentang destinasi..."
                   rows={3}
-                  className="w-full rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors resize-none"
+                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors resize-none"
                 />
               </div>
 

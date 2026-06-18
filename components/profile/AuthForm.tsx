@@ -183,7 +183,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
       <button
         onClick={handleGoogle}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-3 rounded-xl border border-shore-200 bg-white px-4 py-3 text-[13px] font-medium text-navy transition-all duration-200 hover:border-shore-300 hover:shadow-soft disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-3 rounded-xl border border-shore-200 bg-surface px-4 py-3 text-[13px] font-medium text-navy transition-all duration-200 hover:border-shore-300 hover:shadow-soft disabled:opacity-50"
       >
         <GoogleIcon />
         {isLogin ? 'Masuk dengan Google' : 'Daftar dengan Google'}
@@ -204,7 +204,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
             <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">
               Nama Lengkap
             </label>
-            <div className="flex items-center gap-3 rounded-xl border border-shore-200 bg-white px-3.5 py-3 transition-all duration-200 focus-within:border-teal-400 focus-within:shadow-glow">
+            <div className="flex items-center gap-3 rounded-xl border border-shore-200 bg-surface px-3.5 py-3 transition-all duration-200 focus-within:border-teal-400 focus-within:shadow-glow">
               <span className="text-navy-soft"><UserIcon /></span>
               <input
                 type="text"
@@ -222,7 +222,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
           <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">
             Email
           </label>
-          <div className="flex items-center gap-3 rounded-xl border border-shore-200 bg-white px-3.5 py-3 transition-all duration-200 focus-within:border-teal-400 focus-within:shadow-glow">
+          <div className="flex items-center gap-3 rounded-xl border border-shore-200 bg-surface px-3.5 py-3 transition-all duration-200 focus-within:border-teal-400 focus-within:shadow-glow">
             <span className="text-navy-soft"><MailIcon /></span>
             <input
               type="email"
@@ -240,7 +240,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
           <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">
             Password
           </label>
-          <div className="flex items-center gap-3 rounded-xl border border-shore-200 bg-white px-3.5 py-3 transition-all duration-200 focus-within:border-teal-400 focus-within:shadow-glow">
+          <div className="flex items-center gap-3 rounded-xl border border-shore-200 bg-surface px-3.5 py-3 transition-all duration-200 focus-within:border-teal-400 focus-within:shadow-glow">
             <span className="text-navy-soft"><LockIcon /></span>
             <input
               type={showPassword ? 'text' : 'password'}

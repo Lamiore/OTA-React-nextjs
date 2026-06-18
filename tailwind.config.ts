@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -12,28 +13,36 @@ const config: Config = {
         sans: ['var(--font-sans)'],
         serif: ['var(--font-serif)'],
       },
+      // Colors are backed by CSS variables (channel triplets) so a single
+      // `.dark` class swap re-themes the whole app. `<alpha-value>` keeps the
+      // `/opacity` modifier working (e.g. `bg-surface/70`).
       colors: {
         shore: {
-          50: '#FAF8F5',
-          100: '#F4F0EB',
-          200: '#E8E2D9',
-          300: '#D4CBC0',
+          50: 'rgb(var(--c-shore-50) / <alpha-value>)',
+          100: 'rgb(var(--c-shore-100) / <alpha-value>)',
+          200: 'rgb(var(--c-shore-200) / <alpha-value>)',
+          300: 'rgb(var(--c-shore-300) / <alpha-value>)',
         },
         teal: {
-          50: '#EDF7F6',
-          100: '#D4EDE8',
-          200: '#A8DBD2',
-          400: '#3AA8A4',
-          500: '#1B8A8F',
-          600: '#14706E',
-          700: '#0F5553',
+          50: 'rgb(var(--c-teal-50) / <alpha-value>)',
+          100: 'rgb(var(--c-teal-100) / <alpha-value>)',
+          200: 'rgb(var(--c-teal-200) / <alpha-value>)',
+          400: 'rgb(var(--c-teal-400) / <alpha-value>)',
+          500: 'rgb(var(--c-teal-500) / <alpha-value>)',
+          600: 'rgb(var(--c-teal-600) / <alpha-value>)',
+          700: 'rgb(var(--c-teal-700) / <alpha-value>)',
         },
         navy: {
-          DEFAULT: '#0F2B3C',
-          light: '#1A3D52',
-          soft: '#7A8B95',
+          DEFAULT: 'rgb(var(--c-navy) / <alpha-value>)',
+          light: 'rgb(var(--c-navy-light) / <alpha-value>)',
+          soft: 'rgb(var(--c-navy-soft) / <alpha-value>)',
         },
-        seafoam: '#D4EDE8',
+        seafoam: 'rgb(var(--c-seafoam) / <alpha-value>)',
+        // Themed surface (white in light, dark slate in dark).
+        surface: 'rgb(var(--c-surface) / <alpha-value>)',
+        // Always-dark color for overlays/scrims over photos and the brand mark
+        // — must NOT flip with the theme.
+        ink: 'rgb(var(--c-ink) / <alpha-value>)',
       },
       borderRadius: {
         '4xl': '2rem',

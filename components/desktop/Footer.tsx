@@ -8,7 +8,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="xl:col-span-1">
             <div className="mb-4 flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-navy">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink">
                 <span className="font-serif text-sm font-semibold text-white">D</span>
               </div>
               <span className="font-serif text-lg text-navy font-semibold">
