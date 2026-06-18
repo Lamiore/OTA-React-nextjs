@@ -106,17 +106,18 @@ export interface Booking {
   name: string;
   phone: string;
   notes: string;
-  status: "pending" | "confirmed" | "cancelled";
+  status: "pending" | "confirmed" | "cancelled" | "used";
   createdAt: unknown;
+  checkedInAt?: unknown;
 }
 
-export type BookingInput = Omit<Booking, "id" | "status" | "createdAt">;
+export type BookingInput = Omit<Booking, "id" | "status" | "createdAt" | "checkedInAt">;
 
 export async function createBooking(data: BookingInput) {
   if (!db) return;
   await addDoc(collection(db, "bookings"), {
     ...data,
-    status: "pending",
+    status: "confirmed",
     createdAt: serverTimestamp(),
   });
 }
@@ -124,6 +125,15 @@ export async function createBooking(data: BookingInput) {
 export async function updateBookingStatus(id: string, status: Booking["status"]) {
   if (!db) return;
   await updateDoc(doc(db, "bookings", id), { status });
+}
+
+/** Tandai tiket sebagai sudah dipakai (check-in di lokasi). */
+export async function checkInBooking(id: string) {
+  if (!db) return;
+  await updateDoc(doc(db, "bookings", id), {
+    status: "used",
+    checkedInAt: serverTimestamp(),
+  });
 }
 
 // ── Monitoring ──
