@@ -109,22 +109,22 @@ function BookingContent() {
           <CheckCircleIcon />
           <h2 className="font-serif text-xl font-medium text-navy">Booking Berhasil!</h2>
           <p className="text-[13px] text-navy-soft max-w-xs">
-            Booking kamu untuk <span className="font-medium text-navy">{destination?.name}</span> pada
-            tanggal <span className="font-medium text-navy">{new Date(form.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span> sedang diproses.
+            Tiket untuk <span className="font-medium text-navy">{destination?.name}</span> pada
+            tanggal <span className="font-medium text-navy">{new Date(form.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span> sudah siap. Buka untuk melihat QR check-in.
           </p>
           <div className="flex gap-3 mt-4">
             <button
-              onClick={() => router.push('/profile?view=riwayat')}
-              className="btn-ghost rounded-xl px-5 py-2.5 text-[13px]"
+              onClick={() => router.push('/booking')}
+              className="btn-primary rounded-xl px-5 py-2.5 text-[13px]"
             >
-              Lihat Riwayat
+              Lihat Tiket
             </button>
             <button
               onClick={() => {
                 setSuccess(false);
                 setForm({ date: '', guests: 1, name: user?.displayName ?? '', phone: '', notes: '' });
               }}
-              className="btn-primary rounded-xl px-5 py-2.5 text-[13px]"
+              className="btn-ghost rounded-xl px-5 py-2.5 text-[13px]"
             >
               Booking Lagi
             </button>
@@ -144,7 +144,7 @@ function BookingContent() {
             <div>
               <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Destinasi</label>
               {loadingDest ? (
-                <div className="rounded-xl border border-shore-200 bg-white px-3.5 py-3 animate-pulse">
+                <div className="rounded-xl border border-shore-200 bg-surface px-3.5 py-3 animate-pulse">
                   <div className="h-4 w-2/3 rounded-full bg-shore-100" />
                 </div>
               ) : destination ? (
@@ -160,7 +160,7 @@ function BookingContent() {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl border border-shore-200 bg-white px-4 py-3">
+                <div className="rounded-xl border border-shore-200 bg-surface px-4 py-3">
                   <p className="text-[13px] text-navy-soft">Tidak ada destinasi dipilih. <button type="button" onClick={() => router.push('/beranda')} className="text-teal-600 hover:text-teal-700 font-medium">Pilih dari beranda</button></p>
                 </div>
               )}
@@ -176,7 +176,7 @@ function BookingContent() {
                   min={today}
                   onChange={(e) => setForm({ ...form, date: e.target.value })}
                   required
-                  className="w-full rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
                 />
               </div>
               <div>
@@ -188,7 +188,7 @@ function BookingContent() {
                   max={100}
                   onChange={(e) => setForm({ ...form, guests: Number(e.target.value) })}
                   required
-                  className="w-full rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
                 />
               </div>
             </div>
@@ -201,7 +201,7 @@ function BookingContent() {
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Nama pemesan"
                 required
-                className="w-full rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
               />
             </div>
 
@@ -214,7 +214,7 @@ function BookingContent() {
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 placeholder="08xxxxxxxxxx"
                 required
-                className="w-full rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
               />
             </div>
 
@@ -226,7 +226,7 @@ function BookingContent() {
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 placeholder="Permintaan khusus, alergi, dll..."
                 rows={3}
-                className="w-full rounded-xl border border-shore-200 bg-white px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors resize-none"
+                className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors resize-none"
               />
             </div>
 

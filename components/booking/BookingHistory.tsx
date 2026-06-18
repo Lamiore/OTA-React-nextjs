@@ -6,6 +6,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthState } from '@/lib/useAuth';
 import { updateBookingStatus, type Booking as BookingType } from '@/lib/firestore';
+import TicketModal from '@/components/booking/TicketModal';
 import clsx from 'clsx';
 
 function CalendarIcon() {
@@ -19,8 +20,15 @@ function CalendarIcon() {
   );
 }
 
+/** Booking dianggap "lewat" jika tanggalnya sebelum hari ini (waktu lokal). Hari ini masih berlangsung. */
+function isPast(b: BookingType) {
+  // en-CA menghasilkan format YYYY-MM-DD di zona waktu lokal, sehingga aman dibandingkan string.
+  const todayStr = new Date().toLocaleDateString('en-CA');
+  return b.date < todayStr;
+}
+
 interface BookingHistoryProps {
-  /** 'all' shows every booking (riwayat lengkap); 'active' hides cancelled ones (booking berlangsung). */
+  /** 'all' shows every booking (riwayat lengkap); 'active' hides cancelled/used/past ones (booking berlangsung). */
   variant?: 'all' | 'active';
 }
 
@@ -31,11 +39,9 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
   const [bookings, setBookings] = useState<BookingType[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
 
-  const [payingBooking, setPayingBooking] = useState<BookingType | null>(null);
-  const [payingMethod, setPayingMethod] = useState<string | null>(null);
-  const [payProcessing, setPayProcessing] = useState(false);
   const [cancellingBooking, setCancellingBooking] = useState<BookingType | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [ticketBooking, setTicketBooking] = useState<BookingType | null>(null);
 
   useEffect(() => {
     if (!user || !db) {
@@ -60,22 +66,19 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
     setCancellingBooking(null);
   };
 
-  const handlePay = async () => {
-    if (!payingBooking || !payingMethod) return;
-    setPayProcessing(true);
-    await new Promise((r) => setTimeout(r, 1800));
-    await updateBookingStatus(payingBooking.id, 'confirmed');
-    setPayProcessing(false);
-    setPayingBooking(null);
-    setPayingMethod(null);
-  };
-
-  // 'active' hanya menampilkan booking yang masih berlangsung (menunggu + dikonfirmasi)
+  // 'active' hanya menampilkan tiket yang masih berlangsung: belum dibatalkan, belum dipakai, & belum lewat tanggal.
   const visibleBookings =
-    variant === 'active' ? bookings.filter((b) => b.status !== 'cancelled') : bookings;
+    variant === 'active'
+      ? bookings.filter((b) => b.status !== 'cancelled' && b.status !== 'used' && !isPast(b))
+      : bookings;
 
   return (
     <>
+      {/* Ticket modal — di luar semua container */}
+      {ticketBooking && (
+        <TicketModal booking={ticketBooking} onClose={() => setTicketBooking(null)} />
+      )}
+
       {/* Cancel modal — di luar semua container */}
       {cancellingBooking && (
         <div className="fixed inset-0 z-[200]">
@@ -123,7 +126,7 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
       </h1>
       <p className="mt-2 text-sm text-navy-soft">
         {variant === 'active'
-          ? 'Booking yang sedang menunggu atau sudah dikonfirmasi'
+          ? 'Tiket yang sudah dikonfirmasi dan belum dipakai'
           : 'Daftar booking yang pernah kamu buat'}
       </p>
 
@@ -155,104 +158,62 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
           </div>
         ) : (
           <>
-            {/* Payment modal */}
-            {payingBooking && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy/30 backdrop-blur-sm animate-fade-in" onClick={() => !payProcessing && setPayingBooking(null)}>
-                <div className="w-full max-w-sm card p-6 animate-fade-up" onClick={(e) => e.stopPropagation()}>
-                  <h2 className="font-serif text-lg font-medium text-navy mb-1">Pilih Pembayaran</h2>
-                  <p className="text-[12px] text-navy-soft mb-4">{payingBooking.destinationName} · {payingBooking.guests} orang</p>
-
-                  <div className="space-y-2 mb-5">
-                    {[
-                      { id: 'qris', label: 'QRIS', desc: 'GoPay, OVO, DANA, dll' },
-                      { id: 'bca', label: 'Transfer BCA', desc: 'Virtual Account' },
-                      { id: 'bni', label: 'Transfer BNI', desc: 'Virtual Account' },
-                      { id: 'mandiri', label: 'Transfer Mandiri', desc: 'Virtual Account' },
-                    ].map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => setPayingMethod(m.id)}
-                        className={clsx(
-                          'w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200',
-                          payingMethod === m.id
-                            ? 'border-teal-400 bg-teal-50/50'
-                            : 'border-shore-200 hover:border-shore-300'
-                        )}
-                      >
-                        <div className={clsx(
-                          'h-4 w-4 rounded-full border-2 shrink-0 transition-all',
-                          payingMethod === m.id ? 'border-teal-500 bg-teal-500' : 'border-shore-300'
-                        )} />
-                        <div>
-                          <p className="text-[13px] font-medium text-navy">{m.label}</p>
-                          <p className="text-[11px] text-navy-soft">{m.desc}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setPayingBooking(null)}
-                      disabled={payProcessing}
-                      className="btn-ghost flex-1 rounded-xl px-4 py-2.5 text-[13px]"
-                    >
-                      Batal
-                    </button>
-                    <button
-                      onClick={handlePay}
-                      disabled={!payingMethod || payProcessing}
-                      className="btn-primary flex-1 rounded-xl px-4 py-2.5 text-[13px] disabled:opacity-50"
-                    >
-                      {payProcessing ? 'Memproses...' : 'Bayar Sekarang'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {visibleBookings.map((b) => (
-              <div key={b.id} className="card p-5 animate-fade-in">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[15px] font-medium text-navy">{b.destinationName}</p>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[12px] text-navy-soft">
-                      <span>{new Date(b.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                      <span>{b.guests} orang</span>
-                      <span>{b.phone}</span>
+            {visibleBookings.map((b) => {
+              const used = b.status === 'used';
+              const cancelled = b.status === 'cancelled';
+              const past = isPast(b);
+              // 'pending' (data lama) diperlakukan sama seperti 'confirmed'.
+              const activeConfirmed = (b.status === 'confirmed' || b.status === 'pending') && !past;
+              return (
+                <div key={b.id} className="card p-5 animate-fade-in">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-medium text-navy">{b.destinationName}</p>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[12px] text-navy-soft">
+                        <span>{new Date(b.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                        <span>{b.guests} orang</span>
+                        <span>{b.phone}</span>
+                      </div>
+                      {b.notes && (
+                        <p className="mt-2 text-[12px] text-navy-soft italic">{b.notes}</p>
+                      )}
                     </div>
-                    {b.notes && (
-                      <p className="mt-2 text-[12px] text-navy-soft italic">{b.notes}</p>
-                    )}
+                    <span className={clsx(
+                      'rounded-lg px-2.5 py-1 text-[11px] font-medium shrink-0',
+                      used && 'bg-shore-100 text-navy-soft',
+                      cancelled && 'bg-red-100 text-red-600',
+                      !used && !cancelled && past && 'bg-shore-100 text-navy-soft',
+                      !used && !cancelled && !past && 'bg-teal-100 text-teal-700',
+                    )}>
+                      {used ? 'Sudah Digunakan' : cancelled ? 'Dibatalkan' : past ? 'Selesai' : 'Dikonfirmasi'}
+                    </span>
                   </div>
-                  <span className={clsx(
-                    'rounded-lg px-2.5 py-1 text-[11px] font-medium shrink-0',
-                    b.status === 'confirmed' && 'bg-teal-100 text-teal-700',
-                    b.status === 'cancelled' && 'bg-red-100 text-red-600',
-                    b.status === 'pending' && 'bg-amber-100 text-amber-700',
-                  )}>
-                    {b.status === 'confirmed' ? 'Dikonfirmasi' : b.status === 'cancelled' ? 'Dibatalkan' : 'Menunggu'}
-                  </span>
-                </div>
 
-                {b.status === 'pending' && (
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-shore-200">
-                    <button
-                      onClick={() => setPayingBooking(b)}
-                      className="btn-primary flex-1 rounded-xl px-4 py-2 text-[12px]"
-                    >
-                      Bayar Sekarang
-                    </button>
-                    <button
-                      onClick={() => setCancellingBooking(b)}
-                      className="btn-ghost flex-1 rounded-xl px-4 py-2 text-[12px] hover:border-red-200 hover:text-red-500"
-                    >
-                      Batalkan
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+                  {activeConfirmed && (
+                    <div className="flex gap-2 mt-4 pt-4 border-t border-shore-200">
+                      <button
+                        onClick={() => setTicketBooking(b)}
+                        className="btn-primary flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-[12px]"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+                          <path d="M13 5v2" />
+                          <path d="M13 17v2" />
+                          <path d="M13 11v2" />
+                        </svg>
+                        Lihat Tiket
+                      </button>
+                      <button
+                        onClick={() => setCancellingBooking(b)}
+                        className="btn-ghost flex-1 rounded-xl px-4 py-2 text-[12px] hover:border-red-200 hover:text-red-500"
+                      >
+                        Batalkan
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </>
         )}
       </div>
