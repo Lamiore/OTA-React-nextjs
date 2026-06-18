@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { subscribeDestinations, subscribeUsers, type Destination, type AppUser } from '@/lib/firestore';
 
 export default function StatistikPanel() {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
+  const [bookings, setBookings] = useState<{ status: string }[]>([]);
 
   useEffect(() => {
     const unsub1 = subscribeDestinations(setDestinations);
@@ -13,6 +16,15 @@ export default function StatistikPanel() {
     return () => { unsub1(); unsub2(); };
   }, []);
 
+  useEffect(() => {
+    if (!db) return;
+    const unsub = onSnapshot(collection(db, 'bookings'), (snap) => {
+      setBookings(snap.docs.map((d) => ({ status: (d.data().status as string) ?? '' })));
+    });
+    return () => unsub();
+  }, []);
+
+  const usedTickets = bookings.filter((b) => b.status === 'used').length;
   const totalPengelola = users.filter((u) => u.role === 'pengelola').length;
   const totalAdmin = users.filter((u) => u.role === 'admin').length;
 
@@ -60,6 +72,19 @@ export default function StatistikPanel() {
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Tiket Terjual',
+      value: usedTickets,
+      color: 'bg-teal-100 text-teal-600',
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+          <path d="M13 5v2" />
+          <path d="M13 17v2" />
+          <path d="M13 11v2" />
         </svg>
       ),
     },

@@ -34,7 +34,7 @@ export default function PengelolaStatistikPanel() {
 
   const totalBookings = bookings.length;
   const totalGuests = bookings.reduce((sum, b) => sum + (b.guests || 0), 0);
-  const pendingBookings = bookings.filter((b) => b.status === 'pending').length;
+  const usedTickets = bookings.filter((b) => b.status === 'used').length;
 
   const stats = [
     {
@@ -63,13 +63,15 @@ export default function PengelolaStatistikPanel() {
       ),
     },
     {
-      label: 'Menunggu Konfirmasi',
-      value: pendingBookings,
-      color: 'bg-amber-100 text-amber-600',
+      label: 'Tiket Terjual',
+      value: usedTickets,
+      color: 'bg-teal-100 text-teal-600',
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
+          <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+          <path d="M13 5v2" />
+          <path d="M13 17v2" />
+          <path d="M13 11v2" />
         </svg>
       ),
     },
@@ -136,11 +138,12 @@ export default function PengelolaStatistikPanel() {
                   </p>
                 </div>
                 <span className={`rounded-lg px-2.5 py-1 text-[11px] font-medium ${
+                  b.status === 'used' ? 'bg-shore-100 text-navy-soft' :
                   b.status === 'confirmed' ? 'bg-teal-100 text-teal-700' :
                   b.status === 'cancelled' ? 'bg-red-100 text-red-600' :
                   'bg-amber-100 text-amber-700'
                 }`}>
-                  {b.status === 'confirmed' ? 'Dikonfirmasi' : b.status === 'cancelled' ? 'Dibatalkan' : 'Menunggu'}
+                  {b.status === 'used' ? 'Sudah Digunakan' : b.status === 'confirmed' ? 'Dikonfirmasi' : b.status === 'cancelled' ? 'Dibatalkan' : 'Menunggu'}
                 </span>
               </div>
             ))}
