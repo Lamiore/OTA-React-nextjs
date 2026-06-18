@@ -3,7 +3,7 @@
 import clsx from 'clsx';
 import Link from 'next/link';
 
-export type DashboardPage = 'statistik' | 'destinasi' | 'pengguna';
+export type DashboardPage = 'statistik' | 'scan' | 'destinasi' | 'pengguna';
 
 function ChartIcon() {
   return (
@@ -62,8 +62,21 @@ function CloseIcon() {
   );
 }
 
+function ScanIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+      <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+      <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+      <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+      <line x1="7" x2="17" y1="12" y2="12" />
+    </svg>
+  );
+}
+
 const allMenuItems: { key: DashboardPage; label: string; icon: React.ReactNode; roles: string[] }[] = [
   { key: 'statistik', label: 'Statistik', icon: <ChartIcon />, roles: ['admin', 'pengelola'] },
+  { key: 'scan', label: 'Scan Tiket', icon: <ScanIcon />, roles: ['admin', 'pengelola'] },
   { key: 'destinasi', label: 'Destinasi', icon: <MapIcon />, roles: ['admin'] },
   { key: 'pengguna', label: 'Pengguna', icon: <UsersIcon />, roles: ['admin'] },
 ];
@@ -94,7 +107,7 @@ export default function DashboardSidebar({ active, onNavigate, mobileOpen, onMob
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="md:hidden fixed inset-0 z-50 bg-navy/30 backdrop-blur-sm"
+          className="md:hidden fixed inset-0 z-50 bg-ink/30 backdrop-blur-sm"
           onClick={onMobileToggle}
         />
       )}
@@ -102,7 +115,7 @@ export default function DashboardSidebar({ active, onNavigate, mobileOpen, onMob
       {/* Sidebar */}
       <aside
         className={clsx(
-          'fixed top-0 left-0 z-50 h-dvh w-64 bg-white border-r border-shore-200/60 flex flex-col transition-transform duration-300 ease-out',
+          'fixed top-0 left-0 z-50 h-dvh w-64 bg-surface border-r border-shore-200/60 flex flex-col transition-transform duration-300 ease-out',
           'md:translate-x-0 md:static md:z-auto',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}

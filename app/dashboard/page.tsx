@@ -6,6 +6,7 @@ import { useUserRole } from '@/lib/useAuth';
 import DashboardSidebar, { type DashboardPage } from '@/components/dashboard/DashboardSidebar';
 import StatistikPanel from '@/components/dashboard/StatistikPanel';
 import PengelolaStatistikPanel from '@/components/dashboard/PengelolaStatistikPanel';
+import ScanPanel from '@/components/dashboard/ScanPanel';
 import DestinasiPanel from '@/components/dashboard/DestinasiPanel';
 import PenggunaPanel from '@/components/dashboard/PenggunaPanel';
 
@@ -40,6 +41,7 @@ export default function Dashboard() {
       <main className="flex-1 min-w-0 pt-14 md:pt-0">
         <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
           {page === 'statistik' && (role === 'admin' ? <StatistikPanel /> : <PengelolaStatistikPanel />)}
+          {page === 'scan' && <ScanPanel />}
           {page === 'destinasi' && role === 'admin' && <DestinasiPanel />}
           {page === 'pengguna' && role === 'admin' && <PenggunaPanel />}
         </div>
