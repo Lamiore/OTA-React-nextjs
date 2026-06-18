@@ -8,6 +8,7 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
+  runTransaction,
   serverTimestamp,
   type DocumentData,
 } from "firebase/firestore";
@@ -127,12 +128,24 @@ export async function updateBookingStatus(id: string, status: Booking["status"])
   await updateDoc(doc(db, "bookings", id), { status });
 }
 
-/** Tandai tiket sebagai sudah dipakai (check-in di lokasi). */
-export async function checkInBooking(id: string) {
-  if (!db) return;
-  await updateDoc(doc(db, "bookings", id), {
-    status: "used",
-    checkedInAt: serverTimestamp(),
+export type CheckInOutcome = "success" | "already-used" | "cancelled" | "notfound";
+
+/**
+ * Check-in tiket secara transaksional: baca ulang status di dalam transaksi dan
+ * hanya tandai 'used' bila tiket masih valid (confirmed/pending). Mencegah double
+ * check-in / race antar petugas, dan memberi alasan jelas saat gagal.
+ */
+export async function checkInBooking(id: string): Promise<CheckInOutcome> {
+  if (!db) return "notfound";
+  const ref = doc(db, "bookings", id);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return "notfound";
+    const status = snap.data()?.status as Booking["status"] | undefined;
+    if (status === "used") return "already-used";
+    if (status === "cancelled") return "cancelled";
+    tx.update(ref, { status: "used", checkedInAt: serverTimestamp() });
+    return "success";
   });
 }
 

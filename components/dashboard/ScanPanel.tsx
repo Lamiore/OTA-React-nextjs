@@ -13,12 +13,18 @@ type ScanResult =
   | { kind: 'used'; booking: Booking }
   | { kind: 'cancelled'; booking: Booking }
   | { kind: 'notfound' }
-  | { kind: 'invalid' };
+  | { kind: 'invalid' }
+  | { kind: 'error' };
 
-/** Ambil booking id dari payload QR "OTA-TICKET|{id}|{name}|{date}". */
+/**
+ * Ambil booking id dari payload QR "OTA-TICKET|{id}|{name}|{date}".
+ * id divalidasi sebagai auto-id Firestore (20 char alfanumerik) untuk mencegah
+ * path injection saat dipakai di doc(db, 'bookings', id).
+ */
 function parseTicketId(text: string): string | null {
   const parts = text.split('|');
   if (parts[0] !== 'OTA-TICKET' || !parts[1]) return null;
+  if (!/^[A-Za-z0-9]{20}$/.test(parts[1])) return null;
   return parts[1];
 }
 
@@ -66,6 +72,7 @@ export default function ScanPanel() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkedIn, setCheckedIn] = useState(false);
+  const [checkInError, setCheckInError] = useState<string | null>(null);
 
   const scannerRef = useRef<Html5QrcodeType | null>(null);
   const busyRef = useRef(false); // cegah pemrosesan decode ganda
@@ -84,15 +91,19 @@ export default function ScanPanel() {
       setResult({ kind: 'invalid' });
       return;
     }
-    const snap = await getDoc(doc(db, 'bookings', id));
-    if (!snap.exists()) {
-      setResult({ kind: 'notfound' });
-      return;
+    try {
+      const snap = await getDoc(doc(db, 'bookings', id));
+      if (!snap.exists()) {
+        setResult({ kind: 'notfound' });
+        return;
+      }
+      const booking = { id: snap.id, ...snap.data() } as Booking;
+      if (booking.status === 'cancelled') setResult({ kind: 'cancelled', booking });
+      else if (booking.status === 'used') setResult({ kind: 'used', booking });
+      else setResult({ kind: 'valid', booking });
+    } catch {
+      setResult({ kind: 'error' });
     }
-    const booking = { id: snap.id, ...snap.data() } as Booking;
-    if (booking.status === 'cancelled') setResult({ kind: 'cancelled', booking });
-    else if (booking.status === 'used') setResult({ kind: 'used', booking });
-    else setResult({ kind: 'valid', booking });
   }, []);
 
   useEffect(() => {
@@ -127,16 +138,31 @@ export default function ScanPanel() {
 
   const handleCheckIn = async () => {
     if (!result || result.kind !== 'valid') return;
+    setCheckInError(null);
     setCheckingIn(true);
-    await checkInBooking(result.booking.id);
-    setCheckingIn(false);
-    setCheckedIn(true);
+    try {
+      const outcome = await checkInBooking(result.booking.id);
+      if (outcome === 'success') {
+        setCheckedIn(true);
+      } else if (outcome === 'already-used') {
+        setCheckInError('Tiket sudah digunakan (mungkin oleh petugas lain).');
+      } else if (outcome === 'cancelled') {
+        setCheckInError('Tiket sudah dibatalkan.');
+      } else {
+        setCheckInError('Tiket tidak ditemukan.');
+      }
+    } catch {
+      setCheckInError('Gagal check-in. Periksa koneksi atau izin akses Firestore.');
+    } finally {
+      setCheckingIn(false);
+    }
   };
 
   const reset = () => {
     busyRef.current = false;
     setResult(null);
     setCheckedIn(false);
+    setCheckInError(null);
     setCamError(false);
     setScanKey((k) => k + 1);
     setScanning(true);
@@ -168,6 +194,9 @@ export default function ScanPanel() {
             {result?.kind === 'notfound' && (
               <p className="text-[14px] font-medium text-red-600">Tiket tidak ditemukan.</p>
             )}
+            {result?.kind === 'error' && (
+              <p className="text-[14px] font-medium text-red-600">Gagal membaca tiket. Periksa koneksi atau izin akses Firestore.</p>
+            )}
             {result?.kind === 'cancelled' && (
               <>
                 <div className="rounded-xl bg-red-100 px-3 py-2 text-[13px] font-medium text-red-600">Tiket ini sudah dibatalkan.</div>
@@ -186,6 +215,9 @@ export default function ScanPanel() {
               <>
                 <div className="rounded-xl bg-teal-100 px-3 py-2 text-[13px] font-medium text-teal-700">Tiket valid.</div>
                 <BookingCard booking={result.booking} />
+                {checkInError && (
+                  <div className="rounded-xl bg-red-100 px-3 py-2 text-[13px] font-medium text-red-600">{checkInError}</div>
+                )}
                 <button
                   onClick={handleCheckIn}
                   disabled={checkingIn}
