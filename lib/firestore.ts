@@ -110,15 +110,24 @@ export interface Booking {
   status: "pending" | "confirmed" | "cancelled" | "used";
   createdAt: unknown;
   checkedInAt?: unknown;
+  amount?: number;
+  paymentStatus?: "unpaid" | "paid";
+  paymentMethod?: string;
+  paidAt?: unknown;
 }
 
-export type BookingInput = Omit<Booking, "id" | "status" | "createdAt" | "checkedInAt">;
+export type BookingInput = Omit<
+  Booking,
+  "id" | "status" | "createdAt" | "checkedInAt" | "paymentStatus" | "paymentMethod" | "paidAt"
+>;
 
 export async function createBooking(data: BookingInput) {
   if (!db) return;
   await addDoc(collection(db, "bookings"), {
     ...data,
+    amount: data.amount ?? 0,
     status: "confirmed",
+    paymentStatus: "unpaid",
     createdAt: serverTimestamp(),
   });
 }
@@ -146,6 +155,16 @@ export async function checkInBooking(id: string): Promise<CheckInOutcome> {
     if (status === "cancelled") return "cancelled";
     tx.update(ref, { status: "used", checkedInAt: serverTimestamp() });
     return "success";
+  });
+}
+
+/** Tandai booking sebagai lunas (mock — tanpa gateway). Dijalankan oleh pemilik booking. */
+export async function payBooking(id: string, method: string): Promise<void> {
+  if (!db) return;
+  await updateDoc(doc(db, "bookings", id), {
+    paymentStatus: "paid",
+    paymentMethod: method,
+    paidAt: serverTimestamp(),
   });
 }
 

@@ -84,6 +84,7 @@ function BookingContent() {
         name: form.name,
         phone: form.phone,
         notes: form.notes,
+        amount: destination.priceStart * form.guests,
       });
       setSuccess(true);
     } catch {
