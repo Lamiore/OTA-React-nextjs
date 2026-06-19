@@ -8,6 +8,27 @@ import { checkInBooking, type Booking } from '@/lib/firestore';
 
 const READER_ID = 'qr-reader';
 
+/**
+ * Hentikan scanner dengan AMAN. html5-qrcode `stop()` MELEMPAR SINKRON bila kamera
+ * tidak sedang berjalan (start belum selesai, atau sudah di-stop) — lihat
+ * html5-qrcode.js: `throw "Cannot stop, scanner is not running or paused."`.
+ * Karena throw-nya sinkron, `.stop().catch()` TIDAK menangkapnya, sehingga error
+ * bocor keluar dari cleanup useEffect (fase commit React) → error boundary →
+ * "Application error: a client-side exception" (terutama saat race start/cleanup di iOS,
+ * dan pada double-stop setelah scan berhasil). try/catch sinkron menutup celah ini.
+ */
+function stopScanner(instance: Html5QrcodeType | null) {
+  if (!instance) return;
+  try {
+    const stopping = instance.stop();
+    if (stopping && typeof stopping.catch === 'function') {
+      stopping.catch(() => { /* abaikan rejection async */ });
+    }
+  } catch {
+    /* kamera belum/tidak berjalan — aman diabaikan */
+  }
+}
+
 type ScanResult =
   | { kind: 'valid'; booking: Booking }
   | { kind: 'used'; booking: Booking }
@@ -81,9 +102,7 @@ export default function ScanPanel() {
     if (busyRef.current) return;
     busyRef.current = true;
 
-    if (scannerRef.current) {
-      try { await scannerRef.current.stop(); } catch { /* sudah berhenti */ }
-    }
+    stopScanner(scannerRef.current);
     setScanning(false);
 
     const id = parseTicketId(text);
@@ -130,9 +149,7 @@ export default function ScanPanel() {
 
     return () => {
       cancelled = true;
-      if (instance) {
-        instance.stop().catch(() => { /* abaikan */ });
-      }
+      stopScanner(instance);
     };
   }, [scanning, scanKey, handleDecoded]);
 
