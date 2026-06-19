@@ -2,20 +2,13 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { payBooking, type Booking } from '@/lib/firestore';
+import { formatIDR } from '@/lib/format';
 
 const METHODS = [
   { id: 'transfer', label: 'Transfer Bank', desc: 'BCA / Mandiri / BNI' },
   { id: 'ewallet', label: 'E-wallet', desc: 'GoPay / OVO / DANA' },
   { id: 'cash', label: 'Tunai di lokasi', desc: 'Bayar langsung ke petugas' },
 ];
-
-function formatIDR(n: number) {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-  }).format(n);
-}
 
 function CloseIcon() {
   return (

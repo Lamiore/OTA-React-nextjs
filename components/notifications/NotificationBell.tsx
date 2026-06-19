@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { db } from '@/lib/firebase';
 import { useAuthState } from '@/lib/useAuth';
 import type { Booking } from '@/lib/firestore';
+import { formatIDR } from '@/lib/format';
 import PaymentModal from '@/components/notifications/PaymentModal';
 
 function BellIcon() {
@@ -96,6 +97,7 @@ export default function NotificationBell({ variant }: NotificationBellProps) {
                   <p className="mt-0.5 text-[12px] text-navy-soft">
                     Silakan selesaikan pembayaran untuk {b.destinationName}.
                   </p>
+                  <p className="mt-1 text-[12px] font-semibold text-navy">{formatIDR(b.amount ?? 0)}</p>
                   <button
                     onClick={() => {
                       setPayTarget(b);
