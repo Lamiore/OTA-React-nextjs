@@ -9,7 +9,6 @@ export interface SensorReading {
   rainValue: number;
   windSpeed: number;
   flowRate: number;
-  ecValue: number;
   updatedAt: number;
 }
 
