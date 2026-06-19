@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -43,6 +44,11 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
   const [cancelling, setCancelling] = useState(false);
   const [ticketBooking, setTicketBooking] = useState<BookingType | null>(null);
 
+  // Portal modal ke <body> agar lepas dari wrapper .animate-fade-in yang menyisakan
+  // transform: scale(1) (fill 'both'), yang bikin position:fixed melenceng & ketutup nav.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (!user || !db) {
       setLoadingBookings(false);
@@ -79,11 +85,11 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
         <TicketModal booking={ticketBooking} onClose={() => setTicketBooking(null)} />
       )}
 
-      {/* Cancel modal — di luar semua container */}
-      {cancellingBooking && (
-        <div className="fixed inset-0 z-[200]">
+      {/* Cancel modal — di-portal ke <body> (lihat catatan 'mounted' di atas) */}
+      {mounted && cancellingBooking && createPortal(
+        <div className="fixed inset-0 z-[200] overflow-y-auto">
           <div className="absolute inset-0 bg-shore-50/60 backdrop-blur-lg" onClick={() => !cancelling && setCancellingBooking(null)} />
-          <div className="relative flex items-center justify-center h-full p-4">
+          <div className="relative flex min-h-full items-center justify-center p-4">
             <div className="w-full max-w-sm card p-6 animate-fade-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-red-100 mx-auto mb-4">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
@@ -118,7 +124,8 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <h1 className="font-serif text-2xl font-medium text-navy sm:text-3xl">

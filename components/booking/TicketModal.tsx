@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Booking } from '@/lib/firestore';
 
@@ -35,6 +37,12 @@ interface TicketModalProps {
 }
 
 export default function TicketModal({ booking, onClose }: TicketModalProps) {
+  // Portal ke <body> agar lepas dari ancestor ber-transform (mis. wrapper .animate-fade-in
+  // yang menyisakan transform: scale(1) karena fill-mode 'both'), yang kalau tidak membuat
+  // position:fixed jadi relatif ke wrapper, bukan viewport — modal melenceng & ketutup nav.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const dateLabel = new Date(booking.date).toLocaleDateString('id-ID', {
     weekday: 'long',
     day: 'numeric',
@@ -42,12 +50,17 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
     year: 'numeric',
   });
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
+    // overflow-y-auto + wrapper min-h-full menjaga tiket tetap center; kalau lebih tinggi
+    // dari layar, ia bisa di-scroll penuh alih-alih bagian atasnya terpotong di balik nav.
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-ink/30 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[200] overflow-y-auto bg-ink/30 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
     >
-      <div className="relative w-full max-w-sm animate-fade-up" onClick={(e) => e.stopPropagation()}>
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="relative w-full max-w-sm animate-fade-up" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onClose}
           aria-label="Tutup tiket"
@@ -103,6 +116,8 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
