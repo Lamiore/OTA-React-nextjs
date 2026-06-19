@@ -6,6 +6,7 @@ export interface SensorReading {
   humidity: number;
   tempDS18: number;
   rainStatus: string;
+  rainValue: number;
   windSpeed: number;
   flowRate: number;
   ecValue: number;

@@ -74,7 +74,9 @@ export default function SensorPanel() {
     },
     {
       label: 'Kondisi Cuaca',
-      value: data?.rainStatus || '--',
+      value: data?.rainStatus
+        ? `${data.rainStatus}${typeof data.rainValue === 'number' ? ` (${data.rainValue})` : ''}`
+        : '--',
       unit: '',
       color: 'bg-purple-100 text-purple-600',
       icon: (
