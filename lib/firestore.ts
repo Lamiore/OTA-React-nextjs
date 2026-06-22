@@ -26,6 +26,8 @@ export interface Destination {
   priceStart: number;
   description: string;
   image: string;
+  /** True hanya untuk destinasi yang punya stasiun sensor IoT fisik. */
+  hasMonitoring?: boolean;
 }
 
 export type DestinationInput = Omit<Destination, "id">;

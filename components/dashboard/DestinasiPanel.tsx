@@ -19,6 +19,7 @@ const emptyForm: DestinationInput = {
   priceStart: 0,
   description: '',
   image: '',
+  hasMonitoring: false,
 };
 
 function PlusIcon() {
@@ -88,6 +89,7 @@ export default function DestinasiPanel() {
       priceStart: d.priceStart,
       description: d.description ?? '',
       image: d.image ?? '',
+      hasMonitoring: d.hasMonitoring ?? false,
     });
     setTagInput(d.tags.join(', '));
     setEditingId(d.id);
@@ -243,6 +245,20 @@ export default function DestinasiPanel() {
                   className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors resize-none"
                 />
               </div>
+
+              {/* Monitoring IoT */}
+              <label className="flex items-center justify-between gap-3 rounded-xl border border-shore-200 bg-surface px-3.5 py-3 cursor-pointer">
+                <span>
+                  <span className="block text-[13px] font-medium text-navy">Punya stasiun sensor IoT</span>
+                  <span className="block text-[11px] text-navy-soft mt-0.5">Tampilkan sensor live di halaman detail destinasi ini</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={form.hasMonitoring ?? false}
+                  onChange={(e) => setForm({ ...form, hasMonitoring: e.target.checked })}
+                  className="h-5 w-5 shrink-0 rounded border-shore-300 text-teal-500 focus:ring-teal-400 cursor-pointer"
+                />
+              </label>
 
               {/* Actions */}
               <div className="flex gap-3 pt-2">
