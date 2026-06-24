@@ -168,8 +168,17 @@ export default function ScanPanel() {
       } else {
         setCheckInError('Tiket tidak ditemukan.');
       }
-    } catch {
-      setCheckInError('Gagal check-in. Periksa koneksi atau izin akses Firestore.');
+    } catch (err) {
+      // Surface the real Firestore error code agar bisa dibedakan: 'permission-denied'
+      // (rules menolak write) vs 'unavailable' (koneksi transaksi putus di mobile).
+      const code = (err as { code?: string } | null)?.code;
+      if (code === 'permission-denied') {
+        setCheckInError('Gagal check-in: izin Firestore menolak (permission-denied). Rules perlu mengizinkan admin/pengelola meng-update booking.');
+      } else if (code === 'unavailable' || code === 'deadline-exceeded') {
+        setCheckInError(`Gagal check-in: koneksi ke Firestore terputus (${code}). Periksa jaringan lalu coba lagi.`);
+      } else {
+        setCheckInError(`Gagal check-in${code ? ` (${code})` : ''}. Periksa koneksi atau izin akses Firestore.`);
+      }
     } finally {
       setCheckingIn(false);
     }
