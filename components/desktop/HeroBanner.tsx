@@ -120,7 +120,7 @@ export default function HeroBanner() {
             style={{ animationDelay: '0.34s' }}
           >
             <Link
-              href="/destinations"
+              href="#destinasi"
               className="group inline-flex items-center gap-2.5 rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink shadow-lg shadow-ink/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#EAF6F3]"
             >
               Jelajahi Destinasi

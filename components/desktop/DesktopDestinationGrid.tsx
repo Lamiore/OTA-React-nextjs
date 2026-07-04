@@ -56,7 +56,7 @@ export default function DesktopDestinationGrid() {
   }, [activeFilter, fetchDestinations]);
 
   return (
-    <section className="bg-shore-50">
+    <section id="destinasi" className="scroll-mt-16 bg-shore-50">
       <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-10">
         {/* Header */}
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">

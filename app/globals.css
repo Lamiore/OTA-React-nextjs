@@ -72,6 +72,10 @@ html.dark {
   --shadow-lift: 0 4px 12px rgba(0, 0, 0, 0.36), 0 20px 48px rgba(0, 0, 0, 0.5);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   color: var(--fg);
   background: var(--bg);
