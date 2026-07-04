@@ -151,7 +151,7 @@ export default function DestinationDetail() {
             <div>
               <p className="text-[11px] text-navy-soft uppercase tracking-wider">Mulai dari</p>
               <p className="text-xl font-semibold text-navy mt-0.5">
-                {formatRp(dest.priceStart)}
+                {formatRp(dest.priceStart ?? 0)}
                 <span className="text-[13px] text-navy-soft font-normal"> /pax</span>
               </p>
             </div>

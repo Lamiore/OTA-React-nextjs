@@ -16,6 +16,13 @@ import { db } from "./firebase";
 
 // ── Destinations ──
 
+export interface PriceItem {
+  id: string; // key React & edit admin — crypto.randomUUID()
+  label: string; // "Tiket Masuk", "Penginapan", "Sewa Alat Diving", ...
+  price: number; // rupiah, >= 0
+  unit: string; // "/pax", "/malam", "/set" — teks bebas
+}
+
 export interface Destination {
   id: string;
   name: string;
@@ -23,7 +30,10 @@ export interface Destination {
   emoji: string;
   thumbColor: string;
   tags: string[];
-  priceStart: number;
+  /** Legacy — harga tunggal lama; hanya dipakai sebagai fallback getPriceItems. */
+  priceStart?: number;
+  /** Daftar harga multi-item (tiket, penginapan, sewa alat, ...). */
+  priceItems?: PriceItem[];
   description: string;
   image: string;
   /** True hanya untuk destinasi yang punya stasiun sensor IoT fisik. */
@@ -31,6 +41,19 @@ export interface Destination {
 }
 
 export type DestinationInput = Omit<Destination, "id">;
+
+/**
+ * Sumber kebenaran daftar harga. Destinasi legacy (hanya punya priceStart)
+ * di-fallback jadi satu item "Tiket Masuk" agar tetap bisa tampil & dibooking
+ * tanpa migrasi manual.
+ */
+export function getPriceItems(dest: Destination): PriceItem[] {
+  if (dest.priceItems && dest.priceItems.length > 0) return dest.priceItems;
+  if (dest.priceStart && dest.priceStart > 0) {
+    return [{ id: "legacy", label: "Tiket Masuk", price: dest.priceStart, unit: "/pax" }];
+  }
+  return [];
+}
 
 export async function getDestinations(filter?: string): Promise<Destination[]> {
   if (!db) return [];
@@ -99,6 +122,12 @@ export async function updateUserRole(uid: string, role: AppUser["role"]) {
 
 // ── Bookings ──
 
+export interface BookingItem {
+  label: string;
+  price: number;
+  qty: number;
+}
+
 export interface Booking {
   id: string;
   userId: string;
@@ -109,6 +138,8 @@ export interface Booking {
   name: string;
   phone: string;
   notes: string;
+  /** Snapshot rincian item yang dipilih saat booking dibuat. */
+  items?: BookingItem[];
   status: "pending" | "confirmed" | "cancelled" | "used";
   createdAt: unknown;
   checkedInAt?: unknown;
@@ -127,6 +158,7 @@ export async function createBooking(data: BookingInput) {
   if (!db) return;
   await addDoc(collection(db, "bookings"), {
     ...data,
+    items: data.items ?? [],
     amount: data.amount ?? 0,
     status: "confirmed",
     paymentStatus: "unpaid",

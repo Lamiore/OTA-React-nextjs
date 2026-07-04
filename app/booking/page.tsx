@@ -84,7 +84,7 @@ function BookingContent() {
         name: form.name,
         phone: form.phone,
         notes: form.notes,
-        amount: destination.priceStart * form.guests,
+        amount: (destination.priceStart ?? 0) * form.guests,
       });
       setSuccess(true);
     } catch {
@@ -236,7 +236,7 @@ function BookingContent() {
               <div className="card p-4 flex items-center justify-between">
                 <p className="text-[13px] text-navy-soft">Estimasi total</p>
                 <p className="text-lg font-semibold text-navy">
-                  {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(destination.priceStart * form.guests)}
+                  {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format((destination.priceStart ?? 0) * form.guests)}
                 </p>
               </div>
             )}
