@@ -9,7 +9,6 @@ interface Props {
   emoji: string;
   thumbColor: string;
   tags: string[];
-  priceStart: number;
   isLive?: boolean;
   description?: string;
   image?: string;
@@ -24,8 +23,6 @@ function PinIcon() {
   );
 }
 
-const formatRp = (n: number) => `Rp ${(n / 1000).toFixed(0)}k`;
-
 export default function DestinationCard({
   id,
   name,
@@ -33,7 +30,6 @@ export default function DestinationCard({
   emoji,
   thumbColor,
   tags,
-  priceStart,
   isLive,
   image,
 }: Props) {
@@ -82,11 +78,7 @@ export default function DestinationCard({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between mt-auto pt-1.5">
-          <span className="text-[12px] text-navy font-semibold">
-            {formatRp(priceStart)}
-            <span className="text-navy-soft font-normal">/pax</span>
-          </span>
+        <div className="flex items-center justify-end mt-auto pt-1.5">
           <button
             onClick={() => router.push(`/destinations/${id}`)}
             className="bg-teal-500 text-white rounded-lg px-3 py-1 text-[10px] font-medium hover:bg-teal-600 transition-colors duration-200"

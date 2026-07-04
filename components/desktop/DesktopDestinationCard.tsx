@@ -9,7 +9,6 @@ interface Props {
   emoji: string;
   thumbColor: string;
   tags: string[];
-  priceStart: number;
   isLive?: boolean;
   description?: string;
   image?: string;
@@ -33,8 +32,6 @@ function ArrowIcon() {
   );
 }
 
-const formatRp = (n: number) => `Rp ${(n / 1000).toFixed(0)}k`;
-
 export default function DesktopDestinationCard({
   id,
   name,
@@ -42,7 +39,6 @@ export default function DesktopDestinationCard({
   emoji,
   thumbColor,
   tags,
-  priceStart,
   isLive,
   image,
 }: Props) {
@@ -103,13 +99,7 @@ export default function DesktopDestinationCard({
         </div>
 
         {/* Footer */}
-        <div className="mt-1 flex items-center justify-between border-t border-shore-200 pt-4">
-          <div>
-            <span className="text-base font-semibold text-navy">
-              {formatRp(priceStart)}
-            </span>
-            <span className="text-xs text-navy-soft font-normal">/pax</span>
-          </div>
+        <div className="mt-1 flex items-center justify-end border-t border-shore-200 pt-4">
           <button className="btn-primary px-4 py-2 text-xs group/btn">
             Booking
             <span className="group-hover/btn:translate-x-0.5 transition-transform duration-200">
