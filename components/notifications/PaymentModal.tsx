@@ -87,7 +87,18 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
                 </span>
                 <h2 className="mt-2 font-serif text-xl font-medium text-navy">{booking.destinationName}</h2>
 
-                <div className="mt-4 flex items-center justify-between rounded-xl bg-shore-50 px-4 py-3">
+                {booking.items && booking.items.length > 0 && (
+                  <ul className="mt-4 space-y-1.5">
+                    {booking.items.map((it, i) => (
+                      <li key={i} className="flex items-center justify-between gap-3 text-[13px]">
+                        <span className="text-navy-soft">{it.label} ×{it.qty}</span>
+                        <span className="font-medium text-navy shrink-0">{formatIDR(it.price * it.qty)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="mt-3 flex items-center justify-between rounded-xl bg-shore-50 px-4 py-3">
                   <span className="text-[13px] text-navy-soft">Total</span>
                   <span className="text-lg font-semibold text-navy">{formatIDR(booking.amount ?? 0)}</span>
                 </div>
