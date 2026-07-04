@@ -36,8 +36,10 @@ export interface PriceItem {
 - `Destination.priceStart` — jadi opsional (legacy). Tidak dihapus dari interface
   agar dokumen lama tetap terbaca.
 - Helper `getPriceItems(dest: Destination): PriceItem[]`:
-  - jika `priceItems` ada dan tidak kosong → kembalikan apa adanya;
-  - jika tidak, dan `priceStart > 0` → kembalikan satu item sintetis
+  - jika field `priceItems` sudah ada (termasuk array kosong) → kembalikan
+    apa adanya; array kosong berarti admin sengaja mengosongkan harga;
+  - jika field belum ada (dokumen legacy) dan `priceStart > 0` → kembalikan
+    satu item sintetis
     `{ id: 'legacy', label: 'Tiket Masuk', price: priceStart, unit: '/pax' }`;
   - selain itu → `[]`.
 - `Booking.items?: { label: string; price: number; qty: number }[]` — snapshot

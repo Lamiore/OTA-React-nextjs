@@ -43,12 +43,13 @@ export interface Destination {
 export type DestinationInput = Omit<Destination, "id">;
 
 /**
- * Sumber kebenaran daftar harga. Destinasi legacy (hanya punya priceStart)
- * di-fallback jadi satu item "Tiket Masuk" agar tetap bisa tampil & dibooking
- * tanpa migrasi manual.
+ * Sumber kebenaran daftar harga. priceItems yang sudah ada dikembalikan apa
+ * adanya — array kosong berarti sengaja tanpa harga. Fallback priceStart
+ * hanya untuk dokumen legacy yang belum pernah disimpan editor baru, agar
+ * tetap bisa tampil & dibooking tanpa migrasi manual.
  */
 export function getPriceItems(dest: Destination): PriceItem[] {
-  if (dest.priceItems && dest.priceItems.length > 0) return dest.priceItems;
+  if (dest.priceItems) return dest.priceItems;
   if (dest.priceStart && dest.priceStart > 0) {
     return [{ id: "legacy", label: "Tiket Masuk", price: dest.priceStart, unit: "/pax" }];
   }
