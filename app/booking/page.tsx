@@ -5,7 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthState } from '@/lib/useAuth';
-import { createBooking, type Destination } from '@/lib/firestore';
+import { createBooking, getPriceItems, type Destination } from '@/lib/firestore';
+import { formatIDR } from '@/lib/format';
 import TopNav from '@/components/desktop/TopNav';
 import BottomNav from '@/components/mobile/BottomNav';
 import BookingHistory from '@/components/booking/BookingHistory';
@@ -41,6 +42,15 @@ function BookingContent() {
     notes: '',
   });
 
+  const [qty, setQty] = useState<Record<string, number>>({});
+
+  const priceItems = destination ? getPriceItems(destination) : [];
+  const totalQty = priceItems.reduce((s, it) => s + (qty[it.id] ?? 0), 0);
+  const total = priceItems.reduce((s, it) => s + it.price * (qty[it.id] ?? 0), 0);
+
+  const setItemQty = (id: string, next: number) =>
+    setQty((q) => ({ ...q, [id]: Math.max(0, next) }));
+
   // Load destination if destId provided
   useEffect(() => {
     if (!destId || !db) {
@@ -54,6 +64,13 @@ function BookingContent() {
       setLoadingDest(false);
     });
   }, [destId]);
+
+  // Default: item pertama (biasanya tiket masuk) qty 1
+  useEffect(() => {
+    if (!destination) return;
+    const items = getPriceItems(destination);
+    if (items.length > 0) setQty({ [items[0].id]: 1 });
+  }, [destination]);
 
   // Pre-fill name from auth
   useEffect(() => {
@@ -72,6 +89,13 @@ function BookingContent() {
       setError('Pilih destinasi terlebih dahulu.');
       return;
     }
+    const items = priceItems
+      .filter((it) => (qty[it.id] ?? 0) > 0)
+      .map((it) => ({ label: it.label, price: it.price, qty: qty[it.id] ?? 0 }));
+    if (items.length === 0) {
+      setError('Pilih minimal satu item.');
+      return;
+    }
     setError('');
     setSubmitting(true);
     try {
@@ -84,7 +108,8 @@ function BookingContent() {
         name: form.name,
         phone: form.phone,
         notes: form.notes,
-        amount: (destination.priceStart ?? 0) * form.guests,
+        items,
+        amount: total,
       });
       setSuccess(true);
     } catch {
@@ -124,6 +149,7 @@ function BookingContent() {
               onClick={() => {
                 setSuccess(false);
                 setForm({ date: '', guests: 1, name: user?.displayName ?? '', phone: '', notes: '' });
+                setQty(priceItems.length > 0 ? { [priceItems[0].id]: 1 } : {});
               }}
               className="btn-ghost rounded-xl px-5 py-2.5 text-[13px]"
             >
@@ -166,6 +192,50 @@ function BookingContent() {
                 </div>
               )}
             </div>
+
+            {/* Pilih item harga */}
+            {destination && (
+              <div>
+                <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Pilih Item *</label>
+                {priceItems.length === 0 ? (
+                  <div className="rounded-xl border border-shore-200 bg-surface px-4 py-3">
+                    <p className="text-[13px] text-navy-soft">Destinasi ini belum punya daftar harga, booking belum bisa dilakukan.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-shore-200 bg-surface divide-y divide-shore-100">
+                    {priceItems.map((it) => (
+                      <div key={it.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-navy truncate">{it.label}</p>
+                          <p className="text-[12px] text-navy-soft">
+                            {formatIDR(it.price)} <span className="text-navy-soft/70">{it.unit}</span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            aria-label={`Kurangi ${it.label}`}
+                            onClick={() => setItemQty(it.id, (qty[it.id] ?? 0) - 1)}
+                            className="h-7 w-7 rounded-lg border border-shore-200 flex items-center justify-center text-navy-soft hover:text-navy hover:border-shore-300 transition-colors"
+                          >
+                            −
+                          </button>
+                          <span className="w-6 text-center text-[13px] font-medium text-navy">{qty[it.id] ?? 0}</span>
+                          <button
+                            type="button"
+                            aria-label={`Tambah ${it.label}`}
+                            onClick={() => setItemQty(it.id, (qty[it.id] ?? 0) + 1)}
+                            className="h-7 w-7 rounded-lg border border-shore-200 flex items-center justify-center text-navy-soft hover:text-navy hover:border-shore-300 transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Date + Guests */}
             <div className="grid grid-cols-2 gap-4">
@@ -232,12 +302,10 @@ function BookingContent() {
             </div>
 
             {/* Price estimate */}
-            {destination && (
+            {destination && totalQty > 0 && (
               <div className="card p-4 flex items-center justify-between">
                 <p className="text-[13px] text-navy-soft">Estimasi total</p>
-                <p className="text-lg font-semibold text-navy">
-                  {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format((destination.priceStart ?? 0) * form.guests)}
-                </p>
+                <p className="text-lg font-semibold text-navy">{formatIDR(total)}</p>
               </div>
             )}
 
@@ -251,7 +319,7 @@ function BookingContent() {
             {/* Submit */}
             <button
               type="submit"
-              disabled={submitting || !destination}
+              disabled={submitting || !destination || totalQty === 0}
               className="btn-primary w-full rounded-xl px-4 py-3 text-[14px] font-medium shadow-glow disabled:opacity-50"
             >
               {submitting ? 'Memproses...' : 'Konfirmasi Booking'}
