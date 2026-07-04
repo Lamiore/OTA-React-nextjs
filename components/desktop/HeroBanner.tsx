@@ -138,7 +138,7 @@ export default function HeroBanner() {
               </svg>
             </Link>
             <Link
-              href="/booking"
+              href="/profile?view=riwayat"
               className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/[0.04] px-6 py-3 text-sm font-medium text-white/85 backdrop-blur-md transition-all duration-200 hover:border-white/40 hover:bg-white/10"
             >
               Riwayat Booking
