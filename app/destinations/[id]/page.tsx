@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Destination } from '@/lib/firestore';
+import { getPriceItems, type Destination } from '@/lib/firestore';
 import TopNav from '@/components/desktop/TopNav';
 import BottomNav from '@/components/mobile/BottomNav';
 import LiveMonitorSection from '@/components/destinations/LiveMonitorSection';
@@ -81,6 +81,8 @@ export default function DestinationDetail() {
     );
   }
 
+  const priceItems = getPriceItems(dest);
+
   return (
     <main className="min-h-dvh bg-shore-50 pb-28 md:pb-0">
       <TopNav />
@@ -146,18 +148,27 @@ export default function DestinationDetail() {
           {/* Live IoT monitoring — hanya untuk destinasi yang punya stasiun sensor */}
           {dest.hasMonitoring && <LiveMonitorSection />}
 
-          {/* Price + Booking */}
-          <div className="card p-5 sm:p-6 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] text-navy-soft uppercase tracking-wider">Mulai dari</p>
-              <p className="text-xl font-semibold text-navy mt-0.5">
-                {formatRp(dest.priceStart ?? 0)}
-                <span className="text-[13px] text-navy-soft font-normal"> /pax</span>
-              </p>
-            </div>
+          {/* Daftar Harga + Booking */}
+          <div className="card p-5 sm:p-6">
+            <h2 className="text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-3">Daftar Harga</h2>
+            {priceItems.length > 0 ? (
+              <ul className="divide-y divide-shore-100">
+                {priceItems.map((item) => (
+                  <li key={item.id} className="flex items-center justify-between gap-3 py-2.5">
+                    <span className="text-[14px] text-navy">{item.label}</span>
+                    <span className="text-[14px] font-semibold text-navy shrink-0">
+                      {formatRp(item.price)}
+                      <span className="text-[12px] text-navy-soft font-normal"> {item.unit}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[13px] text-navy-soft">Belum ada daftar harga untuk destinasi ini.</p>
+            )}
             <button
               onClick={() => router.push(`/booking?dest=${dest.id}`)}
-              className="btn-primary rounded-xl px-6 py-3 text-[14px]"
+              className="btn-primary w-full rounded-xl px-6 py-3 text-[14px] mt-4"
             >
               Booking Sekarang
             </button>
