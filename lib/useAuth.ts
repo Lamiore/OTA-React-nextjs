@@ -5,7 +5,7 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
-export type UserRole = 'user' | 'pengelola' | 'admin';
+export type UserRole = 'user' | 'mitra' | 'pengelola' | 'admin';
 
 export function useAuthState() {
   const [user, setUser] = useState<User | null>(null);

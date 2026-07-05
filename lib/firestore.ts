@@ -98,12 +98,23 @@ export async function deleteDestination(id: string) {
 
 // ── Users ──
 
+export interface MitraVerification {
+  fullName: string; // nama lengkap penanggung jawab
+  phone: string; // no. HP/WhatsApp aktif
+  organization: string; // instansi/organisasi (operator dive, resort, ...)
+  status: "pending" | "approved" | "rejected";
+  submittedAt: unknown;
+  reviewedAt?: unknown;
+}
+
 export interface AppUser {
   uid: string;
   name: string;
   email: string;
   photoURL: string;
-  role: "user" | "pengelola" | "admin";
+  role: "user" | "mitra" | "pengelola" | "admin";
+  /** Pengajuan verifikasi mitra; tidak ada berarti belum pernah mengajukan. */
+  verification?: MitraVerification;
 }
 
 export function subscribeUsers(callback: (users: AppUser[]) => void) {
@@ -119,6 +130,85 @@ export function subscribeUsers(callback: (users: AppUser[]) => void) {
 export async function updateUserRole(uid: string, role: AppUser["role"]) {
   if (!db) return;
   await updateDoc(doc(db, "users", uid), { role });
+}
+
+export async function submitMitraVerification(
+  uid: string,
+  data: { fullName: string; phone: string; organization: string }
+) {
+  if (!db) return;
+  await updateDoc(doc(db, "users", uid), {
+    verification: { ...data, status: "pending", submittedAt: serverTimestamp() },
+  });
+}
+
+export async function approveMitra(uid: string) {
+  if (!db) return;
+  await updateDoc(doc(db, "users", uid), {
+    role: "mitra",
+    "verification.status": "approved",
+    "verification.reviewedAt": serverTimestamp(),
+  });
+}
+
+export async function rejectMitra(uid: string) {
+  if (!db) return;
+  await updateDoc(doc(db, "users", uid), {
+    "verification.status": "rejected",
+    "verification.reviewedAt": serverTimestamp(),
+  });
+}
+
+// ── Cameras (kamera mitra — terpisah dari monitoring IoT) ──
+
+export interface Camera {
+  id: string; // Firestore doc id
+  cameraId: string; // ID perangkat yang diisi user, unik per pemilik
+  name: string; // nama tampilan, misal "Kamera Dermaga Bunaken"
+  streamUrl: string; // URL stream langsung (MJPEG/HTTP), wajib http(s)://
+  location: string; // lokasi pemasangan, boleh string kosong
+  ownerUid: string;
+  ownerName: string; // snapshot nama pemilik saat dibuat (untuk panel admin)
+  ownerEmail: string; // snapshot email pemilik saat dibuat
+  createdAt: unknown;
+}
+
+export type CameraInput = Omit<Camera, "id" | "createdAt">;
+
+/** Mitra ke atas boleh mengelola kamera; pengelola & admin tanpa verifikasi. */
+export function canManageCameras(role: string | null | undefined): boolean {
+  return role === "mitra" || role === "pengelola" || role === "admin";
+}
+
+export async function addCamera(data: CameraInput) {
+  if (!db) return;
+  await addDoc(collection(db, "cameras"), {
+    ...data,
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function deleteCamera(id: string) {
+  if (!db) return;
+  await deleteDoc(doc(db, "cameras", id));
+}
+
+export function subscribeMyCameras(
+  uid: string,
+  callback: (cameras: Camera[]) => void
+) {
+  if (!db) return () => {};
+  const q = query(collection(db, "cameras"), where("ownerUid", "==", uid));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
+  });
+}
+
+export function subscribeAllCameras(callback: (cameras: Camera[]) => void) {
+  if (!db) return () => {};
+  return onSnapshot(collection(db, "cameras"), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
+  });
 }
 
 // ── Bookings ──
