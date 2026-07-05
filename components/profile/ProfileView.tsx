@@ -7,6 +7,7 @@ import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import type { UserRole } from '@/lib/useAuth';
 import BookingHistory from '@/components/booking/BookingHistory';
+import CameraSection from '@/components/cameras/CameraSection';
 import Link from 'next/link';
 import { useTheme } from '@/lib/useTheme';
 
@@ -82,6 +83,16 @@ function MoonIcon() {
 
 const menuItems = [
   {
+    label: 'Kamera',
+    description: 'Daftarkan & pantau kamera milikmu',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+        <circle cx="12" cy="13" r="3" />
+      </svg>
+    ),
+  },
+  {
     label: 'Riwayat Booking',
     description: 'Lihat dan kelola reservasi',
     icon: (
@@ -116,8 +127,12 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
   const [displayName, setDisplayName] = useState(user.displayName ?? '');
   const [saving, setSaving] = useState(false);
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'menu' | 'riwayat' | 'pengaturan'>(
-    searchParams.get('view') === 'riwayat' ? 'riwayat' : 'menu'
+  const [view, setView] = useState<'menu' | 'riwayat' | 'pengaturan' | 'kamera'>(
+    searchParams.get('view') === 'riwayat'
+      ? 'riwayat'
+      : searchParams.get('view') === 'kamera'
+        ? 'kamera'
+        : 'menu'
   );
   const { theme, setTheme, mounted } = useTheme();
   const isDark = theme === 'dark';
@@ -143,6 +158,23 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
     if (!auth) return;
     await signOut(auth);
   };
+
+  if (view === 'kamera') {
+    return (
+      <div className="w-full max-w-lg mx-auto animate-fade-in">
+        <button
+          onClick={() => setView('menu')}
+          className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-navy-soft transition-colors hover:text-navy"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Kembali
+        </button>
+        <CameraSection user={user} role={role} />
+      </div>
+    );
+  }
 
   if (view === 'riwayat') {
     return (
@@ -312,11 +344,13 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
           <button
             key={item.label}
             onClick={
-              item.label === 'Riwayat Booking'
-                ? () => setView('riwayat')
-                : item.label === 'Pengaturan'
-                  ? () => setView('pengaturan')
-                  : undefined
+              item.label === 'Kamera'
+                ? () => setView('kamera')
+                : item.label === 'Riwayat Booking'
+                  ? () => setView('riwayat')
+                  : item.label === 'Pengaturan'
+                    ? () => setView('pengaturan')
+                    : undefined
             }
             className="w-full flex items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-shore-50"
           >
