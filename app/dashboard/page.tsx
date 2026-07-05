@@ -9,6 +9,7 @@ import PengelolaStatistikPanel from '@/components/dashboard/PengelolaStatistikPa
 import ScanPanel from '@/components/dashboard/ScanPanel';
 import DestinasiPanel from '@/components/dashboard/DestinasiPanel';
 import PenggunaPanel from '@/components/dashboard/PenggunaPanel';
+import KameraPanel from '@/components/dashboard/KameraPanel';
 
 export default function Dashboard() {
   const { user, role, loading } = useUserRole();
@@ -44,6 +45,7 @@ export default function Dashboard() {
           {page === 'scan' && <ScanPanel />}
           {page === 'destinasi' && role === 'admin' && <DestinasiPanel />}
           {page === 'pengguna' && role === 'admin' && <PenggunaPanel />}
+          {page === 'kamera' && role === 'admin' && <KameraPanel />}
         </div>
       </main>
     </div>
