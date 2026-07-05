@@ -5,7 +5,7 @@ import { subscribeUsers, updateUserRole, type AppUser } from '@/lib/firestore';
 
 const roleColors: Record<AppUser['role'], string> = {
   user: 'bg-shore-100 text-navy-soft',
-  mitra: 'bg-ocean-100 text-ocean-700',
+  mitra: 'bg-sky-100 text-sky-700',
   pengelola: 'bg-amber-100 text-amber-700',
   admin: 'bg-teal-100 text-teal-700',
 };
