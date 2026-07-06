@@ -25,6 +25,7 @@ function BookingContent() {
   const router = useRouter();
   const { user } = useAuthState();
   const destId = searchParams.get('dest');
+  const preselect = searchParams.get('items');
 
   const [destination, setDestination] = useState<Destination | null>(null);
   const [loadingDest, setLoadingDest] = useState(!!destId);
@@ -65,12 +66,22 @@ function BookingContent() {
     });
   }, [destId]);
 
-  // Default: item pertama (biasanya tiket masuk) qty 1
+  // Default qty: item yang dibawa dari halaman detail (?items=), atau item
+  // pertama (biasanya tiket masuk) bila tidak ada pra-pilihan.
   useEffect(() => {
     if (!destination) return;
     const items = getPriceItems(destination);
-    if (items.length > 0) setQty({ [items[0].id]: 1 });
-  }, [destination]);
+    if (items.length === 0) return;
+    const preIds = preselect
+      ? preselect.split(',').filter((id) => items.some((it) => it.id === id))
+      : [];
+    if (preIds.length > 0) {
+      const entries = preIds.map((id): [string, number] => [id, 1]);
+      setQty(Object.fromEntries(entries));
+    } else {
+      setQty({ [items[0].id]: 1 });
+    }
+  }, [destination, preselect]);
 
   // Pre-fill name from auth
   useEffect(() => {

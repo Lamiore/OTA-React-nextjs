@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -26,6 +26,14 @@ function PinIcon() {
   );
 }
 
+function CheckIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
 const formatRp = (n: number) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
 
@@ -34,6 +42,8 @@ export default function DestinationDetail() {
   const router = useRouter();
   const [dest, setDest] = useState<Destination | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const initedForId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!db || !id) {
@@ -50,6 +60,17 @@ export default function DestinationDetail() {
     });
     return () => unsub();
   }, [id]);
+
+  // Pra-pilih item pertama (biasanya tiket masuk) sekali per destinasi saat
+  // harga tersedia. Dikunci per id agar update realtime tidak menimpa pilihan
+  // user, tapi tetap ter-reset bila berpindah destinasi.
+  useEffect(() => {
+    if (!dest || initedForId.current === dest.id) return;
+    const items = getPriceItems(dest);
+    if (items.length === 0) return;
+    setSelectedIds([items[0].id]);
+    initedForId.current = dest.id;
+  }, [dest]);
 
   if (loading) {
     return (
@@ -82,6 +103,17 @@ export default function DestinationDetail() {
   }
 
   const priceItems = getPriceItems(dest);
+
+  const toggleItem = (itemId: string) =>
+    setSelectedIds((prev) =>
+      prev.includes(itemId) ? prev.filter((x) => x !== itemId) : [...prev, itemId],
+    );
+
+  const goToBooking = () => {
+    const params = new URLSearchParams({ dest: dest.id });
+    if (selectedIds.length > 0) params.set('items', selectedIds.join(','));
+    router.push(`/booking?${params.toString()}`);
+  };
 
   return (
     <main className="min-h-dvh bg-shore-50 pb-28 md:pb-0">
@@ -148,29 +180,60 @@ export default function DestinationDetail() {
           {/* Live IoT monitoring — hanya untuk destinasi yang punya stasiun sensor */}
           {dest.hasMonitoring && <LiveMonitorSection />}
 
-          {/* Daftar Harga + Booking */}
-          <div className="card p-5 sm:p-6">
-            <h2 className="text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-3">Daftar Harga</h2>
+          {/* Daftar Harga + Booking — tiap item kartu berdiri sendiri (seperti beranda) */}
+          <div className="space-y-3">
+            <h2 className="text-[11px] font-medium text-navy-soft uppercase tracking-wider">Daftar Harga</h2>
             {priceItems.length > 0 ? (
-              <ul className="divide-y divide-shore-100">
-                {priceItems.map((item) => (
-                  <li key={item.id} className="flex items-center justify-between gap-3 py-2.5">
-                    <span className="text-[14px] text-navy">{item.label}</span>
-                    <span className="text-[14px] font-semibold text-navy shrink-0">
-                      {formatRp(item.price)}
-                      <span className="text-[12px] text-navy-soft font-normal"> {item.unit}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-3">
+                {priceItems.map((item) => {
+                  const isSelected = selectedIds.includes(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => toggleItem(item.id)}
+                      aria-pressed={isSelected}
+                      className={`flex w-full items-center justify-between gap-3 rounded-[1.25rem] border p-4 text-left shadow-soft transition-all ${
+                        isSelected
+                          ? 'border-teal-400 bg-teal-50 shadow-lift'
+                          : 'border-shore-200 bg-surface hover:border-shore-300 hover:shadow-lift'
+                      }`}
+                    >
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <span
+                          className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[6px] border transition-colors ${
+                            isSelected
+                              ? 'border-teal-500 bg-teal-500 text-white'
+                              : 'border-shore-300 bg-surface'
+                          }`}
+                        >
+                          {isSelected && <CheckIcon />}
+                        </span>
+                        <span className="text-[14px] text-navy truncate">{item.label}</span>
+                      </span>
+                      <span className="text-[14px] font-semibold text-navy shrink-0">
+                        {formatRp(item.price)}
+                        <span className="text-[12px] text-navy-soft font-normal"> {item.unit}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             ) : (
-              <p className="text-[13px] text-navy-soft">Belum ada daftar harga untuk destinasi ini.</p>
+              <div className="card p-5">
+                <p className="text-[13px] text-navy-soft">Belum ada daftar harga untuk destinasi ini.</p>
+              </div>
             )}
             <button
-              onClick={() => router.push(`/booking?dest=${dest.id}`)}
-              className="btn-primary w-full rounded-xl px-6 py-3 text-[14px] mt-4"
+              onClick={goToBooking}
+              disabled={priceItems.length > 0 && selectedIds.length === 0}
+              className="btn-primary w-full rounded-xl px-6 py-3 text-[14px] disabled:opacity-50"
             >
-              Booking Sekarang
+              {priceItems.length > 0
+                ? selectedIds.length > 0
+                  ? `Booking Sekarang · ${selectedIds.length} item`
+                  : 'Pilih item dulu'
+                : 'Booking Sekarang'}
             </button>
           </div>
         </div>
