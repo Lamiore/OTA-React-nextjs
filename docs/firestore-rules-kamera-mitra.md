@@ -58,6 +58,25 @@ terbatas: `role` tidak boleh berubah.)
 `approveMitra`/`rejectMitra` dijalankan admin sehingga tetap lolos lewat
 cabang `isAdmin()`.
 
+## 3. Blok baru: koleksi `settings` (alamat server kamera)
+
+Dokumen `settings/cameraServer` menyimpan alamat server kamera lokal
+(`camera-server/`) supaya bisa diganti dari website saat WiFi/IP berubah.
+Tambahkan sejajar dengan blok koleksi lain:
+
+```
+match /settings/{settingId} {
+  function settingsUserRole() {
+    return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+  }
+  // Dibaca semua user login (live modal menyusun URL stream dari sini).
+  allow read: if request.auth != null;
+  // Hanya pengelola kamera yang boleh mengubah alamat.
+  allow write: if request.auth != null &&
+    settingsUserRole() in ['mitra', 'pengelola', 'admin'];
+}
+```
+
 ## Uji cepat setelah Publish (Rules Playground atau devtools)
 
 1. User `role: 'user'` create `cameras/{x}` → DITOLAK.
@@ -67,3 +86,5 @@ cabang `isAdmin()`.
    mengubah `role` → DITOLAK.
 4. Mitra query `cameras` filter `ownerUid == uid sendiri` → LOLOS;
    tanpa filter → DITOLAK. Admin tanpa filter → LOLOS.
+5. User `role: 'user'` write `settings/cameraServer` → DITOLAK;
+   read → LOLOS. Mitra write → LOLOS.

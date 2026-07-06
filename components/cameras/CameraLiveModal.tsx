@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Camera } from '@/lib/firestore';
+import { resolveStreamUrl, subscribeCameraServerUrl, type Camera } from '@/lib/firestore';
 
 interface Props {
   camera: Camera;
@@ -13,13 +13,20 @@ interface Props {
  * Live view stream MJPEG/HTTP via <img>, di-portal ke <body> agar lepas dari
  * container ber-transform (pola modal BookingHistory). next/image sengaja
  * tidak dipakai: stream MJPEG tidak bisa dioptimasi/di-proxy.
+ *
+ * URL stream disusun dari alamat server kamera (settings/cameraServer) + ID;
+ * kamera lama yang masih punya streamUrl langsung tetap didukung.
  */
 export default function CameraLiveModal({ camera, onClose }: Props) {
   const [mounted, setMounted] = useState(false);
   const [error, setError] = useState(false);
+  const [serverUrl, setServerUrl] = useState<string | null>(null); // null = memuat
   useEffect(() => setMounted(true), []);
+  useEffect(() => subscribeCameraServerUrl(setServerUrl), []);
 
   if (!mounted) return null;
+
+  const src = serverUrl === null ? null : resolveStreamUrl(camera, serverUrl);
 
   return createPortal(
     <div className="fixed inset-0 z-[200] overflow-y-auto">
@@ -40,17 +47,27 @@ export default function CameraLiveModal({ camera, onClose }: Props) {
           </div>
 
           <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-ink">
-            {error ? (
+            {src === null ? null : src === '' ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
+                <p className="text-sm">Alamat server kamera belum diatur.</p>
+                <p className="text-[12px] text-white/50">
+                  Isi kolom &quot;Alamat Server Kamera&quot; dengan alamat dari
+                  website kamera, lalu buka lagi live view ini.
+                </p>
+              </div>
+            ) : error ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
                 <p className="text-sm">Tidak bisa terhubung ke kamera.</p>
                 <p className="text-[12px] text-white/50">
-                  Pastikan kamera online dan satu jaringan. Bila aplikasi dibuka lewat
-                  HTTPS, stream http:// jaringan lokal akan diblokir browser.
+                  Pastikan server kamera jalan, ID benar, dan semua perangkat satu
+                  jaringan. Bila aplikasi dibuka lewat HTTPS, stream http:// jaringan
+                  lokal akan diblokir browser.
                 </p>
               </div>
             ) : (
               <img
-                src={camera.streamUrl}
+                key={src}
+                src={src}
                 alt={`Stream ${camera.name}`}
                 className="w-full h-full object-contain"
                 onError={() => setError(true)}

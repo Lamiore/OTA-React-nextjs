@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { subscribeAllCameras, type Camera } from '@/lib/firestore';
 import CameraLiveModal from '@/components/cameras/CameraLiveModal';
+import ServerAddressCard from '@/components/cameras/ServerAddressCard';
 
 export default function KameraPanel() {
   const [cameras, setCameras] = useState<Camera[]>([]);
@@ -24,7 +25,11 @@ export default function KameraPanel() {
       <h1 className="font-serif text-2xl font-medium text-navy">Kamera</h1>
       <p className="mt-1 text-sm text-navy-soft">{cameras.length} kamera terdaftar</p>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-6">
+        <ServerAddressCard />
+      </div>
+
+      <div className="mt-4 space-y-3">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="card p-5 animate-pulse space-y-3">

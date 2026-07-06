@@ -5,6 +5,7 @@ import {
   where,
   doc,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   onSnapshot,
@@ -163,9 +164,9 @@ export async function rejectMitra(uid: string) {
 
 export interface Camera {
   id: string; // Firestore doc id
-  cameraId: string; // ID perangkat yang diisi user, unik per pemilik
+  cameraId: string; // ID stream dari server kamera (camera-server), dipaste user
   name: string; // nama tampilan, misal "Kamera Dermaga Bunaken"
-  streamUrl: string; // URL stream langsung (MJPEG/HTTP), wajib http(s)://
+  streamUrl?: string; // legacy: URL stream langsung, kamera lama sebelum server kamera
   location: string; // lokasi pemasangan, boleh string kosong
   ownerUid: string;
   ownerName: string; // snapshot nama pemilik saat dibuat (untuk panel admin)
@@ -209,6 +210,32 @@ export function subscribeAllCameras(callback: (cameras: Camera[]) => void) {
   return onSnapshot(collection(db, "cameras"), (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
   });
+}
+
+// ── Pengaturan server kamera ──
+// Alamat server kamera lokal (camera-server) disimpan di Firestore supaya
+// bisa diganti dari website saat WiFi/IP berubah — semua kamera mengikuti.
+
+export function subscribeCameraServerUrl(callback: (url: string) => void) {
+  if (!db) return () => {};
+  return onSnapshot(doc(db, "settings", "cameraServer"), (snap) => {
+    callback((snap.data()?.baseUrl as string | undefined) ?? "");
+  });
+}
+
+export async function setCameraServerUrl(baseUrl: string) {
+  if (!db) return;
+  await setDoc(doc(db, "settings", "cameraServer"), {
+    baseUrl,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** URL stream final: server kamera + ID. Kamera lama tetap pakai streamUrl langsung. */
+export function resolveStreamUrl(camera: Camera, serverBaseUrl: string): string {
+  if (camera.streamUrl) return camera.streamUrl;
+  if (!serverBaseUrl) return "";
+  return `${serverBaseUrl.replace(/\/+$/, "")}/stream/${camera.cameraId}`;
 }
 
 // ── Bookings ──

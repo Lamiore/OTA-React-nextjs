@@ -10,6 +10,7 @@ import {
   type Camera,
 } from '@/lib/firestore';
 import CameraLiveModal from './CameraLiveModal';
+import ServerAddressCard from './ServerAddressCard';
 
 function TrashIcon() {
   return (
@@ -28,7 +29,6 @@ export default function CameraManager({ user }: { user: User }) {
   // Form tambah kamera
   const [cameraId, setCameraId] = useState('');
   const [name, setName] = useState('');
-  const [streamUrl, setStreamUrl] = useState('');
   const [location, setLocation] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -53,13 +53,12 @@ export default function CameraManager({ user }: { user: User }) {
     e.preventDefault();
     const id = cameraId.trim();
     const nm = name.trim();
-    const url = streamUrl.trim();
-    if (!id || !nm || !url) {
-      setError('ID kamera, nama, dan URL stream wajib diisi.');
+    if (!id || !nm) {
+      setError('ID kamera dan nama wajib diisi.');
       return;
     }
-    if (!/^https?:\/\//i.test(url)) {
-      setError('URL stream harus diawali http:// atau https://.');
+    if (/\s/.test(id) || /^https?:\/\//i.test(id)) {
+      setError('Isi ID pendek dari website kamera (misal k7x2ab), bukan URL.');
       return;
     }
     if (cameras.some((c) => c.cameraId === id)) {
@@ -72,7 +71,6 @@ export default function CameraManager({ user }: { user: User }) {
       await addCamera({
         cameraId: id,
         name: nm,
-        streamUrl: url,
         location: location.trim(),
         ownerUid: user.uid,
         ownerName: user.displayName ?? '',
@@ -80,7 +78,6 @@ export default function CameraManager({ user }: { user: User }) {
       });
       setCameraId('');
       setName('');
-      setStreamUrl('');
       setLocation('');
     } catch {
       setError('Gagal menyimpan kamera. Coba lagi.');
@@ -140,6 +137,10 @@ export default function CameraManager({ user }: { user: User }) {
         document.body,
       )}
 
+      <div className="mb-4">
+        <ServerAddressCard />
+      </div>
+
       {/* Daftar kamera */}
       <div className="space-y-3">
         {loading ? (
@@ -192,9 +193,12 @@ export default function CameraManager({ user }: { user: User }) {
             <input
               value={cameraId}
               onChange={(e) => setCameraId(e.target.value)}
-              placeholder="Misal: CAM-BUNAKEN-01"
+              placeholder="Misal: k7x2ab"
               className={inputClass}
             />
+            <p className="text-[11px] text-navy-soft mt-1.5">
+              Salin ID dari daftar kamera di website kamera.
+            </p>
           </div>
           <div>
             <label className="block text-[12px] font-medium text-navy mb-1.5">Nama Kamera</label>
@@ -202,16 +206,6 @@ export default function CameraManager({ user }: { user: User }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Misal: Kamera Dermaga Bunaken"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-[12px] font-medium text-navy mb-1.5">URL Stream</label>
-            <input
-              value={streamUrl}
-              onChange={(e) => setStreamUrl(e.target.value)}
-              inputMode="url"
-              placeholder="http://192.168.1.20:8080/video"
               className={inputClass}
             />
           </div>
