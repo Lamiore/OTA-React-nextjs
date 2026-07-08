@@ -239,6 +239,20 @@ export function resolveStreamUrl(camera: Camera, serverBaseUrl: string): string 
   return `${serverBaseUrl.replace(/\/+$/, "")}/stream/${camera.cameraId}`;
 }
 
+/**
+ * URL statistik/riwayat deteksi per-kamera pada server gabungan
+ * (kamera_deteksi.py). Kamera lama yang memakai streamUrl langsung tidak punya
+ * endpoint ini → kembalikan string kosong agar panel deteksi disembunyikan.
+ */
+export function resolveDetectionUrl(
+  camera: Camera,
+  serverBaseUrl: string,
+  kind: "stats" | "history",
+): string {
+  if (camera.streamUrl || !serverBaseUrl) return "";
+  return `${serverBaseUrl.replace(/\/+$/, "")}/${kind}/${camera.cameraId}`;
+}
+
 // ── Bookings ──
 
 export interface BookingItem {

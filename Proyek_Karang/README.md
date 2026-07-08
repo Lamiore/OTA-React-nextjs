@@ -19,7 +19,8 @@ Proyek_Karang/
 ├── aug_dataset/            # Dataset hasil augmentasi
 ├── runs/                   # Hasil training & ekspor bobot YOLO
 ├── venv_mac/               # Virtual environment Python (khusus macOS)
-├── app_web.py              # Server Web Backend Flask (Utama)
+├── app_web.py              # Server Web Backend Flask — kamera coral global (halaman Monitoring)
+├── kamera_deteksi.py       # Server kamera mitra multi-kamera + deteksi (halaman Kamera per-user)
 ├── app_karang.py           # Aplikasi Desktop GUI Standalone
 ├── best.pt                 # Bobot YOLOv8 hasil training terbaik
 ├── yolov8n.pt              # Bobot model dasar (Nano) YOLOv8
@@ -60,6 +61,28 @@ Jalankan Flask server yang melayani API statistik dan video feed:
 python app_web.py
 ```
 * Buka browser di alamat: `http://localhost:5001` (kamera otomatis langsung menyala saat dimuat).
+
+### 1b. Menjalankan Server Kamera Mitra + Deteksi (multi-kamera per-user)
+Server ini menggabungkan relay kamera mitra (dulu `camera-server/server.py`)
+dengan deteksi karang: tiap kamera yang didaftarkan mitra distream dengan
+anotasi YOLO + `coral_logic`, dan punya statistik & riwayat deteksi sendiri.
+```bash
+python kamera_deteksi.py                             # default port 5001
+python kamera_deteksi.py --port 5002                 # bila app_web.py sudah pakai 5001
+python kamera_deteksi.py --password rahasiaku        # password kelola sendiri
+```
+* Buka `http://<alamat-server>:<port>` untuk mendaftarkan kamera (dapat ID pendek),
+  lalu salin **Alamat Server** ke kolom "Alamat Server Kamera" di website OTA
+  (Profil → Kamera) dan **ID** ke form "Tambah Kamera".
+* **Halaman kelola dipassword** (Basic Auth): tanpa `--password`, password acak
+  dicetak di terminal saat server start (username bebas). Hanya pemegang password
+  yang bisa melihat daftar ID & menambah/menghapus kamera; stream tetap terbuka
+  karena ID-nya acak dan `<img>` MJPEG tidak bisa mengirim header auth.
+* Deteksi hanya berjalan **saat kamera ditonton** (live view dibuka): model YOLO
+  dimuat per kamera saat penonton pertama datang dan dilepas ~30 dtk setelah
+  penonton terakhir pergi. Statistik & riwayat terkumpul selama sesi menonton.
+* Endpoint per kamera: `/stream/<id>` (teranotasi), `/snapshot/<id>`,
+  `/stats/<id>`, `/history/<id>`.
 
 ### 2. Menjalankan Aplikasi GUI Desktop Standalone
 Jalankan aplikasi desktop lokal cepat tanpa browser:

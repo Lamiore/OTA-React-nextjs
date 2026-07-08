@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { resolveStreamUrl, subscribeCameraServerUrl, type Camera } from '@/lib/firestore';
+import { resolveDetectionUrl, resolveStreamUrl, subscribeCameraServerUrl, type Camera } from '@/lib/firestore';
+import CameraStats from './CameraStats';
+import CameraHistory from './CameraHistory';
 
 interface Props {
   camera: Camera;
@@ -27,12 +29,14 @@ export default function CameraLiveModal({ camera, onClose }: Props) {
   if (!mounted) return null;
 
   const src = serverUrl === null ? null : resolveStreamUrl(camera, serverUrl);
+  const statsUrl = serverUrl === null ? '' : resolveDetectionUrl(camera, serverUrl, 'stats');
+  const historyUrl = serverUrl === null ? '' : resolveDetectionUrl(camera, serverUrl, 'history');
 
   return createPortal(
     <div className="fixed inset-0 z-[200] overflow-y-auto">
       <div className="absolute inset-0 bg-shore-50/60 backdrop-blur-lg" onClick={onClose} />
       <div className="relative flex min-h-full items-center justify-center p-4">
-        <div className="w-full max-w-2xl card p-5 animate-fade-up" onClick={(e) => e.stopPropagation()}>
+        <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto card p-5 animate-fade-up" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="min-w-0">
               <h2 className="font-serif text-lg font-medium text-navy truncate">{camera.name}</h2>
@@ -74,6 +78,14 @@ export default function CameraLiveModal({ camera, onClose }: Props) {
               />
             )}
           </div>
+
+          {/* Deteksi karang per-kamera — hanya untuk kamera server (bukan streamUrl legacy) */}
+          {(statsUrl || historyUrl) && (
+            <div className="mt-5 space-y-4">
+              {statsUrl && <CameraStats url={statsUrl} />}
+              {historyUrl && <CameraHistory url={historyUrl} />}
+            </div>
+          )}
         </div>
       </div>
     </div>,

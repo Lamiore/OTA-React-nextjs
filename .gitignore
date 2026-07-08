@@ -57,8 +57,4 @@ next-env.d.ts
 /Proyek_Karang/screenshot*/
 /Proyek_Karang/**/__pycache__/
 /Proyek_Karang/*.pt
-
-# camera-server: server kamera lokal untuk demo (data & venv saja yang di-ignore)
-/camera-server/cameras.json
-/camera-server/.venv/
-/camera-server/__pycache__/
+/Proyek_Karang/cameras.json

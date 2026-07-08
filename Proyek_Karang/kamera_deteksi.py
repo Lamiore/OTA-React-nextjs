@@ -1,17 +1,29 @@
-"""Server kamera lokal untuk demo fitur Kamera Mitra OTA.
+"""Server kamera mitra + deteksi karang (gabungan).
 
-Jalan di laptop pada jaringan WiFi yang sama dengan kamera dan penonton.
-Mitra mendaftarkan kamera di halaman web server ini, mendapat ID pendek,
-lalu menempelkan ID itu di website OTA. Website OTA menyusun URL stream
-dari "Alamat Server Kamera" (disimpan di Firestore) + /stream/<id>.
+Menggabungkan dua sistem lama:
+- arsitektur multi-kamera dari `camera-server/server.py` (satu worker per
+  kamera, idle-stop, registrasi via halaman web + `cameras.json`, path
+  `/stream/<id>` dipertahankan supaya website OTA tidak perlu diubah);
+- deteksi coral dari `app_web.py` (`coral_logic` + YOLO `best.pt`).
 
-Sumber kamera yang didukung:
+Tiap kamera kini punya stream teranotasi sendiri plus statistik & riwayat
+deteksi sendiri. Deteksi hanya berjalan SAAT KAMERA DITONTON: model YOLO
+dimuat ketika penonton pertama datang dan dilepas lagi saat worker idle-stop
+(30 dtk tanpa penonton), agar laptop tidak menanggung N inferensi paralel.
+
+Sumber kamera yang didukung sama seperti server lama:
 - angka (mis. `0`)  → webcam bawaan laptop (index perangkat OpenCV);
 - URL http(s)       → stream MJPEG, mis. aplikasi IP Webcam Android;
-- `test`            → pola uji bergerak, tanpa kamera fisik.
+- `test`            → pola uji bergerak, tanpa kamera & TANPA deteksi.
+
+Halaman kelola (daftar ID + tambah/hapus kamera) dilindungi password Basic
+Auth (`--password`, atau dibuat acak & dicetak di terminal). Stream/stats/
+history terbuka: ID acak praktis tak tertebak dan <img> MJPEG di website
+tidak bisa mengirim header auth.
 """
 
 import argparse
+import functools
 import json
 import secrets
 import socket
@@ -21,7 +33,12 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from flask import Flask, Response, abort, redirect, render_template_string, request
+from flask import (Flask, Response, abort, jsonify, redirect,
+                   render_template_string, request)
+from flask_cors import CORS
+from ultralytics import YOLO
+
+import coral_logic
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_FILE = BASE_DIR / "cameras.json"
@@ -29,7 +46,86 @@ ID_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"  # tanpa karakter membingungkan 
 JPEG_QUALITY = 70
 TEST_FPS = 15
 
+# ============== TUNING INFERENSI (samakan dgn app_web.py) ==============
+CONF = 0.5
+IMG_SIZE = 640
+MAX_DET = 20
+
+_COLOR = {
+    coral_logic.HEALTH_SEHAT: (0, 255, 0),     # hijau
+    coral_logic.HEALTH_KURANG: (0, 255, 255),  # kuning
+    coral_logic.HEALTH_BLEACH: (0, 0, 255),    # merah
+    coral_logic.HEALTH_UNKNOWN: (200, 200, 200),
+}
+
+
+def resolve_model_path() -> str:
+    """Cari bobot model relatif terhadap folder skrip (bukan cwd)."""
+    for rel in ("best.pt", "runs/detect/train-2/weights/best.pt"):
+        p = BASE_DIR / rel
+        if p.exists():
+            return str(p)
+    print("⚠️  Bobot model tidak ditemukan. Memakai yolov8n.pt")
+    return str(BASE_DIR / "yolov8n.pt")
+
+
+MODEL_PATH = resolve_model_path()
+
+
+def annotate(model, tracker, frame):
+    """Tracking + klasifikasi kesehatan + gambar overlay pada satu frame.
+
+    `model` & `tracker` milik satu kamera (tidak dibagi antar kamera):
+    Ultralytics menyimpan state ByteTrack di dalam instance model, jadi tiap
+    kamera wajib punya instance model sendiri agar track-nya tidak bertabrakan.
+    """
+    results = model.track(frame, persist=True, conf=CONF, imgsz=IMG_SIZE,
+                          max_det=MAX_DET, tracker="bytetrack.yaml", verbose=False)
+    boxes = results[0].boxes
+    dets, coords = [], []
+    for box in boxes:
+        cls_id = int(box.cls[0])
+        label = model.names[cls_id]
+        x1, y1, x2, y2 = map(int, box.xyxy[0])
+        tid = int(box.id[0]) if box.id is not None else None
+        health = coral_logic.predict_health(frame[y1:y2, x1:x2])
+        dets.append({"id": tid, "jenis": label, "health": health})
+        coords.append((x1, y1, x2, y2))
+
+    smoothed = tracker.update(dets)
+    for (x1, y1, x2, y2), d, sm in zip(coords, dets, smoothed):
+        color = _COLOR.get(sm, (200, 200, 200))
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+        cv2.putText(frame, f"{d['jenis']} | {sm}", (x1, max(y1 - 10, 20)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+    return frame
+
+
 app = Flask(__name__)
+CORS(app)  # /stats & /history diambil via fetch() dari browser → butuh CORS
+
+
+# ============== PROTEKSI HALAMAN KELOLA ==============
+# Hanya halaman kelola (daftar ID + tambah/hapus kamera) yang dipassword —
+# siapa pun satu WiFi tidak bisa lagi mengubah daftar kamera. Stream/stats/
+# history sengaja dibiarkan terbuka: ID 6 karakter acak (~887 juta kombinasi)
+# praktis tak tertebak, dan <img> MJPEG tidak bisa mengirim header auth.
+
+def _auth_ok() -> bool:
+    auth = request.authorization
+    return (auth is not None and auth.password is not None
+            and secrets.compare_digest(auth.password, app.config["ADMIN_PASSWORD"]))
+
+
+def auth_required(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not _auth_ok():
+            return Response(
+                "Login dibutuhkan. Username bebas; password ada di terminal server.",
+                401, {"WWW-Authenticate": 'Basic realm="Server Kamera OTA"'})
+        return fn(*args, **kwargs)
+    return wrapper
 
 cameras: dict[str, dict] = {}  # id -> {"id", "name", "source"}
 workers: dict[str, "CameraWorker"] = {}
@@ -81,7 +177,9 @@ class CameraWorker(threading.Thread):
     """Satu thread pembaca per kamera; semua penonton berbagi frame terakhir.
 
     Worker dibuat saat penonton pertama datang dan berhenti sendiri setelah
-    IDLE_STOP_SECONDS tanpa penonton, supaya webcam tidak terkunci terus.
+    IDLE_STOP_SECONDS tanpa penonton, supaya webcam tidak terkunci terus dan
+    inferensi YOLO tidak jalan sia-sia. Tiap worker memegang instance YOLO +
+    `CoralTracker` sendiri; keduanya dimuat saat run() dan dilepas saat stop.
     """
 
     IDLE_STOP_SECONDS = 30
@@ -95,6 +193,10 @@ class CameraWorker(threading.Thread):
         self.stopped = False
         self.viewers = 0
         self.last_viewer_at = time.time()
+        # Tracker per-kamera dibuat lebih awal supaya /stats & /history bisa
+        # membaca meski worker baru mulai; model YOLO (berat) dimuat di run().
+        self.detect = source != "test"
+        self.tracker = coral_logic.CoralTracker() if self.detect else None
 
     def add_viewer(self) -> None:
         with self.cond:
@@ -120,6 +222,11 @@ class CameraWorker(threading.Thread):
                 self.cond.notify_all()
 
     def run(self) -> None:
+        # Muat model hanya saat worker benar-benar mulai (= ada penonton).
+        model = None
+        if self.detect:
+            print(f"🧠 [{self.cam_id}] memuat model YOLO untuk deteksi...")
+            model = YOLO(MODEL_PATH)
         cap = None if self.source == "test" else self._open_capture()
         try:
             while True:
@@ -140,10 +247,13 @@ class CameraWorker(threading.Thread):
                     time.sleep(2)  # sumber putus; coba sambung ulang
                     cap = self._open_capture()
                     continue
+                if self.detect:
+                    frame = annotate(model, self.tracker, frame)
                 self._publish(frame)
         finally:
             if cap is not None:
                 cap.release()
+            model = None  # lepas referensi model → memori dibebaskan saat idle-stop
             with registry_lock:
                 if workers.get(self.cam_id) is self:
                     del workers[self.cam_id]
@@ -153,6 +263,7 @@ class CameraWorker(threading.Thread):
 
 
 def get_worker(cam_id: str) -> CameraWorker:
+    """Ambil worker, buat & jalankan bila belum ada. Dipakai stream/snapshot."""
     with registry_lock:
         worker = workers.get(cam_id)
         if worker is None or worker.stopped:
@@ -160,6 +271,14 @@ def get_worker(cam_id: str) -> CameraWorker:
             workers[cam_id] = worker
             worker.start()
         return worker
+
+
+def peek_worker(cam_id: str) -> "CameraWorker | None":
+    """Ambil worker yang SUDAH ada tanpa membuat yang baru. Dipakai stats/history
+    supaya polling 5 detik tidak ikut menyalakan kamera + model."""
+    with registry_lock:
+        worker = workers.get(cam_id)
+        return worker if worker and not worker.stopped else None
 
 
 def mjpeg_stream(worker: CameraWorker):
@@ -183,12 +302,17 @@ def mjpeg_stream(worker: CameraWorker):
         worker.remove_viewer()
 
 
+EMPTY_STATS = {"total": 0, "by_health": {}, "by_jenis": {},
+               "current": {"total": 0, "by_health": {}, "by_jenis": {}}}
+EMPTY_HISTORY = {"total": 0, "count": 0, "history": []}
+
+
 PAGE = """<!doctype html>
 <html lang="id">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Server Kamera Mitra — OTA</title>
+<title>Server Kamera + Deteksi Karang — OTA</title>
 <style>
   * { box-sizing: border-box; margin: 0; }
   body { font-family: -apple-system, "Segoe UI", sans-serif; background: #f0f4f8;
@@ -223,8 +347,9 @@ PAGE = """<!doctype html>
 </head>
 <body>
 <div class="wrap">
-  <h1>Server Kamera Mitra</h1>
-  <p class="sub">Demo lokal — semua perangkat harus satu WiFi.</p>
+  <h1>Server Kamera + Deteksi Karang</h1>
+  <p class="sub">Demo lokal — semua perangkat harus satu WiFi. Tiap kamera
+  distream dengan deteksi karang otomatis.</p>
 
   <div class="card">
     <h2>Alamat Server</h2>
@@ -290,6 +415,7 @@ function salin(id, btn) {
 
 
 @app.get("/")
+@auth_required
 def index():
     return render_template_string(
         PAGE,
@@ -299,6 +425,7 @@ def index():
 
 
 @app.post("/cameras")
+@auth_required
 def add_camera():
     name = request.form.get("name", "").strip()
     source = request.form.get("source", "").strip()
@@ -311,6 +438,7 @@ def add_camera():
 
 
 @app.post("/cameras/<cam_id>/delete")
+@auth_required
 def delete_camera(cam_id: str):
     with registry_lock:
         cameras.pop(cam_id, None)
@@ -353,15 +481,50 @@ def snapshot(cam_id: str):
     return Response(frame, mimetype="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
+@app.get("/stats/<cam_id>")
+def stats(cam_id: str):
+    """Statistik deteksi kamera ini. Tidak menyalakan kamera: kalau tidak sedang
+    ditonton (worker mati), balikkan nol."""
+    if cam_id not in cameras:
+        abort(404)
+    worker = peek_worker(cam_id)
+    if worker is None or worker.tracker is None:
+        return jsonify(EMPTY_STATS)
+    return jsonify(worker.tracker.stats())
+
+
+@app.get("/history/<cam_id>")
+def history(cam_id: str):
+    if cam_id not in cameras:
+        abort(404)
+    worker = peek_worker(cam_id)
+    if worker is None or worker.tracker is None:
+        return jsonify(EMPTY_HISTORY)
+    return jsonify(worker.tracker.history())
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Server kamera lokal demo OTA")
-    # 5000 dihindari: dipakai AirPlay Receiver di macOS.
+    parser = argparse.ArgumentParser(
+        description="Server kamera mitra + deteksi karang (demo OTA)")
+    # 5000 dihindari: dipakai AirPlay Receiver di macOS. Kalau app_web.py juga
+    # jalan di 5001, jalankan salah satunya dengan --port lain (mis. 5002).
     parser.add_argument("--port", type=int, default=5001)
+    parser.add_argument("--password", default=None,
+                        help="password halaman kelola; kosong = dibuat acak & "
+                             "ditampilkan di terminal")
     args = parser.parse_args()
 
     load_cameras()
     app.config["PORT"] = args.port
-    print(f"\n  Server kamera jalan di: http://{lan_ip()}:{args.port}\n")
+    password = args.password or \
+        "".join(secrets.choice(ID_ALPHABET) for _ in range(8))
+    app.config["ADMIN_PASSWORD"] = password
+    print(f"🚀 Model deteksi: {MODEL_PATH}")
+    print(f"\n  Server kamera jalan di: http://{lan_ip()}:{args.port}")
+    if args.password:
+        print("  🔒 Halaman kelola dilindungi password (--password).\n")
+    else:
+        print(f"  🔒 Password halaman kelola: {password}  (username bebas)\n")
     app.run(host="0.0.0.0", port=args.port, threaded=True)
 
 
