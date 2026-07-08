@@ -114,7 +114,7 @@ export default function DestinasiPanel() {
       ...f,
       priceItems: [
         ...(f.priceItems ?? []),
-        { id: crypto.randomUUID(), label: '', price: 0, unit: '/pax' },
+        { id: crypto.randomUUID(), label: '', description: '', price: 0, unit: '/pax' },
       ],
     }));
 
@@ -226,35 +226,43 @@ export default function DestinasiPanel() {
                 <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Daftar Harga</label>
                 <div className="space-y-2">
                   {(form.priceItems ?? []).map((item, i) => (
-                    <div key={item.id} className="flex items-center gap-2">
+                    <div key={item.id} className="rounded-xl border border-shore-200 bg-surface/60 p-2.5 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={item.label}
+                          onChange={(e) => updateItem(i, { label: e.target.value })}
+                          placeholder="Nama item (mis. Tiket Masuk)"
+                          className="flex-1 min-w-0 rounded-xl border border-shore-200 bg-surface px-3 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          value={item.price || ''}
+                          onChange={(e) => updateItem(i, { price: Math.max(0, Number(e.target.value)) })}
+                          placeholder="Harga"
+                          className="w-24 rounded-xl border border-shore-200 bg-surface px-3 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                        />
+                        <input
+                          value={item.unit}
+                          onChange={(e) => updateItem(i, { unit: e.target.value })}
+                          placeholder="/pax"
+                          className="w-20 rounded-xl border border-shore-200 bg-surface px-3 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                        />
+                        <button
+                          type="button"
+                          aria-label={`Hapus ${item.label || 'item'}`}
+                          onClick={() => removeItem(i)}
+                          className="h-8 w-8 shrink-0 rounded-lg border border-shore-200 flex items-center justify-center text-navy-soft hover:text-red-500 hover:border-red-200 transition-colors"
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
                       <input
-                        value={item.label}
-                        onChange={(e) => updateItem(i, { label: e.target.value })}
-                        placeholder="Nama item (mis. Tiket Masuk)"
-                        className="flex-1 min-w-0 rounded-xl border border-shore-200 bg-surface px-3 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                        value={item.description ?? ''}
+                        onChange={(e) => updateItem(i, { description: e.target.value })}
+                        placeholder="Deskripsi singkat (opsional) — mis. Sudah termasuk pemandu & alat"
+                        className="w-full rounded-xl border border-shore-200 bg-surface px-3 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
                       />
-                      <input
-                        type="number"
-                        min={0}
-                        value={item.price || ''}
-                        onChange={(e) => updateItem(i, { price: Math.max(0, Number(e.target.value)) })}
-                        placeholder="Harga"
-                        className="w-24 rounded-xl border border-shore-200 bg-surface px-3 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
-                      />
-                      <input
-                        value={item.unit}
-                        onChange={(e) => updateItem(i, { unit: e.target.value })}
-                        placeholder="/pax"
-                        className="w-20 rounded-xl border border-shore-200 bg-surface px-3 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
-                      />
-                      <button
-                        type="button"
-                        aria-label={`Hapus ${item.label || 'item'}`}
-                        onClick={() => removeItem(i)}
-                        className="h-8 w-8 shrink-0 rounded-lg border border-shore-200 flex items-center justify-center text-navy-soft hover:text-red-500 hover:border-red-200 transition-colors"
-                      >
-                        <TrashIcon />
-                      </button>
                     </div>
                   ))}
                   <button type="button" onClick={addItem} className="btn-ghost w-full rounded-xl px-4 py-2.5 text-[13px]">

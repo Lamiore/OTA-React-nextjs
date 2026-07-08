@@ -20,6 +20,7 @@ import { db } from "./firebase";
 export interface PriceItem {
   id: string; // key React & edit admin — crypto.randomUUID()
   label: string; // "Tiket Masuk", "Penginapan", "Sewa Alat Diving", ...
+  description?: string; // penjelasan singkat item, tampil di kartu daftar harga
   price: number; // rupiah, >= 0
   unit: string; // "/pax", "/malam", "/set" — teks bebas
 }

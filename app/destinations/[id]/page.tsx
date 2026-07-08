@@ -184,7 +184,7 @@ export default function DestinationDetail() {
           <div className="space-y-3">
             <h2 className="text-[11px] font-medium text-navy-soft uppercase tracking-wider">Daftar Harga</h2>
             {priceItems.length > 0 ? (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {priceItems.map((item) => {
                   const isSelected = selectedIds.includes(item.id);
                   return (
@@ -193,15 +193,16 @@ export default function DestinationDetail() {
                       type="button"
                       onClick={() => toggleItem(item.id)}
                       aria-pressed={isSelected}
-                      className={`flex w-full items-center justify-between gap-3 rounded-[1.25rem] border p-4 text-left shadow-soft transition-all ${
+                      className={`flex flex-col rounded-2xl border p-4 text-left shadow-soft transition-all ${
                         isSelected
                           ? 'border-teal-400 bg-teal-50 shadow-lift'
                           : 'border-shore-200 bg-surface hover:border-shore-300 hover:shadow-lift'
                       }`}
                     >
-                      <span className="flex min-w-0 items-center gap-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="text-[14px] font-semibold text-navy leading-snug">{item.label}</h3>
                         <span
-                          className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[6px] border transition-colors ${
+                          className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[6px] border transition-colors ${
                             isSelected
                               ? 'border-teal-500 bg-teal-500 text-white'
                               : 'border-shore-300 bg-surface'
@@ -209,12 +210,16 @@ export default function DestinationDetail() {
                         >
                           {isSelected && <CheckIcon />}
                         </span>
-                        <span className="text-[14px] text-navy truncate">{item.label}</span>
-                      </span>
-                      <span className="text-[14px] font-semibold text-navy shrink-0">
+                      </div>
+                      {item.description && (
+                        <p className="mt-1.5 text-[12px] text-navy-soft leading-relaxed line-clamp-2">
+                          {item.description}
+                        </p>
+                      )}
+                      <p className="mt-auto pt-3 text-[15px] font-semibold text-navy">
                         {formatRp(item.price)}
                         <span className="text-[12px] text-navy-soft font-normal"> {item.unit}</span>
-                      </span>
+                      </p>
                     </button>
                   );
                 })}
