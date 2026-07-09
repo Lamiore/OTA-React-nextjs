@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import Link from 'next/link';
 import { subscribeMonitoring, type SensorReading } from '@/lib/realtime';
 
 interface Metric {
@@ -17,9 +16,10 @@ function fmt(n: number | undefined, digits = 1) {
 }
 
 /**
- * Ringkasan sensor IoT live untuk halaman detail destinasi yang punya stasiun fisik.
- * Sumber data global `monitoring/latest` (cuma 1 stasiun). Kamera sengaja TIDAK di sini —
- * tetap di halaman /monitoring.
+ * Panel IoT lengkap untuk halaman detail destinasi yang menjadi lokasi stasiun
+ * sensor. Sumber data global `monitoring/latest` (cuma 1 stasiun fisik), jadi
+ * hanya satu destinasi yang boleh ditandai sebagai lokasi stasiun (single-select
+ * di dashboard admin). Menampilkan seluruh metrik + lokasi GPS stasiun.
  */
 export default function LiveMonitorSection() {
   const [data, setData] = useState<SensorReading | null>(null);
@@ -42,7 +42,38 @@ export default function LiveMonitorSection() {
   const ageSec = data?.updatedAt ? Math.max(0, Math.round((now - data.updatedAt) / 1000)) : null;
   const isLive = ageSec !== null && ageSec < 15;
 
+  const lat = data?.latitude;
+  const lng = data?.longitude;
+  const hasFix =
+    !!data?.gpsValid &&
+    typeof lat === 'number' &&
+    typeof lng === 'number' &&
+    (lat !== 0 || lng !== 0);
+  const mapsUrl = hasFix ? `https://www.google.com/maps?q=${lat},${lng}` : null;
+
   const metrics: Metric[] = [
+    {
+      label: 'Suhu Udara',
+      value: fmt(data?.tempDHT),
+      unit: '°C',
+      color: 'bg-red-100 text-red-600',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Kelembapan Udara',
+      value: fmt(data?.humidity),
+      unit: '%',
+      color: 'bg-blue-100 text-blue-600',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7Z" />
+        </svg>
+      ),
+    },
     {
       label: 'Suhu Air',
       value: fmt(data?.tempDS18),
@@ -86,13 +117,14 @@ export default function LiveMonitorSection() {
       ),
     },
     {
-      label: 'Suhu Udara',
-      value: fmt(data?.tempDHT),
-      unit: '°C',
-      color: 'bg-red-100 text-red-600',
+      label: 'Debit Air',
+      value: fmt(data?.flowRate, 2),
+      unit: 'L/min',
+      color: 'bg-sky-100 text-sky-600',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z" />
+          <path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 4.8 7 3c-.29 1.8-1.14 3.13-2.29 4.06S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05Z" />
+          <path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97" />
         </svg>
       ),
     },
@@ -111,7 +143,7 @@ export default function LiveMonitorSection() {
         </span>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {metrics.map((m) => (
           <div key={m.label} className="rounded-xl border border-shore-200/80 bg-surface p-3.5">
             <div className={`h-9 w-9 rounded-lg ${m.color} flex items-center justify-center mb-2.5`}>
@@ -126,21 +158,57 @@ export default function LiveMonitorSection() {
         ))}
       </div>
 
-      <div className="mt-5 flex items-center justify-between gap-3">
-        {ageSec !== null ? (
-          <p className="text-[12px] text-navy-soft">
-            Diperbarui {ageSec < 5 ? 'baru saja' : `${ageSec} detik lalu`}
-          </p>
-        ) : (
-          <span />
+      {/* Lokasi GPS stasiun */}
+      <div className="mt-3 rounded-xl border border-shore-200/80 bg-surface p-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 10c0 4.4-8 12-8 12s-8-7.6-8-12a8 8 0 0 1 16 0Z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[11px] text-navy-soft">Lokasi Stasiun (GPS)</p>
+              {hasFix ? (
+                <p className="text-[15px] font-semibold text-navy leading-tight">
+                  {lat!.toFixed(6)}, {lng!.toFixed(6)}
+                </p>
+              ) : (
+                <p className="text-[13px] font-medium text-navy-soft">
+                  Mencari sinyal satelit…
+                  {typeof data?.satellites === 'number' && data.satellites > 0
+                    ? ` (${data.satellites} terlihat)`
+                    : ''}
+                </p>
+              )}
+            </div>
+          </div>
+          {hasFix && (
+            <a
+              href={mapsUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="chip whitespace-nowrap"
+            >
+              Buka di Peta
+            </a>
+          )}
+        </div>
+        {hasFix && (
+          <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-navy-soft">
+            <span>Satelit: {data?.satellites ?? '--'}</span>
+            {typeof data?.altitude === 'number' && <span>Ketinggian: {data.altitude.toFixed(0)} m</span>}
+            {typeof data?.speed === 'number' && <span>Kecepatan: {data.speed.toFixed(1)} km/h</span>}
+          </div>
         )}
-        <Link
-          href="/monitoring"
-          className="text-[13px] font-medium text-teal-600 hover:text-teal-700 transition-colors whitespace-nowrap"
-        >
-          Lihat monitoring lengkap →
-        </Link>
       </div>
+
+      {ageSec !== null && (
+        <p className="mt-4 text-[12px] text-navy-soft">
+          Diperbarui {ageSec < 5 ? 'baru saja' : `${ageSec} detik lalu`}
+        </p>
+      )}
     </div>
   );
 }

@@ -134,6 +134,15 @@ export default function DestinasiPanel() {
     } else {
       await addDestination(data);
     }
+    // Single-select: cuma ada 1 stasiun sensor fisik, jadi kalau destinasi ini
+    // ditandai sebagai lokasi stasiun, matikan penanda di destinasi lain.
+    if (data.hasMonitoring) {
+      await Promise.all(
+        destinations
+          .filter((d) => d.id !== editingId && d.hasMonitoring)
+          .map((d) => updateDestination(d.id, { hasMonitoring: false })),
+      );
+    }
     setSaving(false);
     closeForm();
   };
@@ -309,8 +318,8 @@ export default function DestinasiPanel() {
               {/* Monitoring IoT */}
               <label className="flex items-center justify-between gap-3 rounded-xl border border-shore-200 bg-surface px-3.5 py-3 cursor-pointer">
                 <span>
-                  <span className="block text-[13px] font-medium text-navy">Punya stasiun sensor IoT</span>
-                  <span className="block text-[11px] text-navy-soft mt-0.5">Tampilkan sensor live di halaman detail destinasi ini</span>
+                  <span className="block text-[13px] font-medium text-navy">Lokasi stasiun sensor IoT</span>
+                  <span className="block text-[11px] text-navy-soft mt-0.5">Tampilkan panel sensor lengkap di destinasi ini. Hanya 1 destinasi — mengaktifkan di sini otomatis mematikan yang lain.</span>
                 </span>
                 <input
                   type="checkbox"

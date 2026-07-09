@@ -9,7 +9,6 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 const navLinks = [
   { label: 'Beranda', href: '/beranda' },
   { label: 'Booking', href: '/booking' },
-  { label: 'Monitoring', href: '/monitoring' },
 ];
 
 function SearchIcon() {
