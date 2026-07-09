@@ -36,6 +36,15 @@ export default function SensorPanel() {
   const ageSec = data?.updatedAt ? Math.max(0, Math.round((now - data.updatedAt) / 1000)) : null;
   const isLive = ageSec !== null && ageSec < 15;
 
+  const lat = data?.latitude;
+  const lng = data?.longitude;
+  const hasFix =
+    !!data?.gpsValid &&
+    typeof lat === 'number' &&
+    typeof lng === 'number' &&
+    (lat !== 0 || lng !== 0);
+  const mapsUrl = hasFix ? `https://www.google.com/maps?q=${lat},${lng}` : null;
+
   const metrics: Metric[] = [
     {
       label: 'Suhu Udara',
@@ -141,6 +150,51 @@ export default function SensorPanel() {
             <p className="text-[12px] text-navy-soft mt-0.5">{m.label}</p>
           </div>
         ))}
+      </div>
+
+      <div className="card mt-4 p-5 text-left">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 10c0 4.4-8 12-8 12s-8-7.6-8-12a8 8 0 0 1 16 0Z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[12px] text-navy-soft">Lokasi Stasiun (GPS)</p>
+              {hasFix ? (
+                <p className="text-lg font-semibold text-navy">
+                  {lat!.toFixed(6)}, {lng!.toFixed(6)}
+                </p>
+              ) : (
+                <p className="text-sm font-medium text-navy-soft">
+                  Mencari sinyal satelit…
+                  {typeof data?.satellites === 'number' && data.satellites > 0
+                    ? ` (${data.satellites} terlihat)`
+                    : ''}
+                </p>
+              )}
+            </div>
+          </div>
+          {hasFix && (
+            <a
+              href={mapsUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="chip whitespace-nowrap"
+            >
+              Buka di Peta
+            </a>
+          )}
+        </div>
+        {hasFix && (
+          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-navy-soft">
+            <span>Satelit: {data?.satellites ?? '--'}</span>
+            {typeof data?.altitude === 'number' && <span>Ketinggian: {data.altitude.toFixed(0)} m</span>}
+            {typeof data?.speed === 'number' && <span>Kecepatan: {data.speed.toFixed(1)} km/h</span>}
+          </div>
+        )}
       </div>
 
       {ageSec !== null && (

@@ -10,6 +10,14 @@ export interface SensorReading {
   windSpeed: number;
   flowRate: number;
   updatedAt: number;
+  // GPS — hanya terisi saat modul NEO-6M dapat fix satelit; kalau belum fix
+  // gpsValid=false dan koordinat 0, jadi UI bisa tampilkan "mencari sinyal".
+  latitude?: number;
+  longitude?: number;
+  altitude?: number;
+  speed?: number;
+  satellites?: number;
+  gpsValid?: boolean;
 }
 
 export function subscribeMonitoring(
