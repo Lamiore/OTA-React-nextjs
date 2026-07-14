@@ -8,6 +8,7 @@ import { getPriceItems, type Destination } from '@/lib/firestore';
 import TopNav from '@/components/desktop/TopNav';
 import BottomNav from '@/components/mobile/BottomNav';
 import LiveMonitorSection from '@/components/destinations/LiveMonitorSection';
+import DestinationCameraSection from '@/components/destinations/DestinationCameraSection';
 
 function ArrowLeftIcon() {
   return (
@@ -176,6 +177,9 @@ export default function DestinationDetail() {
               <p className="text-[14px] text-navy leading-relaxed whitespace-pre-line">{dest.description}</p>
             </div>
           )}
+
+          {/* Live camera stream dari kamera mitra/pengelola */}
+          {dest.cameraId && <DestinationCameraSection cameraId={dest.cameraId} />}
 
           {/* Live IoT monitoring — hanya untuk destinasi yang punya stasiun sensor */}
           {dest.hasMonitoring && <LiveMonitorSection />}

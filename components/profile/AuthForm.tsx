@@ -175,7 +175,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
         <p className="mt-2 text-sm text-navy-soft">
           {isLogin
             ? 'Masuk untuk melanjutkan petualangan'
-            : 'Mulai jelajahi destinasi Sulawesi Utara'}
+            : 'Mulai jelajahi destinasi indah di Sulawesi'}
         </p>
       </div>
 

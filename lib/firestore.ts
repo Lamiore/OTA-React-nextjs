@@ -40,6 +40,8 @@ export interface Destination {
   image: string;
   /** True hanya untuk destinasi yang punya stasiun sensor IoT fisik. */
   hasMonitoring?: boolean;
+  /** Tautan ke kamera mitra/pengelola (id dokumen dari koleksi 'cameras') */
+  cameraId?: string;
 }
 
 export type DestinationInput = Omit<Destination, "id">;

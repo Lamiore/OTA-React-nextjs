@@ -7,9 +7,11 @@ import {
   updateDestination,
   deleteDestination,
   getPriceItems,
+  subscribeAllCameras,
   type Destination,
   type DestinationInput,
   type PriceItem,
+  type Camera,
 } from '@/lib/firestore';
 
 const emptyForm: DestinationInput = {
@@ -22,6 +24,7 @@ const emptyForm: DestinationInput = {
   description: '',
   image: '',
   hasMonitoring: false,
+  cameraId: '',
 };
 
 function PlusIcon() {
@@ -63,6 +66,7 @@ function CloseIcon() {
 
 export default function DestinasiPanel() {
   const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [cameras, setCameras] = useState<Camera[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<DestinationInput>(emptyForm);
@@ -71,6 +75,11 @@ export default function DestinasiPanel() {
 
   useEffect(() => {
     const unsub = subscribeDestinations(setDestinations);
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeAllCameras(setCameras);
     return () => unsub();
   }, []);
 
@@ -92,6 +101,7 @@ export default function DestinasiPanel() {
       description: d.description ?? '',
       image: d.image ?? '',
       hasMonitoring: d.hasMonitoring ?? false,
+      cameraId: d.cameraId ?? '',
     });
     setTagInput(d.tags.join(', '));
     setEditingId(d.id);
@@ -313,6 +323,23 @@ export default function DestinasiPanel() {
                   rows={3}
                   className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors resize-none"
                 />
+              </div>
+
+              {/* Hubungkan Kamera */}
+              <div>
+                <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Hubungkan Kamera Mitra/Pengelola</label>
+                <select
+                  value={form.cameraId || ''}
+                  onChange={(e) => setForm({ ...form, cameraId: e.target.value })}
+                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                >
+                  <option value="">-- Tanpa Kamera --</option>
+                  {cameras.map((cam) => (
+                    <option key={cam.id} value={cam.id}>
+                      {cam.name} {cam.location ? `(${cam.location})` : ''} — {cam.ownerName || 'Mitra'}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Monitoring IoT */}

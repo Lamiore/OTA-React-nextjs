@@ -199,7 +199,7 @@ function BookingContent() {
                 </div>
               ) : (
                 <div className="rounded-xl border border-shore-200 bg-surface px-4 py-3">
-                  <p className="text-[13px] text-navy-soft">Tidak ada destinasi dipilih. <button type="button" onClick={() => router.push('/beranda')} className="text-teal-600 hover:text-teal-700 font-medium">Pilih dari beranda</button></p>
+                  <p className="text-[13px] text-navy-soft">Tidak ada destinasi dipilih. <button type="button" onClick={() => router.push('/beranda#destinasi')} className="text-teal-600 hover:text-teal-700 font-medium">Pilih dari beranda</button></p>
                 </div>
               )}
             </div>

@@ -80,7 +80,7 @@ export default function HeroBanner() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400/70 motion-reduce:animate-none" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-teal-400" />
             </span>
-            Sulawesi Utara · Taman Laut Bunaken
+            Sulawesi · Surga Bahari & Terumbu Karang
           </div>
 
           {/* Greeting */}
@@ -111,7 +111,7 @@ export default function HeroBanner() {
             style={{ animationDelay: '0.26s' }}
           >
             Temukan spot selam terbaik, pantai tersembunyi, dan pengalaman laut
-            yang tak terlupakan di ujung utara Indonesia.
+            yang tak terlupakan di seluruh Sulawesi.
           </p>
 
           {/* CTA */}

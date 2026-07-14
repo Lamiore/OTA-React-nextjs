@@ -159,7 +159,7 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
             <p className="text-sm text-navy-soft">
               {variant === 'active' ? 'Belum ada booking yang berlangsung.' : 'Belum ada booking.'}
             </p>
-            <button onClick={() => router.push('/beranda')} className="btn-primary rounded-xl px-5 py-2.5 text-[13px] mt-4">
+            <button onClick={() => router.push('/beranda#destinasi')} className="btn-primary rounded-xl px-5 py-2.5 text-[13px] mt-4">
               Buat Booking
             </button>
           </div>
