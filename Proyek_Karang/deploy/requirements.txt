@@ -1,0 +1,8 @@
+# Dependency runtime untuk kamera_deteksi.py (server kamera + deteksi karang).
+# Install di VPS: /opt/karang/venv/bin/pip install -r requirements.txt
+flask
+flask-cors
+ultralytics
+opencv-python
+numpy
+qrcode

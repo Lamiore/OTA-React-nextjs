@@ -24,6 +24,7 @@ tidak bisa mengirim header auth.
 
 import argparse
 import functools
+import io
 import json
 import secrets
 import socket
@@ -33,6 +34,8 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import qrcode
+import qrcode.image.svg
 from flask import (Flask, Response, abort, jsonify, redirect,
                    render_template_string, request)
 from flask_cors import CORS
@@ -173,6 +176,16 @@ def make_test_frame(cam_id: str, tick: float) -> np.ndarray:
     return frame
 
 
+def make_qr_svg(data: str) -> str:
+    """QR code sebagai SVG inline — murni Python, tanpa Pillow / panggilan luar."""
+    img = qrcode.make(data, image_factory=qrcode.image.svg.SvgPathImage,
+                      box_size=10, border=2)
+    buf = io.BytesIO()
+    img.save(buf)
+    svg = buf.getvalue().decode("utf-8")
+    return svg[svg.find("<svg"):]  # buang deklarasi <?xml?> agar aman di-inline
+
+
 class CameraWorker(threading.Thread):
     """Satu thread pembaca per kamera; semua penonton berbagi frame terakhir.
 
@@ -193,9 +206,18 @@ class CameraWorker(threading.Thread):
         self.stopped = False
         self.viewers = 0
         self.last_viewer_at = time.time()
+        # Mode push (source == "push"): frame dikirim HP via POST /ingest, bukan
+        # dibaca dari perangkat. `pushed` menyimpan frame mentah terbaru.
+        self.pushed: np.ndarray | None = None
+        self.last_push_at = 0.0
+        # Klasifikasi jenis sumber sekali, case-insensitive, supaya "Push"/"PUSH"
+        # yang diketik user tetap dikenali (URL/angka device tetap apa adanya).
+        kind = source.strip().lower()
+        self.is_test = kind == "test"
+        self.is_push = kind == "push"
         # Tracker per-kamera dibuat lebih awal supaya /stats & /history bisa
         # membaca meski worker baru mulai; model YOLO (berat) dimuat di run().
-        self.detect = source != "test"
+        self.detect = not self.is_test
         self.tracker = coral_logic.CoralTracker() if self.detect else None
 
     def add_viewer(self) -> None:
@@ -207,6 +229,13 @@ class CameraWorker(threading.Thread):
         with self.cond:
             self.viewers -= 1
             self.last_viewer_at = time.time()
+
+    def submit_pushed(self, frame: np.ndarray) -> None:
+        """Terima satu frame dari HP (mode push) dan bangunkan run loop."""
+        with self.cond:
+            self.pushed = frame
+            self.last_push_at = time.time()
+            self.cond.notify_all()
 
     def _open_capture(self):
         src = int(self.source) if self.source.isdigit() else self.source
@@ -227,18 +256,33 @@ class CameraWorker(threading.Thread):
         if self.detect:
             print(f"🧠 [{self.cam_id}] memuat model YOLO untuk deteksi...")
             model = YOLO(MODEL_PATH)
-        cap = None if self.source == "test" else self._open_capture()
+        cap = None if (self.is_test or self.is_push) else self._open_capture()
         try:
             while True:
                 with self.cond:
-                    idle = self.viewers == 0 and \
-                        time.time() - self.last_viewer_at > self.IDLE_STOP_SECONDS
+                    now = time.time()
+                    idle = (self.viewers == 0
+                            and now - self.last_viewer_at > self.IDLE_STOP_SECONDS
+                            and now - self.last_push_at > self.IDLE_STOP_SECONDS)
                 if idle:
                     break
 
-                if self.source == "test":
+                if self.is_test:
                     self._publish(make_test_frame(self.cam_id, time.monotonic()))
                     time.sleep(1 / TEST_FPS)
+                    continue
+
+                if self.is_push:
+                    with self.cond:
+                        got = self.cond.wait_for(
+                            lambda: self.pushed is not None or self.stopped, timeout=1)
+                        frame = self.pushed
+                        self.pushed = None
+                    if not got or frame is None:
+                        continue
+                    if self.detect:
+                        frame = annotate(model, self.tracker, frame)
+                    self._publish(frame)
                     continue
 
                 ok, frame = cap.read()
@@ -343,6 +387,10 @@ PAGE = """<!doctype html>
         letter-spacing: 1px; color: #0d9488; }
   .empty { color: #5b7083; font-size: 13px; text-align: center; padding: 12px 0; }
   a { color: #0d9488; font-size: 12px; }
+  .qr { margin-top: 8px; }
+  .qr svg { width: 128px; height: 128px; display: block; background: #fff;
+            border: 1px solid #dde6ee; border-radius: 8px; padding: 6px; }
+  .qr-cap { font-size: 11px; color: #5b7083; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -369,6 +417,12 @@ PAGE = """<!doctype html>
       <div class="info">
         <p class="name">{{ c.name }}</p>
         <p class="src">{{ c.source }} — <a href="/stream/{{ c.id }}" target="_blank">pratinjau</a></p>
+        {% if c.source|lower == 'push' %}
+        <p class="src">📱 <a href="/broadcast/{{ c.id }}" target="_blank">buka siaran HP</a>
+           · <a href="#" onclick="salinLink('{{ c.id }}', this); return false;">salin link siaran</a></p>
+        <div class="qr" title="Scan pakai kamera HP untuk buka halaman siaran">{{ qr_svgs[c.id]|safe }}</div>
+        <p class="qr-cap">Scan pakai HP → buka halaman siaran</p>
+        {% endif %}
       </div>
       <span class="id" id="id-{{ c.id }}">{{ c.id }}</span>
       <button class="ghost" onclick="salin('id-{{ c.id }}', this)">Salin ID</button>
@@ -388,9 +442,10 @@ PAGE = """<!doctype html>
       <input name="name" required placeholder="Misal: Kamera Dermaga Bunaken">
       <label>Sumber</label>
       <input name="source" required
-             placeholder="0 (webcam laptop) / http://192.168.1.20:8080/video / test">
-      <p class="hint">Isi <code>0</code> untuk webcam laptop, URL stream IP Webcam
-      untuk kamera HP, atau <code>test</code> untuk pola uji tanpa kamera.</p>
+             placeholder="push (kamera HP) / 0 (webcam) / http://.../video / test">
+      <p class="hint">Isi <code>push</code> untuk kamera HP via browser (buka
+      <code>/broadcast/&lt;id&gt;</code> di HP), <code>0</code> untuk webcam laptop,
+      URL stream IP Webcam, atau <code>test</code> untuk pola uji tanpa kamera.</p>
       <p style="margin-top:14px"><button>Tambah</button></p>
     </form>
   </div>
@@ -409,6 +464,19 @@ function salin(id, btn) {
   btn.textContent = 'Tersalin!';
   setTimeout(() => (btn.textContent = asal), 1200);
 }
+/* Salin URL siaran lengkap (origin saat ini + /broadcast/<id>) untuk dibuka di HP. */
+function salinLink(id, el) {
+  const teks = location.origin + '/broadcast/' + id;
+  const ta = document.createElement('textarea');
+  ta.value = teks;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  ta.remove();
+  const asal = el.textContent;
+  el.textContent = 'Link tersalin!';
+  setTimeout(() => (el.textContent = asal), 1200);
+}
 </script>
 </body>
 </html>"""
@@ -417,9 +485,17 @@ function salin(id, btn) {
 @app.get("/")
 @auth_required
 def index():
+    # URL publik yang sebenarnya dilihat browser (di balik Caddy: host asli +
+    # X-Forwarded-Proto=https), dipakai untuk isi QR halaman siaran.
+    proto = request.headers.get("X-Forwarded-Proto", request.scheme)
+    base = f"{proto}://{request.host}"
+    cams = sorted(cameras.values(), key=lambda c: c["name"].lower())
+    qr_svgs = {c["id"]: make_qr_svg(f"{base}/broadcast/{c['id']}")
+               for c in cams if c["source"].strip().lower() == "push"}
     return render_template_string(
         PAGE,
-        cameras=sorted(cameras.values(), key=lambda c: c["name"].lower()),
+        cameras=cams,
+        qr_svgs=qr_svgs,
         base_url=f"http://{lan_ip()}:{app.config['PORT']}",
     )
 
@@ -501,6 +577,77 @@ def history(cam_id: str):
     if worker is None or worker.tracker is None:
         return jsonify(EMPTY_HISTORY)
     return jsonify(worker.tracker.history())
+
+
+@app.post("/ingest/<cam_id>")
+def ingest(cam_id: str):
+    """HP (mode push) mengirim satu frame JPEG. Body = byte JPEG mentah.
+    ID kamera 6-karakter acak = kredensialnya (sama seperti /stream)."""
+    if cam_id not in cameras:
+        abort(404)
+    if cameras[cam_id]["source"].strip().lower() != "push":
+        abort(400)
+    img = cv2.imdecode(np.frombuffer(request.get_data(), np.uint8), cv2.IMREAD_COLOR)
+    if img is None:
+        abort(400)
+    get_worker(cam_id).submit_pushed(img)
+    return ("", 204)
+
+
+BROADCAST_PAGE = """<!doctype html>
+<html lang="id"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Siaran — {{ name }}</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", sans-serif; background: #0b1220;
+         color: #e6eef6; margin: 0; padding: 16px; display: flex;
+         flex-direction: column; align-items: center; gap: 14px; }
+  video { width: 100%; max-width: 520px; background: #000; border-radius: 12px; }
+  button { border: 0; border-radius: 12px; padding: 14px 26px; font-size: 16px;
+           background: #0d9488; color: #fff; }
+  .status { font-size: 14px; color: #9fb3c8; }
+  h2 { font-size: 18px; margin: 4px 0; }
+</style>
+</head><body>
+<h2>Siaran Kamera: {{ name }}</h2>
+<video id="v" playsinline muted></video>
+<button id="start">Mulai Siaran</button>
+<p class="status" id="s">Tekan tombol, lalu izinkan akses kamera.</p>
+<script>
+const FPS = 8, W = 640, H = 480, Q = 0.6, CAM = "{{ cam_id }}";
+const v = document.getElementById('v'), s = document.getElementById('s');
+document.getElementById('start').onclick = async () => {
+  s.textContent = 'meminta akses kamera...';
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia(
+      { video: { facingMode: 'environment', width: W, height: H }, audio: false });
+  } catch (e) { s.textContent = 'gagal akses kamera: ' + e.message; return; }
+  v.srcObject = stream; await v.play();
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  document.getElementById('start').style.display = 'none';
+  s.textContent = 'LIVE — biarkan halaman ini terbuka';
+  setInterval(() => {
+    ctx.drawImage(v, 0, 0, W, H);
+    c.toBlob(b => {
+      if (b) fetch('/ingest/' + CAM, { method: 'POST', body: b,
+        headers: { 'Content-Type': 'image/jpeg' } }).catch(() => {});
+    }, 'image/jpeg', Q);
+  }, 1000 / FPS);
+};
+</script>
+</body></html>"""
+
+
+@app.get("/broadcast/<cam_id>")
+def broadcast(cam_id: str):
+    """Halaman kamera untuk HP (mode push). Buka lewat HTTPS agar kamera aktif."""
+    if cam_id not in cameras:
+        abort(404)
+    return render_template_string(
+        BROADCAST_PAGE, cam_id=cam_id, name=cameras[cam_id]["name"])
 
 
 def main() -> None:

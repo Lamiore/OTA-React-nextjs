@@ -1,0 +1,13 @@
+[Unit]
+Description=Server Kamera + Deteksi Karang (Flask, kamera_deteksi.py)
+After=network.target
+
+[Service]
+User=ilhamserv
+WorkingDirectory=/opt/karang
+ExecStart=/opt/karang/venv/bin/python /opt/karang/kamera_deteksi.py --port 5001 --password otakarang123
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
