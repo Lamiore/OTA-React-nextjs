@@ -88,7 +88,7 @@ const allMenuItems: { key: DashboardPage; label: string; icon: React.ReactNode; 
   { key: 'scan', label: 'Scan Tiket', icon: <ScanIcon />, roles: ['admin', 'pengelola'] },
   { key: 'destinasi', label: 'Destinasi', icon: <MapIcon />, roles: ['admin'] },
   { key: 'pengguna', label: 'Pengguna', icon: <UsersIcon />, roles: ['admin'] },
-  { key: 'kamera', label: 'Kamera', icon: <CameraIcon />, roles: ['admin'] },
+  { key: 'kamera', label: 'Kamera', icon: <CameraIcon />, roles: ['admin', 'pengelola'] },
 ];
 
 interface Props {

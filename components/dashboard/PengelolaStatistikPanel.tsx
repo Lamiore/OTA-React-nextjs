@@ -3,7 +3,11 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { subscribeDestinations, type Destination } from '@/lib/firestore';
+import {
+  subscribeDestinations,
+  destinationIdsInRegion,
+  type Destination,
+} from '@/lib/firestore';
 
 interface Booking {
   id: string;
@@ -14,7 +18,7 @@ interface Booking {
   date: string;
 }
 
-export default function PengelolaStatistikPanel() {
+export default function PengelolaStatistikPanel({ location }: { location: string | null }) {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
 
@@ -32,14 +36,19 @@ export default function PengelolaStatistikPanel() {
     return () => unsub();
   }, []);
 
-  const totalBookings = bookings.length;
-  const totalGuests = bookings.reduce((sum, b) => sum + (b.guests || 0), 0);
-  const usedTickets = bookings.filter((b) => b.status === 'used').length;
+  // Batasi ke wilayah pengelola: booking tak punya field lokasi, jadi lewat
+  // id destinasi di wilayah ini. Wilayah kosong → set kosong (tak match apa pun).
+  const regionIds = destinationIdsInRegion(destinations, location);
+  const regionBookings = bookings.filter((b) => regionIds.has(b.destinationId));
+
+  const totalBookings = regionBookings.length;
+  const totalGuests = regionBookings.reduce((sum, b) => sum + (b.guests || 0), 0);
+  const usedTickets = regionBookings.filter((b) => b.status === 'used').length;
 
   const stats = [
     {
       label: 'Total Destinasi',
-      value: destinations.length,
+      value: regionIds.size,
       color: 'bg-teal-100 text-teal-600',
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -90,15 +99,25 @@ export default function PengelolaStatistikPanel() {
     },
   ];
 
-  // Recent bookings
-  const recentBookings = [...bookings]
+  // Recent bookings (dibatasi ke wilayah pengelola)
+  const recentBookings = [...regionBookings]
     .sort((a, b) => (b.date > a.date ? 1 : -1))
     .slice(0, 5);
 
   return (
     <div className="animate-fade-in">
       <h1 className="font-serif text-2xl font-medium text-navy">Statistik</h1>
-      <p className="mt-1 text-sm text-navy-soft">Ringkasan data wisata</p>
+      <p className="mt-1 text-sm text-navy-soft">
+        {location ? `Ringkasan wisata wilayah ${location}` : 'Wilayah belum ditetapkan admin'}
+      </p>
+
+      {!location && (
+        <div className="card p-4 mt-4 text-center">
+          <p className="text-sm text-navy-soft">
+            Wilayahmu belum ditetapkan admin. Data akan muncul setelah admin menetapkan wilayah kelolamu.
+          </p>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (

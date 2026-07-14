@@ -6,8 +6,11 @@ import type { User } from 'firebase/auth';
 import {
   addCamera,
   deleteCamera,
+  distinctLocations,
+  subscribeDestinations,
   subscribeMyCameras,
   type Camera,
+  type Destination,
 } from '@/lib/firestore';
 import CameraLiveModal from './CameraLiveModal';
 import ServerAddressCard from './ServerAddressCard';
@@ -25,6 +28,7 @@ function TrashIcon() {
 export default function CameraManager({ user }: { user: User }) {
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
+  const [regions, setRegions] = useState<string[]>([]);
 
   // Form tambah kamera
   const [cameraId, setCameraId] = useState('');
@@ -49,6 +53,13 @@ export default function CameraManager({ user }: { user: User }) {
     return () => unsub();
   }, [user.uid]);
 
+  useEffect(() => {
+    const unsub = subscribeDestinations((data: Destination[]) =>
+      setRegions(distinctLocations(data)),
+    );
+    return () => unsub();
+  }, []);
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     const id = cameraId.trim();
@@ -65,13 +76,17 @@ export default function CameraManager({ user }: { user: User }) {
       setError('ID kamera sudah terdaftar.');
       return;
     }
+    if (!location) {
+      setError('Pilih wilayah kamera.');
+      return;
+    }
     setError('');
     setSaving(true);
     try {
       await addCamera({
         cameraId: id,
         name: nm,
-        location: location.trim(),
+        location: location,
         ownerUid: user.uid,
         ownerName: user.displayName ?? '',
         ownerEmail: user.email ?? '',
@@ -210,15 +225,21 @@ export default function CameraManager({ user }: { user: User }) {
             />
           </div>
           <div>
-            <label className="block text-[12px] font-medium text-navy mb-1.5">
-              Lokasi <span className="font-normal text-navy-soft">(opsional)</span>
-            </label>
-            <input
+            <label className="block text-[12px] font-medium text-navy mb-1.5">Wilayah</label>
+            <select
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="Misal: Dermaga utama, Bunaken"
               className={inputClass}
-            />
+            >
+              <option value="">Pilih wilayah…</option>
+              {regions.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-navy-soft mt-1.5">
+              Wilayah menentukan pengelola mana yang bisa memantau kamera ini.
+              Detail titik pasang taruh di nama kamera.
+            </p>
           </div>
 
           {error && <p className="text-[12px] text-red-500">{error}</p>}

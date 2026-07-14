@@ -3,10 +3,14 @@
 import { useEffect, useState } from 'react';
 import {
   approveMitra,
+  distinctLocations,
   rejectMitra,
+  subscribeDestinations,
   subscribeUsers,
+  updateUserLocation,
   updateUserRole,
   type AppUser,
+  type Destination,
 } from '@/lib/firestore';
 
 const roleColors: Record<AppUser['role'], string> = {
@@ -18,6 +22,7 @@ const roleColors: Record<AppUser['role'], string> = {
 
 export default function PenggunaPanel() {
   const [users, setUsers] = useState<AppUser[]>([]);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [updatingUid, setUpdatingUid] = useState<string | null>(null);
   const [reviewingUid, setReviewingUid] = useState<string | null>(null);
 
@@ -26,9 +31,22 @@ export default function PenggunaPanel() {
     return () => unsub();
   }, []);
 
+  useEffect(() => {
+    const unsub = subscribeDestinations(setDestinations);
+    return () => unsub();
+  }, []);
+
+  const regions = distinctLocations(destinations);
+
   const handleRoleChange = async (uid: string, role: AppUser['role']) => {
     setUpdatingUid(uid);
     await updateUserRole(uid, role);
+    setUpdatingUid(null);
+  };
+
+  const handleLocationChange = async (uid: string, location: string) => {
+    setUpdatingUid(uid);
+    await updateUserLocation(uid, location);
     setUpdatingUid(null);
   };
 
@@ -94,6 +112,27 @@ export default function PenggunaPanel() {
                 <option value="admin">Admin</option>
               </select>
             </div>
+
+            {/* Wilayah kelola — hanya untuk pengelola. Membatasi kamera & statistik. */}
+            {u.role === 'pengelola' && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 pl-14">
+                <span className="text-[12px] text-navy-soft">Wilayah kelola:</span>
+                <select
+                  value={u.location ?? ''}
+                  onChange={(e) => handleLocationChange(u.uid, e.target.value)}
+                  disabled={updatingUid === u.uid}
+                  className="rounded-lg px-3 py-1.5 text-[12px] font-medium border border-shore-200 bg-surface text-navy outline-none cursor-pointer transition-colors focus:border-teal-400 disabled:opacity-50"
+                >
+                  <option value="">Pilih wilayah…</option>
+                  {regions.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                {!u.location && (
+                  <span className="text-[11px] text-amber-600">Belum ditetapkan</span>
+                )}
+              </div>
+            )}
 
             {/* Pengajuan verifikasi mitra */}
             {u.verification?.status === 'pending' && (

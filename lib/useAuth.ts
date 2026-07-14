@@ -44,6 +44,7 @@ async function ensureUserDoc(user: User) {
 export function useUserRole() {
   const { user, loading: authLoading } = useAuthState();
   const [role, setRole] = useState<UserRole | null>(null);
+  const [location, setLocation] = useState<string | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
 
   useEffect(() => {
@@ -51,6 +52,7 @@ export function useUserRole() {
 
     if (!user || !db) {
       setRole(null);
+      setLocation(null);
       setRoleLoading(false);
       return;
     }
@@ -60,11 +62,12 @@ export function useUserRole() {
     const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
       const data = snap.data();
       setRole((data?.role as UserRole) ?? 'user');
+      setLocation((data?.location as string) ?? null);
       setRoleLoading(false);
     });
 
     return () => unsub();
   }, [user, authLoading]);
 
-  return { user, role, loading: authLoading || roleLoading };
+  return { user, role, location, loading: authLoading || roleLoading };
 }

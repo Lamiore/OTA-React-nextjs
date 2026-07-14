@@ -82,6 +82,27 @@ export function subscribeDestinations(
   });
 }
 
+/** Daftar wilayah unik (non-kosong, terurut) dari destinasi — sumber pilihan wilayah pengelola & kamera. */
+export function distinctLocations(destinations: Destination[]): string[] {
+  return Array.from(
+    new Set(destinations.map((d) => d.location).filter(Boolean))
+  ).sort();
+}
+
+/**
+ * Set id destinasi pada satu wilayah. Wilayah kosong/null → set kosong: TIDAK
+ * boleh match global, supaya pengelola tanpa wilayah tidak melihat data siapa pun.
+ */
+export function destinationIdsInRegion(
+  destinations: Destination[],
+  region: string | null | undefined
+): Set<string> {
+  if (!region) return new Set();
+  return new Set(
+    destinations.filter((d) => d.location === region).map((d) => d.id)
+  );
+}
+
 export async function addDestination(data: DestinationInput) {
   if (!db) return;
   await addDoc(collection(db, "destinations"), {
@@ -117,6 +138,8 @@ export interface AppUser {
   email: string;
   photoURL: string;
   role: "user" | "mitra" | "pengelola" | "admin";
+  /** Wilayah yang dikelola (khusus pengelola) — membatasi kamera & statistik ke wilayah ini. */
+  location?: string;
   /** Pengajuan verifikasi mitra; tidak ada berarti belum pernah mengajukan. */
   verification?: MitraVerification;
 }
@@ -134,6 +157,12 @@ export function subscribeUsers(callback: (users: AppUser[]) => void) {
 export async function updateUserRole(uid: string, role: AppUser["role"]) {
   if (!db) return;
   await updateDoc(doc(db, "users", uid), { role });
+}
+
+/** Tetapkan wilayah kelola untuk pengelola. */
+export async function updateUserLocation(uid: string, location: string) {
+  if (!db) return;
+  await updateDoc(doc(db, "users", uid), { location });
 }
 
 export async function submitMitraVerification(
@@ -211,6 +240,21 @@ export function subscribeMyCameras(
 export function subscribeAllCameras(callback: (cameras: Camera[]) => void) {
   if (!db) return () => {};
   return onSnapshot(collection(db, "cameras"), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
+  });
+}
+
+/**
+ * Kamera pada satu wilayah (untuk pengelola). Jangan panggil dengan lokasi
+ * kosong — itu akan match kamera berlokasi kosong; caller wajib guard dulu.
+ */
+export function subscribeCamerasByLocation(
+  location: string,
+  callback: (cameras: Camera[]) => void
+) {
+  if (!db) return () => {};
+  const q = query(collection(db, "cameras"), where("location", "==", location));
+  return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
   });
 }
