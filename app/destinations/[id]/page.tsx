@@ -4,10 +4,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getPriceItems, type Destination } from '@/lib/firestore';
+import {
+  getPriceItems,
+  subscribeReviews,
+  reviewStats,
+  type Destination,
+  type Review,
+} from '@/lib/firestore';
 import TopNav from '@/components/desktop/TopNav';
 import BottomNav from '@/components/mobile/BottomNav';
 import LiveMonitorPanel from '@/components/destinations/LiveMonitorPanel';
+import DestinationReviews, { StarRow } from '@/components/destinations/DestinationReviews';
 
 function ArrowLeftIcon() {
   return (
@@ -43,6 +50,7 @@ export default function DestinationDetail() {
   const [dest, setDest] = useState<Destination | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const initedForId = useRef<string | null>(null);
 
   useEffect(() => {
@@ -59,6 +67,11 @@ export default function DestinationDetail() {
       setLoading(false);
     });
     return () => unsub();
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    return subscribeReviews(id, setReviews);
   }, [id]);
 
   // Pra-pilih item pertama (biasanya tiket masuk) sekali per destinasi saat
@@ -103,6 +116,7 @@ export default function DestinationDetail() {
   }
 
   const priceItems = getPriceItems(dest);
+  const { avg, count } = reviewStats(reviews);
 
   const toggleItem = (itemId: string) =>
     setSelectedIds((prev) =>
@@ -158,6 +172,13 @@ export default function DestinationDetail() {
               <PinIcon />
               <span className="text-[13px]">{dest.location}</span>
             </div>
+            {count > 0 && (
+              <div className="flex items-center gap-1.5 mt-2">
+                <StarRow value={avg} size={15} />
+                <span className="text-[13px] font-semibold text-navy">{avg.toFixed(1)}</span>
+                <span className="text-[12px] text-navy-soft">· {count} ulasan</span>
+              </div>
+            )}
           </div>
 
           {/* Tags */}
@@ -175,16 +196,6 @@ export default function DestinationDetail() {
               <h2 className="text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-2">Tentang</h2>
               <p className="text-[14px] text-navy leading-relaxed whitespace-pre-line">{dest.description}</p>
             </div>
-          )}
-
-          {/* Pantau langsung — kamera (kalau di-link) + sensor IoT dalam satu card */}
-          {(dest.cameraStreamId || dest.cameraStreamUrl || dest.hasMonitoring) && (
-            <LiveMonitorPanel
-              cameraStreamId={dest.cameraStreamId}
-              cameraStreamUrl={dest.cameraStreamUrl}
-              cameraName={dest.cameraName}
-              hasMonitoring={!!dest.hasMonitoring}
-            />
           )}
 
           {/* Daftar Harga + Booking — tiap item kartu berdiri sendiri (seperti beranda) */}
@@ -248,6 +259,19 @@ export default function DestinationDetail() {
                 : 'Booking Sekarang'}
             </button>
           </div>
+
+          {/* Pantau langsung — kamera (kalau di-link) + sensor IoT dalam satu card */}
+          {(dest.cameraStreamId || dest.cameraStreamUrl || dest.hasMonitoring) && (
+            <LiveMonitorPanel
+              cameraStreamId={dest.cameraStreamId}
+              cameraStreamUrl={dest.cameraStreamUrl}
+              cameraName={dest.cameraName}
+              hasMonitoring={!!dest.hasMonitoring}
+            />
+          )}
+
+          {/* Ulasan pengunjung */}
+          <DestinationReviews destinationId={dest.id} reviews={reviews} />
         </div>
       </article>
 

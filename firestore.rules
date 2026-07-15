@@ -72,6 +72,21 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    match /reviews/{reviewId} {
+      // Ulasan destinasi: dibaca publik (rata-rata & daftar tampil di halaman destinasi).
+      allow read: if true;
+      // Tulis/ubah hanya oleh pemilik; id dokumen wajib `<destinationId>_<uid>`
+      // (mengunci 1 ulasan per user per destinasi); rating wajib bilangan 1..5.
+      allow create, update: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && reviewId == request.resource.data.destinationId + '_' + request.auth.uid
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5;
+      allow delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+    }
+
     match /settings/{settingId} {
       function settingsUserRole() {
         return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;

@@ -1,6 +1,7 @@
 import {
   collection,
   getDocs,
+  getDoc,
   query,
   where,
   doc,
@@ -387,6 +388,66 @@ export async function payBooking(id: string, method: string): Promise<void> {
     paymentMethod: method,
     paidAt: serverTimestamp(),
   });
+}
+
+// ── Reviews (ulasan destinasi) ──
+
+export interface Review {
+  id: string; // `${destinationId}_${userId}` — 1 ulasan per user per destinasi
+  destinationId: string;
+  userId: string;
+  userName: string;
+  userPhoto: string;
+  rating: number; // 1..5
+  comment: string;
+  createdAt: unknown;
+  updatedAt?: unknown;
+}
+
+export function subscribeReviews(
+  destinationId: string,
+  callback: (reviews: Review[]) => void
+) {
+  if (!db) return () => {};
+  const q = query(collection(db, "reviews"), where("destinationId", "==", destinationId));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Review)));
+  });
+}
+
+/** Buat/perbarui ulasan user untuk sebuah destinasi (id dokumen deterministik → 1 per user). createdAt hanya di-set saat pertama. */
+export async function upsertReview(
+  destinationId: string,
+  userId: string,
+  data: { userName: string; userPhoto: string; rating: number; comment: string }
+) {
+  if (!db) return;
+  const ref = doc(db, "reviews", `${destinationId}_${userId}`);
+  const existing = await getDoc(ref);
+  await setDoc(
+    ref,
+    {
+      destinationId,
+      userId,
+      ...data,
+      updatedAt: serverTimestamp(),
+      ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
+    },
+    { merge: true }
+  );
+}
+
+export async function deleteReview(destinationId: string, userId: string) {
+  if (!db) return;
+  await deleteDoc(doc(db, "reviews", `${destinationId}_${userId}`));
+}
+
+/** Rata-rata & jumlah rating. reviews kosong → avg 0. */
+export function reviewStats(reviews: Review[]): { avg: number; count: number } {
+  const count = reviews.length;
+  if (count === 0) return { avg: 0, count: 0 };
+  const avg = reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / count;
+  return { avg, count };
 }
 
 // ── Monitoring ──
