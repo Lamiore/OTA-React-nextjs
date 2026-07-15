@@ -76,8 +76,10 @@ service cloud.firestore {
       function settingsUserRole() {
         return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
       }
-      // Dibaca semua user login (live modal menyusun URL stream dari sini).
-      allow read: if request.auth != null;
+      // Alamat server kamera: 'cameraServer' publik (halaman destinasi publik
+      // menyusun URL stream dari sini, termasuk pengunjung anonim); setting lain
+      // tetap butuh login. Bukan rahasia — stream memang publik.
+      allow read: if settingId == 'cameraServer' || request.auth != null;
       // Hanya pengelola kamera yang boleh mengubah alamat server.
       allow write: if request.auth != null
         && settingsUserRole() in ['mitra', 'pengelola', 'admin'];

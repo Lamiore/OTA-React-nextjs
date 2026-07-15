@@ -1,7 +1,16 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
+import { subscribeCameraServerUrl } from '@/lib/firestore';
 import { subscribeMonitoring, type SensorReading } from '@/lib/realtime';
+
+interface Props {
+  /** Denormalisasi dari kamera yang di-link ke destinasi (halaman ini tidak membaca koleksi cameras). */
+  cameraStreamId?: string;
+  cameraStreamUrl?: string; // legacy: kamera lama dengan URL stream langsung
+  cameraName?: string;
+  hasMonitoring: boolean;
+}
 
 interface Metric {
   label: string;
@@ -16,28 +25,65 @@ function fmt(n: number | undefined, digits = 1) {
 }
 
 /**
- * Panel IoT lengkap untuk halaman detail destinasi yang menjadi lokasi stasiun
- * sensor. Sumber data global `monitoring/latest` (cuma 1 stasiun fisik), jadi
- * hanya satu destinasi yang boleh ditandai sebagai lokasi stasiun (single-select
- * di dashboard admin). Menampilkan seluruh metrik + lokasi GPS stasiun.
+ * Panel "Pantau Langsung" gabungan: stream kamera + sensor IoT dalam satu card.
+ * Kamera dirender dari data denormalisasi di dokumen destinasi (publik), jadi
+ * pengunjung tidak perlu membaca koleksi cameras yang privat. Sensor memakai
+ * sumber global monitoring/latest.
  */
-export default function LiveMonitorSection() {
+export default function LiveMonitorPanel({
+  cameraStreamId,
+  cameraStreamUrl,
+  cameraName,
+  hasMonitoring,
+}: Props) {
+  const hasCamera = !!(cameraStreamId || cameraStreamUrl);
+
+  // ── Kamera ──
+  const [serverUrl, setServerUrl] = useState<string | null>(null); // null = loading
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!hasCamera || cameraStreamUrl) return; // legacy tidak butuh server URL
+    return subscribeCameraServerUrl(setServerUrl);
+  }, [hasCamera, cameraStreamUrl]);
+
+  const src = !hasCamera
+    ? ''
+    : cameraStreamUrl
+      ? cameraStreamUrl
+      : serverUrl === null
+        ? null // masih memuat alamat server
+        : serverUrl === ''
+          ? '' // alamat server belum diatur
+          : `${serverUrl.replace(/\/+$/, '')}/stream/${cameraStreamId}`;
+
+  useEffect(() => {
+    setError(false);
+  }, [src]);
+
+  const streaming = !!src && !error;
+
+  // ── Sensor ──
   const [data, setData] = useState<SensorReading | null>(null);
   const [ready, setReady] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
+    if (!hasMonitoring) return;
     const unsub = subscribeMonitoring((d) => {
       setData(d);
       setReady(true);
     });
     return () => unsub();
-  }, []);
+  }, [hasMonitoring]);
 
   useEffect(() => {
+    if (!hasMonitoring) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [hasMonitoring]);
+
+  if (!hasCamera && !hasMonitoring) return null;
 
   const ageSec = data?.updatedAt ? Math.max(0, Math.round((now - data.updatedAt) / 1000)) : null;
   const isLive = ageSec !== null && ageSec < 15;
@@ -50,6 +96,13 @@ export default function LiveMonitorSection() {
     typeof lng === 'number' &&
     (lat !== 0 || lng !== 0);
   const mapsUrl = hasFix ? `https://www.google.com/maps?q=${lat},${lng}` : null;
+
+  const subtitle =
+    hasCamera && hasMonitoring
+      ? 'Kamera live & sensor lingkungan real-time'
+      : hasCamera
+        ? 'Kamera live destinasi'
+        : 'Sensor lingkungan real-time';
 
   const metrics: Metric[] = [
     {
@@ -130,20 +183,63 @@ export default function LiveMonitorSection() {
     },
   ];
 
-  return (
-    <div className="card p-5 sm:p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-[11px] font-medium text-navy-soft uppercase tracking-wider">Pantau Live</h2>
-          <p className="text-[14px] text-navy font-medium mt-0.5">Sensor lingkungan real-time</p>
+  const bothSides = hasCamera && hasMonitoring;
+  const metricCols = bothSides ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3';
+
+  const cameraBlock = hasCamera && (
+    <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-ink">
+      {src === null ? (
+        <div className="absolute inset-0 animate-pulse bg-white/5" />
+      ) : src === '' ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
+          <p className="text-sm">Alamat server kamera belum diatur.</p>
+          <p className="text-[12px] text-white/50">
+            Isi &quot;Alamat Server Kamera&quot; di dashboard admin, lalu buka kembali halaman ini.
+          </p>
         </div>
+      ) : error ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
+          <p className="text-sm">Tidak bisa terhubung ke kamera.</p>
+          <p className="text-[12px] text-white/50">
+            Pastikan server kamera berjalan dan ID kamera benar.
+          </p>
+        </div>
+      ) : (
+        <img
+          key={src}
+          src={src}
+          alt={`Stream ${cameraName ?? 'kamera'}`}
+          className="w-full h-full object-contain"
+          onError={() => setError(true)}
+        />
+      )}
+
+      {streaming && (
+        <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-teal-500 px-2.5 py-1 text-[11px] font-medium text-white shadow-sm">
+          <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+          Live
+        </span>
+      )}
+
+      {cameraName && (
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 via-ink/40 to-transparent px-4 pt-10 pb-3">
+          <p className="text-[13px] font-medium text-white drop-shadow-sm">{cameraName}</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const sensorBlock = hasMonitoring && (
+    <div className={bothSides ? 'mt-5 lg:mt-0' : ''}>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[11px] font-medium text-navy-soft uppercase tracking-wider">Sensor Lingkungan</p>
         <span className={`chip ${isLive ? 'chip-active' : ''}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-white animate-pulse' : 'bg-navy-soft'}`} />
           {!ready ? 'Menghubungkan…' : isLive ? 'Live' : 'Offline'}
         </span>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className={`grid ${metricCols} gap-3`}>
         {metrics.map((m) => (
           <div key={m.label} className="rounded-xl border border-shore-200/80 bg-surface p-3.5">
             <div className={`h-9 w-9 rounded-lg ${m.color} flex items-center justify-center mb-2.5`}>
@@ -185,12 +281,7 @@ export default function LiveMonitorSection() {
             </div>
           </div>
           {hasFix && (
-            <a
-              href={mapsUrl!}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="chip whitespace-nowrap"
-            >
+            <a href={mapsUrl!} target="_blank" rel="noopener noreferrer" className="chip whitespace-nowrap">
               Buka di Peta
             </a>
           )}
@@ -209,6 +300,35 @@ export default function LiveMonitorSection() {
           Diperbarui {ageSec < 5 ? 'baru saja' : `${ageSec} detik lalu`}
         </p>
       )}
+    </div>
+  );
+
+  return (
+    <div className="card p-4 sm:p-5 lg:p-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+          </svg>
+        </div>
+        <div className="min-w-0">
+          <h2 className="font-serif text-lg font-medium text-navy leading-tight">Pantau Langsung</h2>
+          <p className="text-[12px] text-navy-soft">{subtitle}</p>
+        </div>
+      </div>
+
+      {/* Body: desktop dua kolom bila kamera + sensor, selain itu satu kolom */}
+      <div
+        className={
+          bothSides
+            ? 'mt-4 lg:mt-5 lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start'
+            : 'mt-4 lg:mt-5'
+        }
+      >
+        {cameraBlock && <div className={bothSides ? 'lg:col-span-3' : ''}>{cameraBlock}</div>}
+        {sensorBlock && <div className={bothSides ? 'lg:col-span-2' : ''}>{sensorBlock}</div>}
+      </div>
     </div>
   );
 }

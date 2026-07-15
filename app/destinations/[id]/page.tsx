@@ -7,8 +7,7 @@ import { db } from '@/lib/firebase';
 import { getPriceItems, type Destination } from '@/lib/firestore';
 import TopNav from '@/components/desktop/TopNav';
 import BottomNav from '@/components/mobile/BottomNav';
-import LiveMonitorSection from '@/components/destinations/LiveMonitorSection';
-import DestinationCameraSection from '@/components/destinations/DestinationCameraSection';
+import LiveMonitorPanel from '@/components/destinations/LiveMonitorPanel';
 
 function ArrowLeftIcon() {
   return (
@@ -178,11 +177,15 @@ export default function DestinationDetail() {
             </div>
           )}
 
-          {/* Live camera stream dari kamera mitra/pengelola */}
-          {dest.cameraId && <DestinationCameraSection cameraId={dest.cameraId} />}
-
-          {/* Live IoT monitoring — hanya untuk destinasi yang punya stasiun sensor */}
-          {dest.hasMonitoring && <LiveMonitorSection />}
+          {/* Pantau langsung — kamera (kalau di-link) + sensor IoT dalam satu card */}
+          {(dest.cameraStreamId || dest.cameraStreamUrl || dest.hasMonitoring) && (
+            <LiveMonitorPanel
+              cameraStreamId={dest.cameraStreamId}
+              cameraStreamUrl={dest.cameraStreamUrl}
+              cameraName={dest.cameraName}
+              hasMonitoring={!!dest.hasMonitoring}
+            />
+          )}
 
           {/* Daftar Harga + Booking — tiap item kartu berdiri sendiri (seperti beranda) */}
           <div className="space-y-3">

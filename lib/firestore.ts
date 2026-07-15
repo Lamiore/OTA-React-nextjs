@@ -42,6 +42,14 @@ export interface Destination {
   hasMonitoring?: boolean;
   /** Tautan ke kamera mitra/pengelola (id dokumen dari koleksi 'cameras') */
   cameraId?: string;
+  /**
+   * Snapshot kamera yang di-link, denormalisasi saat menyimpan destinasi.
+   * Halaman publik /destinations/[id] memakai ini agar bisa menampilkan stream
+   * tanpa membaca koleksi 'cameras' (yang privat). Kosong = tidak ada kamera.
+   */
+  cameraStreamId?: string; // = Camera.cameraId (id stream di server kamera)
+  cameraName?: string;
+  cameraStreamUrl?: string; // legacy: kamera lama dengan URL stream langsung
 }
 
 export type DestinationInput = Omit<Destination, "id">;

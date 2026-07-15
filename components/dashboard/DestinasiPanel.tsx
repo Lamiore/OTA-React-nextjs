@@ -134,10 +134,18 @@ export default function DestinasiPanel() {
   const handleSave = async () => {
     if (!form.name.trim() || !form.location.trim()) return;
     setSaving(true);
+    // Denormalisasi kamera yang di-link ke dokumen destinasi (publik) supaya
+    // halaman /destinations/[id] bisa menampilkan stream tanpa membaca koleksi
+    // cameras yang privat. Saat unlink (cameraId kosong) field ini WAJIB
+    // di-clear agar stream lama tidak "nyangkut" publik.
+    const linkedCam = form.cameraId ? cameras.find((c) => c.id === form.cameraId) : null;
     const data: DestinationInput = {
       ...form,
       tags: tagInput.split(',').map((t) => t.trim()).filter(Boolean),
       priceItems: (form.priceItems ?? []).filter((it) => it.label.trim() !== ''),
+      cameraStreamId: linkedCam?.cameraId ?? '',
+      cameraName: linkedCam?.name ?? '',
+      cameraStreamUrl: linkedCam?.streamUrl ?? '',
     };
     if (editingId) {
       await updateDestination(editingId, data);
