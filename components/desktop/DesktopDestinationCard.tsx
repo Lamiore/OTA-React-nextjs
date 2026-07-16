@@ -77,13 +77,13 @@ export default function DesktopDestinationCard({
 
       {/* Content */}
       <div className="p-5 flex flex-col gap-2.5">
-        <h3 className="text-[15px] font-semibold text-navy leading-snug transition-colors group-hover:text-teal-600">
+        <h3 className="text-[15px] font-semibold text-navy leading-snug transition-colors group-hover:text-teal-600 capitalize">
           {name}
         </h3>
 
         <div className="flex items-center gap-1.5">
           <PinIcon />
-          <span className="text-[12px] text-navy-soft">{location}</span>
+          <span className="text-[12px] text-navy-soft capitalize">{location}</span>
         </div>
 
         {/* Tags */}

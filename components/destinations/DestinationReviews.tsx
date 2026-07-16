@@ -166,7 +166,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
         <div className="card p-5 text-center">
           <p className="text-[13px] text-navy-soft">
             <Link href="/profile" className="text-teal-600 font-medium hover:underline">
-              Login
+              Masuk
             </Link>{' '}
             untuk menulis ulasan.
           </p>

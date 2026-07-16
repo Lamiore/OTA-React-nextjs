@@ -140,9 +140,13 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
       <div className="mt-6 space-y-3">
         {!user ? (
           <div className="card p-8 text-center">
-            <p className="text-sm text-navy-soft">
-              <button onClick={() => router.push('/profile')} className="text-teal-600 font-medium hover:text-teal-700">Masuk</button> untuk melihat riwayat booking.
-            </p>
+            <div className="h-12 w-12 rounded-xl bg-shore-100 flex items-center justify-center mx-auto mb-3 text-navy-soft">
+              <CalendarIcon />
+            </div>
+            <p className="text-sm text-navy-soft">Masuk untuk melihat riwayat booking kamu.</p>
+            <button onClick={() => router.push('/profile')} className="btn-primary rounded-xl px-5 py-2.5 text-[13px] mt-4">
+              Masuk
+            </button>
           </div>
         ) : loadingBookings ? (
           Array.from({ length: 3 }).map((_, i) => (
@@ -175,7 +179,7 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                 <div key={b.id} className="card p-5 animate-fade-in">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[15px] font-medium text-navy">{b.destinationName}</p>
+                      <p className="text-[15px] font-medium text-navy capitalize">{b.destinationName}</p>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[12px] text-navy-soft">
                         <span>{new Date(b.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                         <span>{b.guests} orang</span>

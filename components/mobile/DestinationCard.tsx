@@ -51,13 +51,13 @@ export default function DestinationCard({
 
       {/* Content */}
       <div className="flex-1 p-3.5 flex flex-col gap-1.5">
-        <h3 className="text-[13px] font-semibold text-navy leading-tight">
+        <h3 className="text-[13px] font-semibold text-navy leading-tight capitalize">
           {name}
         </h3>
 
         <div className="flex items-center gap-1">
           <PinIcon />
-          <span className="text-[11px] text-navy-soft">{location}</span>
+          <span className="text-[11px] text-navy-soft capitalize">{location}</span>
         </div>
 
         {/* Tags */}
