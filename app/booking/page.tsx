@@ -48,6 +48,7 @@ function BookingContent() {
   const priceItems = destination ? getPriceItems(destination) : [];
   const totalQty = priceItems.reduce((s, it) => s + (qty[it.id] ?? 0), 0);
   const total = priceItems.reduce((s, it) => s + it.price * (qty[it.id] ?? 0), 0);
+  const selectedItems = priceItems.filter((it) => (qty[it.id] ?? 0) > 0);
 
   const setItemQty = (id: string, next: number) =>
     setQty((q) => ({ ...q, [id]: Math.max(0, next) }));
@@ -173,11 +174,13 @@ function BookingContent() {
   }
 
   return (
-    <div className="w-full max-w-lg mx-auto animate-fade-in">
-          <h1 className="font-serif text-2xl font-medium text-navy sm:text-3xl">Booking</h1>
-          <p className="mt-2 text-sm text-navy-soft">Isi detail untuk memesan perjalanan</p>
+    <div className="w-full max-w-5xl mx-auto animate-fade-in">
+      <h1 className="font-serif text-2xl font-medium text-navy sm:text-3xl">Booking</h1>
+      <p className="mt-2 text-sm text-navy-soft">Isi detail untuk memesan perjalanan</p>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+      <form onSubmit={handleSubmit} className="mt-6 lg:grid lg:grid-cols-[1fr_340px] lg:gap-8 lg:items-start">
+        {/* KIRI: field-field */}
+        <div className="space-y-5">
             {/* Destination info */}
             <div>
               <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Destinasi</label>
@@ -193,8 +196,8 @@ function BookingContent() {
                     <span className="text-2xl shrink-0">{destination.emoji}</span>
                   )}
                   <div className="min-w-0">
-                    <p className="text-[14px] font-medium text-navy truncate">{destination.name}</p>
-                    <p className="text-[12px] text-navy-soft">{destination.location}</p>
+                    <p className="text-[14px] font-medium text-navy truncate capitalize">{destination.name}</p>
+                    <p className="text-[12px] text-navy-soft capitalize">{destination.location}</p>
                   </div>
                 </div>
               ) : (
@@ -217,7 +220,7 @@ function BookingContent() {
                     {priceItems.map((it) => (
                       <div key={it.id} className="flex items-center justify-between gap-3 px-4 py-3">
                         <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-navy truncate">{it.label}</p>
+                          <p className="text-[13px] font-medium text-navy truncate capitalize">{it.label}</p>
                           <p className="text-[12px] text-navy-soft">
                             {formatIDR(it.price)} <span className="text-navy-soft/70">{it.unit}</span>
                           </p>
@@ -312,22 +315,39 @@ function BookingContent() {
               />
             </div>
 
-            {/* Price estimate */}
-            {destination && totalQty > 0 && (
-              <div className="card p-4 flex items-center justify-between">
-                <p className="text-[13px] text-navy-soft">Estimasi total</p>
-                <p className="text-lg font-semibold text-navy">{formatIDR(total)}</p>
+        </div>
+
+        {/* KANAN: ringkasan sticky */}
+        <aside className="mt-6 lg:mt-0 lg:sticky lg:top-24">
+          <div className="card p-5 space-y-4">
+            <h2 className="text-[11px] font-medium text-navy-soft uppercase tracking-wider">Ringkasan</h2>
+
+            {selectedItems.length > 0 ? (
+              <div className="space-y-2">
+                {selectedItems.map((it) => (
+                  <div key={it.id} className="flex items-center justify-between gap-3 text-[13px]">
+                    <span className="min-w-0 truncate text-navy-soft capitalize">
+                      {it.label} <span className="text-navy-soft/60">×{qty[it.id] ?? 0}</span>
+                    </span>
+                    <span className="shrink-0 font-medium text-navy">{formatIDR(it.price * (qty[it.id] ?? 0))}</span>
+                  </div>
+                ))}
               </div>
+            ) : (
+              <p className="text-[13px] text-navy-soft">Belum ada item dipilih.</p>
             )}
 
-            {/* Error */}
+            <div className="flex items-center justify-between border-t border-shore-100 pt-3">
+              <span className="text-[13px] text-navy-soft">Estimasi total</span>
+              <span className="text-lg font-semibold text-navy">{formatIDR(total)}</span>
+            </div>
+
             {error && (
               <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-[13px] text-red-600 animate-fade-up">
                 {error}
               </div>
             )}
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={submitting || !destination || totalQty === 0}
@@ -341,7 +361,9 @@ function BookingContent() {
                 Kamu perlu <button type="button" onClick={() => router.push('/profile')} className="text-teal-600 font-medium hover:text-teal-700">masuk</button> terlebih dahulu untuk booking.
               </p>
             )}
-          </form>
+          </div>
+        </aside>
+      </form>
     </div>
   );
 }

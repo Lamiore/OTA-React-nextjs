@@ -15,6 +15,7 @@ import TopNav from '@/components/desktop/TopNav';
 import BottomNav from '@/components/mobile/BottomNav';
 import LiveMonitorPanel from '@/components/destinations/LiveMonitorPanel';
 import DestinationReviews, { StarRow } from '@/components/destinations/DestinationReviews';
+import { useAuthState } from '@/lib/useAuth';
 
 function ArrowLeftIcon() {
   return (
@@ -47,6 +48,7 @@ const formatRp = (n: number) =>
 export default function DestinationDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuthState();
   const [dest, setDest] = useState<Destination | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -124,6 +126,10 @@ export default function DestinationDetail() {
     );
 
   const goToBooking = () => {
+    if (!user) {
+      router.push('/profile');
+      return;
+    }
     const params = new URLSearchParams({ dest: dest.id });
     if (selectedIds.length > 0) params.set('items', selectedIds.join(','));
     router.push(`/booking?${params.toString()}`);
@@ -167,10 +173,10 @@ export default function DestinationDetail() {
         <div className="mt-6 space-y-5">
           {/* Title + Location */}
           <div>
-            <h1 className="font-serif text-2xl sm:text-3xl font-medium text-navy">{dest.name}</h1>
+            <h1 className="font-serif text-2xl sm:text-3xl font-medium text-navy capitalize">{dest.name}</h1>
             <div className="flex items-center gap-1.5 mt-2 text-navy-soft">
               <PinIcon />
-              <span className="text-[13px]">{dest.location}</span>
+              <span className="text-[13px] capitalize">{dest.location}</span>
             </div>
             {count > 0 && (
               <div className="flex items-center gap-1.5 mt-2">
@@ -218,7 +224,7 @@ export default function DestinationDetail() {
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-[14px] font-semibold text-navy leading-snug">{item.label}</h3>
+                        <h3 className="text-[14px] font-semibold text-navy leading-snug capitalize">{item.label}</h3>
                         <span
                           className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[6px] border transition-colors ${
                             isSelected
