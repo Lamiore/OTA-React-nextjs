@@ -24,6 +24,15 @@ function fmt(n: number | undefined, digits = 1) {
   return typeof n === 'number' && !Number.isNaN(n) ? n.toFixed(digits) : '--';
 }
 
+/** Umur data → teks relatif ringkas (detik/menit/jam/hari). */
+function relTime(sec: number): string {
+  if (sec < 5) return 'baru saja';
+  if (sec < 60) return `${sec} detik lalu`;
+  if (sec < 3600) return `${Math.floor(sec / 60)} menit lalu`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)} jam lalu`;
+  return `${Math.floor(sec / 86400)} hari lalu`;
+}
+
 /**
  * Panel "Pantau Langsung" gabungan: stream kamera + sensor IoT dalam satu card.
  * Kamera dirender dari data denormalisasi di dokumen destinasi (publik), jadi
@@ -41,6 +50,7 @@ export default function LiveMonitorPanel({
   // ── Kamera ──
   const [serverUrl, setServerUrl] = useState<string | null>(null); // null = loading
   const [error, setError] = useState(false);
+  const [loaded, setLoaded] = useState(false); // frame pertama sudah masuk
 
   useEffect(() => {
     if (!hasCamera || cameraStreamUrl) return; // legacy tidak butuh server URL
@@ -59,9 +69,11 @@ export default function LiveMonitorPanel({
 
   useEffect(() => {
     setError(false);
+    setLoaded(false);
   }, [src]);
 
-  const streaming = !!src && !error;
+  // "Live" hanya kalau frame beneran masuk — koneksi terbuka tanpa frame ≠ live.
+  const streaming = !!src && !error && loaded;
 
   // ── Sensor ──
   const [data, setData] = useState<SensorReading | null>(null);
@@ -142,10 +154,9 @@ export default function LiveMonitorPanel({
     },
     {
       label: 'Kondisi Cuaca',
-      value: data?.rainStatus
-        ? `${data.rainStatus}${typeof data.rainValue === 'number' ? ` (${data.rainValue})` : ''}`
-        : '--',
-      unit: '',
+      // Status utama besar, nilai mentah sensor ditaruh di slot unit (kecil & redup).
+      value: data?.rainStatus ?? '--',
+      unit: data?.rainStatus && typeof data.rainValue === 'number' ? `(${data.rainValue})` : '',
       color: 'bg-purple-100 text-purple-600',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -205,13 +216,22 @@ export default function LiveMonitorPanel({
           </p>
         </div>
       ) : (
-        <img
-          key={src}
-          src={src}
-          alt={`Stream ${cameraName ?? 'kamera'}`}
-          className="w-full h-full object-contain"
-          onError={() => setError(true)}
-        />
+        <>
+          <img
+            key={src}
+            src={src}
+            alt={`Stream ${cameraName ?? 'kamera'}`}
+            className="w-full h-full object-contain"
+            onLoad={() => setLoaded(true)}
+            onError={() => setError(true)}
+          />
+          {!loaded && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 text-white/70">
+              <span className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white/80 animate-spin" />
+              <p className="text-[13px]">Menghubungkan ke kamera…</p>
+            </div>
+          )}
+        </>
       )}
 
       {streaming && (
@@ -230,7 +250,7 @@ export default function LiveMonitorPanel({
   );
 
   const sensorBlock = hasMonitoring && (
-    <div className={bothSides ? 'mt-5 lg:mt-0' : ''}>
+    <div>
       <div className="flex items-center justify-between mb-3">
         <p className="text-[11px] font-medium text-navy-soft uppercase tracking-wider">Sensor Lingkungan</p>
         <span className={`chip ${isLive ? 'chip-active' : ''}`}>
@@ -241,7 +261,7 @@ export default function LiveMonitorPanel({
 
       <div className={`grid ${metricCols} gap-3`}>
         {metrics.map((m) => (
-          <div key={m.label} className="rounded-xl border border-shore-200/80 bg-surface p-3.5">
+          <div key={m.label} className="rounded-xl border border-shore-200/80 bg-surface p-3.5 transition-colors hover:border-teal-200">
             <div className={`h-9 w-9 rounded-lg ${m.color} flex items-center justify-center mb-2.5`}>
               {m.icon}
             </div>
@@ -254,51 +274,47 @@ export default function LiveMonitorPanel({
         ))}
       </div>
 
-      {/* Lokasi GPS stasiun */}
-      <div className="mt-3 rounded-xl border border-shore-200/80 bg-surface p-3.5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 10c0 4.4-8 12-8 12s-8-7.6-8-12a8 8 0 0 1 16 0Z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-[11px] text-navy-soft">Lokasi Stasiun (GPS)</p>
-              {hasFix ? (
-                <p className="text-[15px] font-semibold text-navy leading-tight">
-                  {lat!.toFixed(6)}, {lng!.toFixed(6)}
-                </p>
-              ) : (
-                <p className="text-[13px] font-medium text-navy-soft">
-                  Mencari sinyal satelit…
-                  {typeof data?.satellites === 'number' && data.satellites > 0
-                    ? ` (${data.satellites} terlihat)`
-                    : ''}
-                </p>
-              )}
-            </div>
+    </div>
+  );
+
+  const gpsBlock = hasMonitoring && (
+    <div className="rounded-xl border border-shore-200/80 bg-surface p-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 10c0 4.4-8 12-8 12s-8-7.6-8-12a8 8 0 0 1 16 0Z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
           </div>
-          {hasFix && (
-            <a href={mapsUrl!} target="_blank" rel="noopener noreferrer" className="chip whitespace-nowrap">
-              Buka di Peta
-            </a>
-          )}
+          <div>
+            <p className="text-[11px] text-navy-soft">Lokasi Stasiun (GPS)</p>
+            {hasFix ? (
+              <p className="text-[15px] font-semibold text-navy leading-tight">
+                {lat!.toFixed(6)}, {lng!.toFixed(6)}
+              </p>
+            ) : (
+              <p className="text-[13px] font-medium text-navy-soft">
+                Mencari sinyal satelit…
+                {typeof data?.satellites === 'number' && data.satellites > 0
+                  ? ` (${data.satellites} terlihat)`
+                  : ''}
+              </p>
+            )}
+          </div>
         </div>
         {hasFix && (
-          <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-navy-soft">
-            <span>Satelit: {data?.satellites ?? '--'}</span>
-            {typeof data?.altitude === 'number' && <span>Ketinggian: {data.altitude.toFixed(0)} m</span>}
-            {typeof data?.speed === 'number' && <span>Kecepatan: {data.speed.toFixed(1)} km/h</span>}
-          </div>
+          <a href={mapsUrl!} target="_blank" rel="noopener noreferrer" className="chip whitespace-nowrap">
+            Buka di Peta
+          </a>
         )}
       </div>
-
-      {ageSec !== null && (
-        <p className="mt-4 text-[12px] text-navy-soft">
-          Diperbarui {ageSec < 5 ? 'baru saja' : `${ageSec} detik lalu`}
-        </p>
+      {hasFix && (
+        <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-navy-soft">
+          <span>Satelit: {data?.satellites ?? '--'}</span>
+          {typeof data?.altitude === 'number' && <span>Ketinggian: {data.altitude.toFixed(0)} m</span>}
+          {typeof data?.speed === 'number' && <span>Kecepatan: {data.speed.toFixed(1)} km/h</span>}
+        </div>
       )}
     </div>
   );
@@ -318,17 +334,27 @@ export default function LiveMonitorPanel({
         </div>
       </div>
 
-      {/* Body: desktop dua kolom bila kamera + sensor, selain itu satu kolom */}
-      <div
-        className={
-          bothSides
-            ? 'mt-4 lg:mt-5 lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start'
-            : 'mt-4 lg:mt-5'
-        }
-      >
-        {cameraBlock && <div className={bothSides ? 'lg:col-span-3' : ''}>{cameraBlock}</div>}
-        {sensorBlock && <div className={bothSides ? 'lg:col-span-2' : ''}>{sensorBlock}</div>}
-      </div>
+      {/* Body: desktop dua kolom (kamera + GPS di kiri, sensor di kanan) bila
+          keduanya ada — biar tinggi kedua kolom seimbang; selain itu ditumpuk. */}
+      {bothSides ? (
+        <div className="mt-4 lg:mt-5 lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start">
+          <div className="space-y-3 lg:col-span-3">
+            {cameraBlock}
+            {gpsBlock}
+          </div>
+          <div className="mt-5 lg:mt-0 lg:col-span-2">{sensorBlock}</div>
+        </div>
+      ) : (
+        <div className="mt-4 space-y-4 lg:mt-5">
+          {cameraBlock}
+          {sensorBlock}
+          {gpsBlock}
+        </div>
+      )}
+
+      {ageSec !== null && (
+        <p className="mt-4 text-[12px] text-navy-soft">Diperbarui {relTime(ageSec)}</p>
+      )}
     </div>
   );
 }
