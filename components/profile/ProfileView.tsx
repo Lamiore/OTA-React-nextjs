@@ -1,24 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { signOut, updateProfile } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import type { UserRole } from '@/lib/useAuth';
+import { subscribeUserBookings, subscribeUserReviews, type Booking } from '@/lib/firestore';
 import BookingHistory from '@/components/booking/BookingHistory';
 import CameraSection from '@/components/cameras/CameraSection';
+import AccountSettings from '@/components/profile/AccountSettings';
 import Link from 'next/link';
 import { useTheme } from '@/lib/useTheme';
-
-function CameraIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-      <circle cx="12" cy="13" r="3" />
-    </svg>
-  );
-}
 
 function LogOutIcon() {
   return (
@@ -26,23 +19,6 @@ function LogOutIcon() {
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <polyline points="16 17 21 12 16 7" />
       <line x1="21" x2="9" y1="12" y2="12" />
-    </svg>
-  );
-}
-
-function EditIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-      <path d="m15 5 4 4" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
     </svg>
   );
 }
@@ -123,9 +99,6 @@ const menuItems = [
 ];
 
 export default function ProfileView({ user, role }: { user: User; role: UserRole | null }) {
-  const [editing, setEditing] = useState(false);
-  const [displayName, setDisplayName] = useState(user.displayName ?? '');
-  const [saving, setSaving] = useState(false);
   const searchParams = useSearchParams();
   const [view, setView] = useState<'menu' | 'riwayat' | 'pengaturan' | 'kamera'>(
     searchParams.get('view') === 'riwayat'
@@ -137,22 +110,16 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
   const { theme, setTheme, mounted } = useTheme();
   const isDark = theme === 'dark';
 
+  // Statistik profil — real-time dari Firestore.
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [reviewCount, setReviewCount] = useState(0);
+  useEffect(() => subscribeUserBookings(user.uid, setBookings), [user.uid]);
+  useEffect(() => subscribeUserReviews(user.uid, (r) => setReviewCount(r.length)), [user.uid]);
+  const bookingCount = bookings.length;
+
   const initials = user.displayName
     ? user.displayName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
     : user.email?.[0]?.toUpperCase() ?? 'U';
-
-  const handleSaveName = async () => {
-    if (!auth?.currentUser || !displayName.trim()) return;
-    setSaving(true);
-    try {
-      await updateProfile(auth.currentUser, { displayName: displayName.trim() });
-      setEditing(false);
-    } catch {
-      // silently fail
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -205,6 +172,8 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
           </svg>
           Kembali
         </button>
+
+        <AccountSettings user={user} />
 
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-shore-200/80">
@@ -260,7 +229,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
         {/* Avatar + info */}
         <div className="flex flex-col items-center text-center">
           {/* Avatar */}
-          <div className="relative group mb-4">
+          <div className="mb-4">
             {user.photoURL ? (
               <img
                 src={user.photoURL}
@@ -273,41 +242,12 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
                 <span className="text-xl font-semibold text-teal-700">{initials}</span>
               </div>
             )}
-            <button className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-surface border border-shore-200 flex items-center justify-center text-navy-soft hover:text-teal-600 hover:border-teal-300 transition-colors shadow-sm">
-              <CameraIcon />
-            </button>
           </div>
 
           {/* Name */}
-          {editing ? (
-            <div className="flex items-center gap-2 mb-1 animate-fade-in">
-              <input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="text-center font-serif text-xl font-medium text-navy bg-transparent border-b-2 border-teal-400 outline-none px-2 py-0.5"
-                autoFocus
-              />
-              <button
-                onClick={handleSaveName}
-                disabled={saving}
-                className="h-8 w-8 rounded-full bg-teal-500 flex items-center justify-center text-white hover:bg-teal-600 transition-colors disabled:opacity-50"
-              >
-                <CheckIcon />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="font-serif text-xl font-medium text-navy">
-                {user.displayName || 'Pengguna'}
-              </h2>
-              <button
-                onClick={() => setEditing(true)}
-                className="h-7 w-7 rounded-full border border-shore-200 flex items-center justify-center text-navy-soft hover:text-teal-600 hover:border-teal-300 transition-colors"
-              >
-                <EditIcon />
-              </button>
-            </div>
-          )}
+          <h2 className="font-serif text-xl font-medium text-navy mb-1">
+            {user.displayName || 'Pengguna'}
+          </h2>
 
           <p className="text-[13px] text-navy-soft">{user.email}</p>
 
@@ -322,17 +262,13 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
         <div className="h-px bg-shore-200 my-6" />
 
         {/* Quick stats */}
-        <div className="grid grid-cols-3 gap-4 text-center">
+        <div className="grid grid-cols-2 gap-4 text-center">
           <div>
-            <span className="text-lg font-semibold text-navy">0</span>
+            <span className="text-lg font-semibold text-navy">{bookingCount}</span>
             <p className="text-[11px] text-navy-soft mt-0.5">Booking</p>
           </div>
-          <div className="border-x border-shore-200">
-            <span className="text-lg font-semibold text-navy">0</span>
-            <p className="text-[11px] text-navy-soft mt-0.5">Tersimpan</p>
-          </div>
-          <div>
-            <span className="text-lg font-semibold text-navy">0</span>
+          <div className="border-l border-shore-200">
+            <span className="text-lg font-semibold text-navy">{reviewCount}</span>
             <p className="text-[11px] text-navy-soft mt-0.5">Ulasan</p>
           </div>
         </div>

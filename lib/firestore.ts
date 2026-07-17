@@ -146,6 +146,8 @@ export interface AppUser {
   name: string;
   email: string;
   photoURL: string;
+  /** No. HP/WhatsApp kontak — diisi sendiri di Pengaturan Akun. */
+  phone?: string;
   role: "user" | "mitra" | "pengelola" | "admin";
   /** Wilayah yang dikelola (khusus pengelola) — membatasi kamera & statistik ke wilayah ini. */
   location?: string;
@@ -172,6 +174,12 @@ export async function updateUserRole(uid: string, role: AppUser["role"]) {
 export async function updateUserLocation(uid: string, location: string) {
   if (!db) return;
   await updateDoc(doc(db, "users", uid), { location });
+}
+
+/** Simpan/ubah no. HP kontak di profil pengguna. */
+export async function updateUserPhone(uid: string, phone: string) {
+  if (!db) return;
+  await updateDoc(doc(db, "users", uid), { phone });
 }
 
 export async function submitMitraVerification(
@@ -354,6 +362,18 @@ export async function createBooking(data: BookingInput) {
   });
 }
 
+/** Semua booking milik satu user (real-time) — dipakai untuk statistik profil. */
+export function subscribeUserBookings(
+  uid: string,
+  callback: (bookings: Booking[]) => void
+) {
+  if (!db) return () => {};
+  const q = query(collection(db, "bookings"), where("userId", "==", uid));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Booking)));
+  });
+}
+
 export async function updateBookingStatus(id: string, status: Booking["status"]) {
   if (!db) return;
   await updateDoc(doc(db, "bookings", id), { status });
@@ -440,6 +460,18 @@ export async function upsertReview(
 export async function deleteReview(destinationId: string, userId: string) {
   if (!db) return;
   await deleteDoc(doc(db, "reviews", `${destinationId}_${userId}`));
+}
+
+/** Semua ulasan yang ditulis satu user (real-time) — dipakai untuk statistik profil. */
+export function subscribeUserReviews(
+  userId: string,
+  callback: (reviews: Review[]) => void
+) {
+  if (!db) return () => {};
+  const q = query(collection(db, "reviews"), where("userId", "==", userId));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Review)));
+  });
 }
 
 /** Rata-rata & jumlah rating. reviews kosong → avg 0. */

@@ -7,6 +7,7 @@ import {
   updateProfile,
   GoogleAuthProvider,
   signInWithPopup,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -91,6 +92,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   const ensureUserDoc = async (user: { uid: string; displayName: string | null; email: string | null; photoURL: string | null }) => {
     if (!db) return;
@@ -137,6 +139,26 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
+    } catch (err: unknown) {
+      const firebaseErr = err as { code?: string };
+      setError(getErrorMessage(firebaseErr.code ?? ''));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgot = async () => {
+    if (!auth) return;
+    setError('');
+    setNotice('');
+    if (!email.trim()) {
+      setError('Isi email dulu untuk kirim link reset password.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setNotice('Link reset password terkirim. Cek inbox email kamu.');
     } catch (err: unknown) {
       const firebaseErr = err as { code?: string };
       setError(getErrorMessage(firebaseErr.code ?? ''));
@@ -261,6 +283,27 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
           </div>
         </div>
 
+        {/* Lupa password — login saja */}
+        {isLogin && (
+          <div className="text-right -mt-1">
+            <button
+              type="button"
+              onClick={handleForgot}
+              disabled={loading}
+              className="text-[12px] font-medium text-teal-600 hover:text-teal-700 transition-colors disabled:opacity-50"
+            >
+              Lupa password?
+            </button>
+          </div>
+        )}
+
+        {/* Notice */}
+        {notice && (
+          <div className="rounded-xl bg-teal-50 border border-teal-100 px-4 py-3 text-[13px] text-teal-700 animate-fade-up">
+            {notice}
+          </div>
+        )}
+
         {/* Error */}
         {error && (
           <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-[13px] text-red-600 animate-fade-up">
@@ -291,6 +334,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
           onClick={() => {
             setMode(isLogin ? 'register' : 'login');
             setError('');
+            setNotice('');
           }}
           className="font-medium text-teal-600 hover:text-teal-700 transition-colors"
         >
