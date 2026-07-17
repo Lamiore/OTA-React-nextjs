@@ -62,13 +62,16 @@ service cloud.firestore {
           || (camUserRole() == 'pengelola'
               && resource.data.location == camUserLocation())
         );
-      // Hanya mitra/pengelola/admin boleh mendaftarkan kamera miliknya sendiri.
+      // Hanya mitra/pengelola/admin boleh mendaftarkan kamera miliknya sendiri,
+      // dan wajib berstatus 'pending' — validasi approve/reject hanya dari server
+      // VPS (Admin SDK, bypass rules). User tidak bisa menyetujui kameranya sendiri.
       allow create: if request.auth != null
         && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'pending'
         && camUserRole() in ['mitra', 'pengelola', 'admin'];
       allow delete: if request.auth != null
         && (resource.data.ownerUid == request.auth.uid || camUserRole() == 'admin');
-      // Edit kamera belum ada di aplikasi.
+      // Update status (approve/reject) hanya lewat server VPS via Admin SDK.
       allow update: if false;
     }
 

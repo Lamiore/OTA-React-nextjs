@@ -25,7 +25,6 @@ tidak bisa mengirim header auth.
 import argparse
 import functools
 import io
-import json
 import secrets
 import socket
 import threading
@@ -39,12 +38,12 @@ import qrcode.image.svg
 from flask import (Flask, Response, abort, jsonify, redirect,
                    render_template_string, request)
 from flask_cors import CORS
+from google.cloud import firestore
 from ultralytics import YOLO
 
 import coral_logic
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_FILE = BASE_DIR / "cameras.json"
 ID_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"  # tanpa karakter membingungkan (0/o, 1/l/i)
 JPEG_QUALITY = 70
 TEST_FPS = 15
@@ -130,25 +129,62 @@ def auth_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
-cameras: dict[str, dict] = {}  # id -> {"id", "name", "source"}
+cameras: dict[str, dict] = {}      # cameraId -> {"id", "name", "source"} (approved)
+pending_cameras: list[dict] = []   # antrean menunggu persetujuan admin
 workers: dict[str, "CameraWorker"] = {}
 registry_lock = threading.Lock()
+fs = None  # firestore.Client — diinisialisasi di main()
 
 
-def load_cameras() -> None:
-    if DATA_FILE.exists():
-        cameras.update(json.loads(DATA_FILE.read_text()))
+def _apply_snapshot(docs) -> None:
+    """Bangun ulang registry dari koleksi Firestore 'cameras'.
+
+    Sumber kebenaran kamera ada di Firestore: kamera dibuat dari website OTA
+    (status 'pending'), admin menyetujui di server ini (→ 'approved'). Hanya
+    kamera approved yang disajikan; yang pending tampil di antrean persetujuan.
+    Dokumen lama tanpa field status diperlakukan 'approved' (kompatibel mundur);
+    tanpa field source diperlakukan 'push' (kamera HP — satu-satunya sumber yang
+    dibuat dari website).
+    """
+    approved: dict[str, dict] = {}
+    pending: list[dict] = []
+    for doc in docs:
+        d = doc.to_dict() or {}
+        status = d.get("status", "approved")
+        cam_id = d.get("cameraId") or doc.id
+        name = d.get("name", "")
+        source = (d.get("source") or "push").strip()
+        if status == "approved":
+            approved[cam_id] = {"id": cam_id, "name": name, "source": source}
+        elif status == "pending":
+            pending.append({
+                "doc_id": doc.id, "cam_id": cam_id, "name": name, "source": source,
+                "location": d.get("location", ""),
+                "owner": d.get("ownerName") or d.get("ownerEmail") or "",
+            })
+    with registry_lock:
+        removed = set(cameras) - set(approved)  # tak lagi approved / dihapus
+        cameras.clear()
+        cameras.update(approved)
+        pending_cameras.clear()
+        pending_cameras.extend(sorted(pending, key=lambda c: c["name"].lower()))
+        stale = [workers.get(cid) for cid in removed]
+    for w in stale:  # hentikan worker kamera yang dicabut → lepas perangkat
+        if w:
+            with w.cond:
+                w.stopped = True
+                w.cond.notify_all()
 
 
-def save_cameras() -> None:
-    DATA_FILE.write_text(json.dumps(cameras, indent=2, ensure_ascii=False))
+def _on_snapshot(col_snapshot, changes, read_time) -> None:
+    _apply_snapshot(col_snapshot)
 
 
-def new_camera_id() -> str:
-    while True:
-        cam_id = "".join(secrets.choice(ID_ALPHABET) for _ in range(6))
-        if cam_id not in cameras:
-            return cam_id
+def refresh_registry() -> None:
+    """Baca ulang registry sinkron — dipakai setelah approve/reject agar halaman
+    langsung memantulkan perubahan tanpa menunggu listener async."""
+    if fs is not None:
+        _apply_snapshot(fs.collection("cameras").get())
 
 
 def lan_ip() -> str:
@@ -410,44 +446,47 @@ PAGE = """<!doctype html>
   </div>
 
   <div class="card">
-    <h2>Kamera Terdaftar</h2>
-    {% if not cameras %}<p class="empty">Belum ada kamera. Tambahkan di bawah.</p>{% endif %}
+    <h2>Menunggu Persetujuan</h2>
+    {% if not pending %}<p class="empty">Tidak ada kamera menunggu persetujuan.</p>{% endif %}
+    {% for c in pending %}
+    <div class="cam">
+      <div class="info">
+        <p class="name">{{ c.name }}</p>
+        <p class="src">Sumber: {{ c.source }}{% if c.location %} · {{ c.location }}{% endif %}</p>
+        {% if c.owner %}<p class="src">Pemilik: {{ c.owner }}</p>{% endif %}
+        <p class="src">ID: <code>{{ c.cam_id }}</code></p>
+      </div>
+      <form method="post" action="/cameras/{{ c.doc_id }}/approve">
+        <button>Ya, setujui</button>
+      </form>
+      <form method="post" action="/cameras/{{ c.doc_id }}/reject"
+            onsubmit="return confirm('Tolak kamera {{ c.name }}?')">
+        <button class="danger">Tidak</button>
+      </form>
+    </div>
+    {% endfor %}
+    <p class="hint">Kamera dibuat dari website OTA. Setujui agar bisa mulai disiarkan;
+    QR siaran otomatis muncul di website pemilik setelah disetujui.</p>
+  </div>
+
+  <div class="card">
+    <h2>Kamera Aktif</h2>
+    {% if not cameras %}<p class="empty">Belum ada kamera aktif.</p>{% endif %}
     {% for c in cameras %}
     <div class="cam">
       <div class="info">
         <p class="name">{{ c.name }}</p>
         <p class="src">{{ c.source }} — <a href="/stream/{{ c.id }}" target="_blank">pratinjau</a></p>
         {% if c.source|lower == 'push' %}
-        <p class="src">📱 <a href="/broadcast/{{ c.id }}" target="_blank">buka siaran HP</a>
-           · <a href="#" onclick="salinLink('{{ c.id }}', this); return false;">salin link siaran</a></p>
+        <p class="src">📱 <a href="/broadcast/{{ c.id }}" target="_blank">buka siaran HP</a></p>
         <div class="qr" title="Scan pakai kamera HP untuk buka halaman siaran">{{ qr_svgs[c.id]|safe }}</div>
         <p class="qr-cap">Scan pakai HP → buka halaman siaran</p>
         {% endif %}
       </div>
       <span class="id" id="id-{{ c.id }}">{{ c.id }}</span>
-      <button class="ghost" onclick="salin('id-{{ c.id }}', this)">Salin ID</button>
-      <form method="post" action="/cameras/{{ c.id }}/delete"
-            onsubmit="return confirm('Hapus kamera {{ c.name }}?')">
-        <button class="danger">Hapus</button>
-      </form>
     </div>
     {% endfor %}
-    <p class="hint">Tempel <b>ID</b> di form "Tambah Kamera" website OTA.</p>
-  </div>
-
-  <div class="card">
-    <h2>Tambah Kamera</h2>
-    <form method="post" action="/cameras">
-      <label>Nama</label>
-      <input name="name" required placeholder="Misal: Kamera Dermaga Bunaken">
-      <label>Sumber</label>
-      <input name="source" required
-             placeholder="push (kamera HP) / 0 (webcam) / http://.../video / test">
-      <p class="hint">Isi <code>push</code> untuk kamera HP via browser (buka
-      <code>/broadcast/&lt;id&gt;</code> di HP), <code>0</code> untuk webcam laptop,
-      URL stream IP Webcam, atau <code>test</code> untuk pola uji tanpa kamera.</p>
-      <p style="margin-top:14px"><button>Tambah</button></p>
-    </form>
+    <p class="hint">Kamera dihapus dari website OTA oleh pemiliknya, bukan dari sini.</p>
   </div>
 </div>
 <script>
@@ -464,19 +503,6 @@ function salin(id, btn) {
   btn.textContent = 'Tersalin!';
   setTimeout(() => (btn.textContent = asal), 1200);
 }
-/* Salin URL siaran lengkap (origin saat ini + /broadcast/<id>) untuk dibuka di HP. */
-function salinLink(id, el) {
-  const teks = location.origin + '/broadcast/' + id;
-  const ta = document.createElement('textarea');
-  ta.value = teks;
-  document.body.appendChild(ta);
-  ta.select();
-  document.execCommand('copy');
-  ta.remove();
-  const asal = el.textContent;
-  el.textContent = 'Link tersalin!';
-  setTimeout(() => (el.textContent = asal), 1200);
-}
 </script>
 </body>
 </html>"""
@@ -489,41 +515,35 @@ def index():
     # X-Forwarded-Proto=https), dipakai untuk isi QR halaman siaran.
     proto = request.headers.get("X-Forwarded-Proto", request.scheme)
     base = f"{proto}://{request.host}"
-    cams = sorted(cameras.values(), key=lambda c: c["name"].lower())
+    with registry_lock:
+        cams = sorted(cameras.values(), key=lambda c: c["name"].lower())
+        pending = list(pending_cameras)
     qr_svgs = {c["id"]: make_qr_svg(f"{base}/broadcast/{c['id']}")
                for c in cams if c["source"].strip().lower() == "push"}
     return render_template_string(
         PAGE,
         cameras=cams,
+        pending=pending,
         qr_svgs=qr_svgs,
         base_url=f"http://{lan_ip()}:{app.config['PORT']}",
     )
 
 
-@app.post("/cameras")
+@app.post("/cameras/<doc_id>/approve")
 @auth_required
-def add_camera():
-    name = request.form.get("name", "").strip()
-    source = request.form.get("source", "").strip()
-    if name and source:
-        with registry_lock:
-            cam_id = new_camera_id()
-            cameras[cam_id] = {"id": cam_id, "name": name, "source": source}
-            save_cameras()
+def approve_camera(doc_id: str):
+    """Admin menyetujui pengajuan kamera dari website → status 'approved'."""
+    fs.collection("cameras").document(doc_id).update({"status": "approved"})
+    refresh_registry()
     return redirect("/")
 
 
-@app.post("/cameras/<cam_id>/delete")
+@app.post("/cameras/<doc_id>/reject")
 @auth_required
-def delete_camera(cam_id: str):
-    with registry_lock:
-        cameras.pop(cam_id, None)
-        save_cameras()
-        worker = workers.get(cam_id)
-    if worker:
-        with worker.cond:
-            worker.stopped = True
-            worker.cond.notify_all()
+def reject_camera(doc_id: str):
+    """Admin menolak pengajuan kamera → status 'rejected' (pemilik lihat di website)."""
+    fs.collection("cameras").document(doc_id).update({"status": "rejected"})
+    refresh_registry()
     return redirect("/")
 
 
@@ -650,6 +670,20 @@ def broadcast(cam_id: str):
         BROADCAST_PAGE, cam_id=cam_id, name=cameras[cam_id]["name"])
 
 
+def init_firestore() -> None:
+    """Sambungkan ke Firestore (sumber kebenaran kamera) + pasang listener realtime.
+
+    Kredensial lewat env GOOGLE_APPLICATION_CREDENTIALS (service-account JSON di
+    VPS, TIDAK di-commit ke repo publik). Snapshot awal dibaca sinkron agar
+    stream sudah bisa dilayani sebelum listener async menyala.
+    """
+    global fs
+    fs = firestore.Client(project="ota-db")
+    col = fs.collection("cameras")
+    _apply_snapshot(col.get())      # sync awal sebelum melayani
+    col.on_snapshot(_on_snapshot)   # update realtime (thread latar sendiri)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Server kamera mitra + deteksi karang (demo OTA)")
@@ -661,12 +695,14 @@ def main() -> None:
                              "ditampilkan di terminal")
     args = parser.parse_args()
 
-    load_cameras()
+    init_firestore()
     app.config["PORT"] = args.port
     password = args.password or \
         "".join(secrets.choice(ID_ALPHABET) for _ in range(8))
     app.config["ADMIN_PASSWORD"] = password
     print(f"🚀 Model deteksi: {MODEL_PATH}")
+    print(f"☁️  Firestore terhubung — {len(cameras)} kamera aktif, "
+          f"{len(pending_cameras)} menunggu persetujuan")
     print(f"\n  Server kamera jalan di: http://{lan_ip()}:{args.port}")
     if args.password:
         print("  🔒 Halaman kelola dilindungi password (--password).\n")

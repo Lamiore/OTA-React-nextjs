@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import type { User } from 'firebase/auth';
 import {
   addCamera,
+  cameraStatus,
   deleteCamera,
   distinctLocations,
+  subscribeCameraServerUrl,
   subscribeDestinations,
   subscribeMyCameras,
   type Camera,
@@ -29,9 +32,9 @@ export default function CameraManager({ user }: { user: User }) {
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
   const [regions, setRegions] = useState<string[]>([]);
+  const [serverUrl, setServerUrl] = useState('');
 
-  // Form tambah kamera
-  const [cameraId, setCameraId] = useState('');
+  // Form tambah kamera — cukup nama + wilayah; ID stream digenerate otomatis.
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [saving, setSaving] = useState(false);
@@ -60,20 +63,13 @@ export default function CameraManager({ user }: { user: User }) {
     return () => unsub();
   }, []);
 
+  useEffect(() => subscribeCameraServerUrl(setServerUrl), []);
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const id = cameraId.trim();
     const nm = name.trim();
-    if (!id || !nm) {
-      setError('ID kamera dan nama wajib diisi.');
-      return;
-    }
-    if (/\s/.test(id) || /^https?:\/\//i.test(id)) {
-      setError('Isi ID pendek dari website kamera (misal k7x2ab), bukan URL.');
-      return;
-    }
-    if (cameras.some((c) => c.cameraId === id)) {
-      setError('ID kamera sudah terdaftar.');
+    if (!nm) {
+      setError('Nama kamera wajib diisi.');
       return;
     }
     if (!location) {
@@ -84,14 +80,12 @@ export default function CameraManager({ user }: { user: User }) {
     setSaving(true);
     try {
       await addCamera({
-        cameraId: id,
         name: nm,
         location: location,
         ownerUid: user.uid,
         ownerName: user.displayName ?? '',
         ownerEmail: user.email ?? '',
       });
-      setCameraId('');
       setName('');
       setLocation('');
     } catch {
@@ -170,51 +164,99 @@ export default function CameraManager({ user }: { user: User }) {
             <p className="text-sm text-navy-soft">Belum ada kamera. Tambahkan kamera pertamamu.</p>
           </div>
         ) : (
-          cameras.map((c) => (
-            <div key={c.id} className="card p-5 animate-fade-in">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[15px] font-medium text-navy truncate">{c.name}</p>
-                  <p className="text-[12px] text-navy-soft mt-1 truncate">
-                    ID: {c.cameraId}
-                    {c.location && ` — ${c.location}`}
-                  </p>
+          cameras.map((c) => {
+            const status = cameraStatus(c);
+            const isPush = (c.source ?? 'push').trim().toLowerCase() === 'push';
+            const broadcastUrl = serverUrl ? `${serverUrl.replace(/\/+$/, '')}/broadcast/${c.cameraId}` : '';
+            return (
+              <div key={c.id} className="card p-5 animate-fade-in">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-medium text-navy truncate">{c.name}</p>
+                    <p className="text-[12px] text-navy-soft mt-1 truncate">
+                      ID: {c.cameraId}
+                      {c.location && ` — ${c.location}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {status === 'pending' && (
+                      <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-600">Menunggu admin</span>
+                    )}
+                    {status === 'rejected' && (
+                      <span className="rounded-lg bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-600">Ditolak</span>
+                    )}
+                    {status === 'approved' && (
+                      <span className="rounded-lg bg-teal-50 px-2.5 py-1 text-[11px] font-medium text-teal-600">Disetujui</span>
+                    )}
+                    <button
+                      onClick={() => setDeletingCamera(c)}
+                      className="h-8 w-8 rounded-lg border border-shore-200 flex items-center justify-center text-navy-soft hover:border-red-200 hover:text-red-500 transition-colors"
+                      aria-label={`Hapus ${c.name}`}
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setDeletingCamera(c)}
-                  className="h-8 w-8 rounded-lg border border-shore-200 flex items-center justify-center text-navy-soft hover:border-red-200 hover:text-red-500 transition-colors shrink-0"
-                  aria-label={`Hapus ${c.name}`}
-                >
-                  <TrashIcon />
-                </button>
+
+                {status === 'pending' && (
+                  <p className="mt-4 text-[12px] text-navy-soft leading-relaxed rounded-xl bg-shore-50 px-4 py-3">
+                    Kamera menunggu persetujuan admin di server. Setelah disetujui, QR
+                    untuk mulai siaran dari HP akan muncul di sini.
+                  </p>
+                )}
+
+                {status === 'rejected' && (
+                  <p className="mt-4 text-[12px] text-navy-soft leading-relaxed rounded-xl bg-red-50/60 px-4 py-3">
+                    Pengajuan kamera ditolak admin. Hapus kamera ini lalu daftarkan ulang
+                    bila perlu.
+                  </p>
+                )}
+
+                {status === 'approved' && isPush && broadcastUrl && (
+                  <div className="mt-4 flex flex-col items-center gap-3 rounded-xl bg-shore-50 px-4 py-5 sm:flex-row sm:items-center sm:gap-5">
+                    <div className="shrink-0 rounded-xl bg-white p-2.5 shadow-soft">
+                      <QRCodeSVG value={broadcastUrl} size={116} />
+                    </div>
+                    <div className="min-w-0 text-center sm:text-left">
+                      <p className="text-[13px] font-medium text-navy">Mulai siaran dari HP</p>
+                      <p className="text-[12px] text-navy-soft mt-1 leading-relaxed">
+                        Scan QR ini pakai kamera HP, atau buka link siaran di HP lalu izinkan
+                        akses kamera. Biarkan halaman siaran tetap terbuka.
+                      </p>
+                      <a
+                        href={broadcastUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block mt-2 text-[12px] font-medium text-teal-600 hover:text-teal-700 break-all"
+                      >
+                        Buka halaman siaran ↗
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {status === 'approved' && (
+                  <button
+                    onClick={() => setLiveCamera(c)}
+                    className="btn-primary w-full rounded-xl px-4 py-2 text-[12px] mt-4"
+                  >
+                    Lihat Live
+                  </button>
+                )}
               </div>
-              <button
-                onClick={() => setLiveCamera(c)}
-                className="btn-primary w-full rounded-xl px-4 py-2 text-[12px] mt-4"
-              >
-                Lihat Live
-              </button>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
       {/* Form tambah kamera */}
       <div className="card p-6 mt-4">
         <h2 className="font-serif text-lg font-medium text-navy">Tambah Kamera</h2>
+        <p className="text-[12px] text-navy-soft mt-1 leading-relaxed">
+          Daftarkan kamera dari sini. Admin akan memvalidasi di server, lalu QR untuk
+          siaran dari HP muncul otomatis di daftar di atas.
+        </p>
         <form onSubmit={handleAdd} className="mt-4 space-y-4">
-          <div>
-            <label className="block text-[12px] font-medium text-navy mb-1.5">ID Kamera</label>
-            <input
-              value={cameraId}
-              onChange={(e) => setCameraId(e.target.value)}
-              placeholder="Misal: k7x2ab"
-              className={inputClass}
-            />
-            <p className="text-[11px] text-navy-soft mt-1.5">
-              Salin ID dari daftar kamera di website kamera.
-            </p>
-          </div>
           <div>
             <label className="block text-[12px] font-medium text-navy mb-1.5">Nama Kamera</label>
             <input

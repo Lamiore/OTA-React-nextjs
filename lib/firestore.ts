@@ -211,31 +211,71 @@ export async function rejectMitra(uid: string) {
 
 // ── Cameras (kamera mitra — terpisah dari monitoring IoT) ──
 
+/** Status validasi kamera oleh admin di server VPS. */
+export type CameraStatus = "pending" | "approved" | "rejected";
+
 export interface Camera {
   id: string; // Firestore doc id
-  cameraId: string; // ID stream dari server kamera (camera-server), dipaste user
+  cameraId: string; // ID stream 6-karakter, digenerate website saat daftar
   name: string; // nama tampilan, misal "Kamera Dermaga Bunaken"
   streamUrl?: string; // legacy: URL stream langsung, kamera lama sebelum server kamera
   location: string; // lokasi pemasangan, boleh string kosong
   ownerUid: string;
   ownerName: string; // snapshot nama pemilik saat dibuat (untuk panel admin)
   ownerEmail: string; // snapshot email pemilik saat dibuat
+  /** Sumber frame di server kamera: "push" (HP), "0" (webcam), URL stream, "test". */
+  source?: string;
+  /** Validasi admin. Dokumen lama tanpa field diperlakukan "approved" (server VPS). */
+  status?: CameraStatus;
   createdAt: unknown;
 }
 
-export type CameraInput = Omit<Camera, "id" | "createdAt">;
+/** Data yang diisi pemilik saat mendaftarkan kamera; cameraId & status digenerate. */
+export interface NewCamera {
+  name: string;
+  location: string;
+  ownerUid: string;
+  ownerName: string;
+  ownerEmail: string;
+  source?: string; // default "push" (kamera HP)
+}
+
+// Alfabet ID stream — sama persis dengan server kamera (tanpa 0/o/1/l/i).
+const CAM_ID_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+
+/** ID stream pendek 6 karakter (~887 juta kombinasi, praktis tak tertebak & tak bentrok). */
+export function genCameraId(len = 6): string {
+  const bytes = new Uint32Array(len);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (n) => CAM_ID_ALPHABET[n % CAM_ID_ALPHABET.length]).join("");
+}
+
+/** Status efektif kamera — dokumen lama tanpa field diperlakukan "approved". */
+export function cameraStatus(c: Pick<Camera, "status">): CameraStatus {
+  return c.status ?? "approved";
+}
 
 /** Mitra ke atas boleh mengelola kamera; pengelola & admin tanpa verifikasi. */
 export function canManageCameras(role: string | null | undefined): boolean {
   return role === "mitra" || role === "pengelola" || role === "admin";
 }
 
-export async function addCamera(data: CameraInput) {
-  if (!db) return;
+/**
+ * Daftarkan kamera dari website dengan status "pending". Server VPS (admin)
+ * yang memvalidasi approve/reject; QR siaran muncul di website setelah disetujui.
+ * Mengembalikan cameraId yang digenerate.
+ */
+export async function addCamera(data: NewCamera): Promise<string> {
+  if (!db) return "";
+  const cameraId = genCameraId();
   await addDoc(collection(db, "cameras"), {
     ...data,
+    source: data.source ?? "push",
+    cameraId,
+    status: "pending",
     createdAt: serverTimestamp(),
   });
+  return cameraId;
 }
 
 export async function deleteCamera(id: string) {

@@ -58,3 +58,7 @@ next-env.d.ts
 /Proyek_Karang/**/__pycache__/
 /Proyek_Karang/*.pt
 /Proyek_Karang/cameras.json
+# Service-account Firestore — RAHASIA, jangan pernah commit ke repo publik.
+serviceAccount.json
+/Proyek_Karang/**/serviceAccount*.json
+*-firebase-adminsdk-*.json

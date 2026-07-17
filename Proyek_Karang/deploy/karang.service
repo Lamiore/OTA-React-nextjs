@@ -5,6 +5,9 @@ After=network.target
 [Service]
 User=ilhamserv
 WorkingDirectory=/opt/karang
+# Kredensial Firestore (service-account JSON). File ini TIDAK di-commit ke repo
+# publik — upload manual ke VPS: /opt/karang/serviceAccount.json (chmod 600).
+Environment=GOOGLE_APPLICATION_CREDENTIALS=/opt/karang/serviceAccount.json
 ExecStart=/opt/karang/venv/bin/python /opt/karang/kamera_deteksi.py --port 5001 --password otakarang123
 Restart=always
 RestartSec=3
