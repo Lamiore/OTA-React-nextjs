@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Destination } from '@/lib/firestore';
+import { fetchRatingSummaries, type Destination, type RatingSummary } from '@/lib/firestore';
+import { useSavedDestinations } from '@/lib/useSaved';
 import DestinationCard from './DestinationCard';
 import FilterChips from './FilterChips';
 
@@ -11,10 +12,26 @@ function SkeletonCard() {
   return <div className="h-24 rounded-2xl bg-shore-100 animate-pulse" />;
 }
 
+function SearchIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-navy-soft shrink-0">
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  );
+}
+
 export default function DestinationList() {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('Semua');
+  const [search, setSearch] = useState('');
+  const [ratings, setRatings] = useState<Record<string, RatingSummary>>({});
+  const { user, savedIds, toggle } = useSavedDestinations();
+
+  useEffect(() => {
+    fetchRatingSummaries().then(setRatings);
+  }, []);
 
   const fetchDestinations = useCallback(async (filter: string) => {
     if (!db) {
@@ -44,6 +61,13 @@ export default function DestinationList() {
     fetchDestinations(activeFilter);
   }, [activeFilter, fetchDestinations]);
 
+  const term = search.trim().toLowerCase();
+  const shown = term
+    ? destinations.filter((d) =>
+        [d.name, d.location, ...(d.tags ?? [])].join(' ').toLowerCase().includes(term)
+      )
+    : destinations;
+
   return (
     <div className="bg-shore-50">
       {/* Section header */}
@@ -52,6 +76,19 @@ export default function DestinationList() {
         <button className="text-[11px] text-teal-600 font-medium">
           Lihat Semua
         </button>
+      </div>
+
+      {/* Search */}
+      <div className="px-4 pb-2.5">
+        <div className="flex items-center gap-2.5 rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5">
+          <SearchIcon />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari destinasi..."
+            className="w-full bg-transparent text-[13px] text-navy placeholder:text-navy-soft/60 outline-none"
+          />
+        </div>
       </div>
 
       <FilterChips onFilterChange={(f) => setActiveFilter(f)} />
@@ -63,7 +100,7 @@ export default function DestinationList() {
             <SkeletonCard />
             <SkeletonCard />
           </>
-        ) : destinations.length === 0 ? (
+        ) : shown.length === 0 ? (
           <div className="flex flex-col items-center py-12 gap-3">
             <div className="w-12 h-12 rounded-xl bg-shore-100 flex items-center justify-center">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-navy-soft">
@@ -76,13 +113,18 @@ export default function DestinationList() {
             </p>
           </div>
         ) : (
-          destinations.map((dest, i) => (
+          shown.map((dest, i) => (
             <div
               key={dest.id}
               className="animate-fade-up"
               style={{ animationDelay: `${i * 60}ms` }}
             >
-              <DestinationCard {...dest} />
+              <DestinationCard
+                {...dest}
+                rating={ratings[dest.id]}
+                saved={savedIds.includes(dest.id)}
+                onToggleSave={user ? () => toggle(dest.id) : undefined}
+              />
             </div>
           ))
         )}

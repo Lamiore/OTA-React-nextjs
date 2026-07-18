@@ -12,6 +12,9 @@ interface Props {
   isLive?: boolean;
   description?: string;
   image?: string;
+  rating?: { avg: number; count: number };
+  saved?: boolean;
+  onToggleSave?: () => void;
 }
 
 function PinIcon() {
@@ -19,6 +22,22 @@ function PinIcon() {
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-navy-soft shrink-0">
       <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
       <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
+function StarIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" className="text-amber-400 shrink-0">
+      <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+    </svg>
+  );
+}
+
+function HeartIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
     </svg>
   );
 }
@@ -32,6 +51,9 @@ export default function DestinationCard({
   tags,
   isLive,
   image,
+  rating,
+  saved,
+  onToggleSave,
 }: Props) {
   const router = useRouter();
 
@@ -51,9 +73,20 @@ export default function DestinationCard({
 
       {/* Content */}
       <div className="flex-1 p-3.5 flex flex-col gap-1.5">
-        <h3 className="text-[13px] font-semibold text-navy leading-tight capitalize">
-          {name}
-        </h3>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-[13px] font-semibold text-navy leading-tight capitalize">
+            {name}
+          </h3>
+          {onToggleSave && (
+            <button
+              onClick={onToggleSave}
+              aria-label={saved ? 'Hapus dari tersimpan' : 'Simpan destinasi'}
+              className={`shrink-0 -mt-1 -mr-1 p-1 transition-colors ${saved ? 'text-red-400' : 'text-shore-300 hover:text-red-300'}`}
+            >
+              <HeartIcon filled={!!saved} />
+            </button>
+          )}
+        </div>
 
         <div className="flex items-center gap-1">
           <PinIcon />
@@ -78,7 +111,16 @@ export default function DestinationCard({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end mt-auto pt-1.5">
+        <div className="flex items-center justify-between mt-auto pt-1.5">
+          {rating && rating.count > 0 ? (
+            <span className="flex items-center gap-1 text-[10px] text-navy-soft">
+              <StarIcon />
+              <span className="font-semibold text-navy">{rating.avg.toFixed(1)}</span>
+              ({rating.count})
+            </span>
+          ) : (
+            <span />
+          )}
           <button
             onClick={() => router.push(`/destinations/${id}`)}
             className="bg-teal-500 text-white rounded-lg px-3 py-1 text-[10px] font-medium hover:bg-teal-600 transition-colors duration-200"

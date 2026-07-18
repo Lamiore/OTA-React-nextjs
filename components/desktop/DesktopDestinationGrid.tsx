@@ -3,11 +3,21 @@
 import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Destination } from '@/lib/firestore';
+import { fetchRatingSummaries, type Destination, type RatingSummary } from '@/lib/firestore';
+import { useSavedDestinations } from '@/lib/useSaved';
 import DesktopDestinationCard from './DesktopDestinationCard';
 import clsx from 'clsx';
 
 const filters = ['Semua', 'Bunaken', 'Likupang', 'Lembeh', 'Terdekat'];
+
+function SearchIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-navy-soft shrink-0">
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  );
+}
 
 function SkeletonCard() {
   return (
@@ -26,6 +36,13 @@ export default function DesktopDestinationGrid() {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('Semua');
+  const [search, setSearch] = useState('');
+  const [ratings, setRatings] = useState<Record<string, RatingSummary>>({});
+  const { user, savedIds, toggle } = useSavedDestinations();
+
+  useEffect(() => {
+    fetchRatingSummaries().then(setRatings);
+  }, []);
 
   const fetchDestinations = useCallback(async (filter: string) => {
     if (!db) {
@@ -55,6 +72,13 @@ export default function DesktopDestinationGrid() {
     fetchDestinations(activeFilter);
   }, [activeFilter, fetchDestinations]);
 
+  const term = search.trim().toLowerCase();
+  const shown = term
+    ? destinations.filter((d) =>
+        [d.name, d.location, ...(d.tags ?? [])].join(' ').toLowerCase().includes(term)
+      )
+    : destinations;
+
   return (
     <section id="destinasi" className="scroll-mt-16 bg-shore-50">
       <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-10">
@@ -67,6 +91,17 @@ export default function DesktopDestinationGrid() {
           <button className="btn-ghost rounded-full px-4 py-2 text-xs">
             Lihat Semua
           </button>
+        </div>
+
+        {/* Search */}
+        <div className="mb-4 flex max-w-md items-center gap-2.5 rounded-xl border border-shore-200 bg-surface px-4 py-2.5">
+          <SearchIcon />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari destinasi..."
+            className="w-full bg-transparent text-[13px] text-navy placeholder:text-navy-soft/60 outline-none"
+          />
         </div>
 
         {/* Filter chips */}
@@ -92,7 +127,7 @@ export default function DesktopDestinationGrid() {
               <SkeletonCard key={i} />
             ))}
           </div>
-        ) : destinations.length === 0 ? (
+        ) : shown.length === 0 ? (
           <div className="flex flex-col items-center py-24 gap-4">
             <div className="w-16 h-16 rounded-2xl bg-shore-100 flex items-center justify-center">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-navy-soft">
@@ -106,13 +141,18 @@ export default function DesktopDestinationGrid() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {destinations.map((dest, i) => (
+            {shown.map((dest, i) => (
               <div
                 key={dest.id}
                 className="animate-fade-in"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
-                <DesktopDestinationCard {...dest} />
+                <DesktopDestinationCard
+                  {...dest}
+                  rating={ratings[dest.id]}
+                  saved={savedIds.includes(dest.id)}
+                  onToggleSave={user ? () => toggle(dest.id) : undefined}
+                />
               </div>
             ))}
           </div>

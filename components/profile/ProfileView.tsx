@@ -10,6 +10,7 @@ import { subscribeUserBookings, subscribeUserReviews, type Booking } from '@/lib
 import BookingHistory from '@/components/booking/BookingHistory';
 import CameraSection from '@/components/cameras/CameraSection';
 import AccountSettings from '@/components/profile/AccountSettings';
+import SavedDestinations from '@/components/profile/SavedDestinations';
 import Link from 'next/link';
 import { useTheme } from '@/lib/useTheme';
 
@@ -81,6 +82,15 @@ const menuItems = [
     ),
   },
   {
+    label: 'Tersimpan',
+    description: 'Destinasi favorit yang kamu simpan',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+      </svg>
+    ),
+  },
+  {
     label: 'Pengaturan',
     description: 'Tema tampilan & preferensi',
     icon: <SettingsIcon />,
@@ -100,7 +110,7 @@ const menuItems = [
 
 export default function ProfileView({ user, role }: { user: User; role: UserRole | null }) {
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'menu' | 'riwayat' | 'pengaturan' | 'kamera'>(
+  const [view, setView] = useState<'menu' | 'riwayat' | 'tersimpan' | 'pengaturan' | 'kamera'>(
     searchParams.get('view') === 'riwayat'
       ? 'riwayat'
       : searchParams.get('view') === 'kamera'
@@ -156,6 +166,23 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
           Kembali
         </button>
         <BookingHistory />
+      </div>
+    );
+  }
+
+  if (view === 'tersimpan') {
+    return (
+      <div className="w-full max-w-lg mx-auto animate-fade-in">
+        <button
+          onClick={() => setView('menu')}
+          className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-navy-soft transition-colors hover:text-navy"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Kembali
+        </button>
+        <SavedDestinations />
       </div>
     );
   }
@@ -284,9 +311,11 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
                 ? () => setView('kamera')
                 : item.label === 'Riwayat Booking'
                   ? () => setView('riwayat')
-                  : item.label === 'Pengaturan'
-                    ? () => setView('pengaturan')
-                    : undefined
+                  : item.label === 'Tersimpan'
+                    ? () => setView('tersimpan')
+                    : item.label === 'Pengaturan'
+                      ? () => setView('pengaturan')
+                      : undefined
             }
             className="w-full flex items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-shore-50"
           >

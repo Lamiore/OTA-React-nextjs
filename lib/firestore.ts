@@ -12,6 +12,8 @@ import {
   onSnapshot,
   runTransaction,
   serverTimestamp,
+  arrayUnion,
+  arrayRemove,
   type DocumentData,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -149,6 +151,8 @@ export interface AppUser {
   /** No. HP/WhatsApp kontak — diisi sendiri di Pengaturan Akun. */
   phone?: string;
   role: "user" | "mitra" | "pengelola" | "admin";
+  /** Id destinasi tersimpan (wishlist) — di-toggle dari tombol hati di kartu destinasi. */
+  saved?: string[];
   /** Wilayah yang dikelola (khusus pengelola) — membatasi kamera & statistik ke wilayah ini. */
   location?: string;
   /** Pengajuan verifikasi mitra; tidak ada berarti belum pernah mengajukan. */
@@ -180,6 +184,29 @@ export async function updateUserLocation(uid: string, location: string) {
 export async function updateUserPhone(uid: string, phone: string) {
   if (!db) return;
   await updateDoc(doc(db, "users", uid), { phone });
+}
+
+/** Id destinasi tersimpan milik user (real-time dari users/{uid}.saved). */
+export function subscribeSavedDestinations(
+  uid: string,
+  callback: (ids: string[]) => void
+) {
+  if (!db) return () => {};
+  return onSnapshot(doc(db, "users", uid), (snap) => {
+    callback((snap.data()?.saved as string[] | undefined) ?? []);
+  });
+}
+
+/** Toggle simpan/hapus destinasi dari wishlist user. */
+export async function toggleSavedDestination(
+  uid: string,
+  destinationId: string,
+  isSaved: boolean
+) {
+  if (!db) return;
+  await updateDoc(doc(db, "users", uid), {
+    saved: isSaved ? arrayRemove(destinationId) : arrayUnion(destinationId),
+  });
 }
 
 export async function submitMitraVerification(
@@ -520,6 +547,23 @@ export function reviewStats(reviews: Review[]): { avg: number; count: number } {
   if (count === 0) return { avg: 0, count: 0 };
   const avg = reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / count;
   return { avg, count };
+}
+
+export type RatingSummary = { avg: number; count: number };
+
+/** Rata-rata rating per destinasi dari seluruh ulasan — untuk kartu destinasi. */
+// ponytail: baca semua ulasan sekali jalan; denormalisasi ke dokumen destinasi kalau ulasan sudah ribuan.
+export async function fetchRatingSummaries(): Promise<Record<string, RatingSummary>> {
+  if (!db) return {};
+  const snap = await getDocs(collection(db, "reviews"));
+  const grouped: Record<string, Review[]> = {};
+  snap.docs.forEach((d) => {
+    const r = d.data() as Review;
+    (grouped[r.destinationId] ??= []).push(r);
+  });
+  return Object.fromEntries(
+    Object.entries(grouped).map(([id, rs]) => [id, reviewStats(rs)])
+  );
 }
 
 // ── Monitoring ──
