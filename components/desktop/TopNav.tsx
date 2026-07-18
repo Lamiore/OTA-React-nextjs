@@ -25,7 +25,7 @@ export default function TopNav() {
   const { user } = useAuthState();
   const initials = user?.displayName
     ? user.displayName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
-    : 'DN';
+    : 'LA';
 
   return (
     <header className="sticky top-0 z-50 border-b border-shore-200/60 bg-shore-50/80 backdrop-blur-xl">
@@ -34,10 +34,10 @@ export default function TopNav() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500 shadow-sm">
-              <span className="font-serif text-sm font-semibold text-white tracking-tight">D</span>
+              <span className="font-serif text-sm font-semibold text-white tracking-tight">L</span>
             </div>
             <span className="font-serif text-lg font-semibold tracking-tight text-navy">
-              DeepNorth
+              Lautara
             </span>
           </Link>
 

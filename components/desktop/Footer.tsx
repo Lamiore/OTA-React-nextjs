@@ -9,10 +9,10 @@ export default function Footer() {
           <div className="xl:col-span-1">
             <div className="mb-4 flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink">
-                <span className="font-serif text-sm font-semibold text-white">D</span>
+                <span className="font-serif text-sm font-semibold text-white">L</span>
               </div>
               <span className="font-serif text-lg text-navy font-semibold">
-                DeepNorth
+                Lautara
               </span>
             </div>
             <p className="text-[13px] leading-relaxed text-navy-soft max-w-xs">
@@ -69,7 +69,7 @@ export default function Footer() {
 
         <div className="mt-10 border-t border-shore-200 pt-6 text-center">
           <p className="text-[12px] text-navy-soft/60">
-            &copy; 2026 DeepNorth. All rights reserved.
+            &copy; 2026 Lautara. All rights reserved.
           </p>
         </div>
       </div>

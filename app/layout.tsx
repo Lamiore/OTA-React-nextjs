@@ -15,7 +15,7 @@ const cormorant = Cormorant({
 });
 
 export const metadata: Metadata = {
-  title: "DeepNorth — Dive Into Adventure",
+  title: "Lautara — Dive Into Adventure",
   description:
     "Platform OTA untuk destinasi selam terbaik di Indonesia Utara",
 };

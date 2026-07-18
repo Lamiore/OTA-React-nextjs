@@ -134,10 +134,10 @@ export default function DashboardSidebar({ active, onNavigate, mobileOpen, onMob
         <div className="flex items-center justify-between h-16 px-5 border-b border-shore-200/60 shrink-0">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500 shadow-sm">
-              <span className="font-serif text-sm font-semibold text-white tracking-tight">D</span>
+              <span className="font-serif text-sm font-semibold text-white tracking-tight">L</span>
             </div>
             <div>
-              <span className="font-serif text-base font-semibold tracking-tight text-navy">DeepNorth</span>
+              <span className="font-serif text-base font-semibold tracking-tight text-navy">Lautara</span>
               <p className="text-[10px] text-navy-soft -mt-0.5">{role === 'admin' ? 'Admin Panel' : 'Panel Pengelola'}</p>
             </div>
           </Link>
