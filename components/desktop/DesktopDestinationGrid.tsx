@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { fetchRatingSummaries, type Destination, type RatingSummary } from '@/lib/firestore';
+import { fetchRatingSummaries, getPriceItems, type Destination, type RatingSummary } from '@/lib/firestore';
 import { useSavedDestinations } from '@/lib/useSaved';
 import DesktopDestinationCard from './DesktopDestinationCard';
 import clsx from 'clsx';
@@ -17,6 +17,14 @@ function SearchIcon() {
       <path d="m21 21-4.3-4.3" />
     </svg>
   );
+}
+
+/** Harga item termurah destinasi — undefined bila belum ada daftar harga. */
+function priceFrom(dest: Destination): number | undefined {
+  const prices = getPriceItems(dest)
+    .map((p) => p.price)
+    .filter((n) => n > 0);
+  return prices.length ? Math.min(...prices) : undefined;
 }
 
 function SkeletonCard() {
@@ -80,28 +88,32 @@ export default function DesktopDestinationGrid() {
     : destinations;
 
   return (
-    <section id="destinasi" className="scroll-mt-16 bg-shore-50">
-      <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-10">
-        {/* Header */}
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <section id="destinasi" className="relative scroll-mt-16 overflow-hidden bg-shore-50">
+      {/* Aksen atmosfer — cahaya teal lembut di belakang grid. */}
+      <div className="pointer-events-none absolute -right-28 top-16 h-96 w-96 rounded-full bg-teal-400/[0.06] blur-3xl" />
+      <div className="pointer-events-none absolute -left-28 bottom-8 h-80 w-80 rounded-full bg-teal-200/[0.05] blur-3xl" />
+
+      <div className="relative max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-10">
+        {/* Header — heading serif menyambung gaya editorial hero, search di kanan. */}
+        <div className="mb-7 flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
           <div>
             <span className="section-label mb-2">Pilihan Terbaik</span>
-            <h2 className="text-xl font-semibold text-navy mt-1.5">Destinasi Populer</h2>
+            <h2 className="mt-2 font-serif text-3xl font-medium tracking-tight text-navy sm:text-4xl">
+              Destinasi Populer
+            </h2>
+            <p className="mt-2 text-[13px] font-light text-navy-soft">
+              Spot selam, pantai & ekowisata pilihan di Sulawesi Utara.
+            </p>
           </div>
-          <button className="btn-ghost rounded-full px-4 py-2 text-xs">
-            Lihat Semua
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="mb-4 flex max-w-md items-center gap-2.5 rounded-xl border border-shore-200 bg-surface px-4 py-2.5">
-          <SearchIcon />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari destinasi..."
-            className="w-full bg-transparent text-[13px] text-navy placeholder:text-navy-soft/60 outline-none"
-          />
+          <div className="flex w-full items-center gap-2.5 rounded-full border border-shore-200 bg-surface px-4 py-2.5 shadow-soft transition-colors focus-within:border-teal-400 sm:w-72">
+            <SearchIcon />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari destinasi..."
+              className="w-full bg-transparent text-[13px] text-navy placeholder:text-navy-soft/60 outline-none"
+            />
+          </div>
         </div>
 
         {/* Filter chips */}
@@ -152,6 +164,7 @@ export default function DesktopDestinationGrid() {
                   rating={ratings[dest.id]}
                   saved={savedIds.includes(dest.id)}
                   onToggleSave={user ? () => toggle(dest.id) : undefined}
+                  priceFrom={priceFrom(dest)}
                 />
               </div>
             ))}
