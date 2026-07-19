@@ -175,7 +175,8 @@ function BookingContent() {
 
   return (
     <div className="w-full max-w-5xl mx-auto animate-fade-in">
-      <h1 className="font-serif text-2xl font-medium text-navy sm:text-3xl">Booking</h1>
+      <span className="section-label mb-2">Reservasi</span>
+      <h1 className="mt-2 font-serif text-2xl font-medium text-navy sm:text-3xl">Booking</h1>
       <p className="mt-2 text-sm text-navy-soft">Isi detail untuk memesan perjalanan</p>
 
       <form onSubmit={handleSubmit} className="mt-6 lg:grid lg:grid-cols-[1fr_340px] lg:gap-8 lg:items-start">

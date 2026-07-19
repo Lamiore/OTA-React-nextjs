@@ -102,7 +102,7 @@ export default function DesktopDestinationCard({
 
   return (
     <div
-      className="card group cursor-pointer overflow-hidden hover:-translate-y-1"
+      className="card group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-teal-400/40 hover:shadow-glow"
       onClick={() => router.push(`/destinations/${id}`)}
     >
       {/* Thumbnail */}
@@ -111,7 +111,7 @@ export default function DesktopDestinationCard({
           <img
             src={image}
             alt={name}
-            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 ease-out"
           />
         ) : (
           <EmojiScene emoji={emoji} thumbColor={thumbColor} />

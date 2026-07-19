@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { fetchRatingSummaries, getPriceItems, type Destination, type RatingSummary } from '@/lib/firestore';
@@ -9,6 +10,8 @@ import DesktopDestinationCard from './DesktopDestinationCard';
 import clsx from 'clsx';
 
 const filters = ['Semua', 'Bunaken', 'Likupang', 'Lembeh', 'Terdekat'];
+
+const gridClass = 'grid grid-cols-1 gap-5 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 
 function SearchIcon() {
   return (
@@ -40,13 +43,37 @@ function SkeletonCard() {
   );
 }
 
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center gap-4 py-24">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-shore-100">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-navy-soft">
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+      </div>
+      <p className="text-sm text-navy-soft">Tidak ada destinasi ditemukan</p>
+    </div>
+  );
+}
+
 export default function DesktopDestinationGrid() {
+  // Seed dari URL (?q & ?loc) yang di-set hero search, lalu ikut berubah bila
+  // hero mencari lagi. Ketikan di kotak search grid sendiri tetap lokal.
+  const searchParams = useSearchParams();
+  const qParam = searchParams.get('q') ?? '';
+  const locParam = searchParams.get('loc') ?? 'Semua';
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState('Semua');
-  const [search, setSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState(locParam);
+  const [search, setSearch] = useState(qParam);
   const [ratings, setRatings] = useState<Record<string, RatingSummary>>({});
   const { user, savedIds, toggle } = useSavedDestinations();
+
+  useEffect(() => {
+    setSearch(qParam);
+    setActiveFilter(locParam);
+  }, [qParam, locParam]);
 
   useEffect(() => {
     fetchRatingSummaries().then(setRatings);
@@ -87,22 +114,53 @@ export default function DesktopDestinationGrid() {
       )
     : destinations;
 
+  // Search teks atau chip lokasi aktif → tampilkan hasil flat. Selain itu →
+  // permukaan discovery per-wilayah (Ecosystem Index).
+  const hasFilter = term !== '' || activeFilter !== 'Semua';
+
+  const byLocation = useMemo(() => {
+    const m = new Map<string, Destination[]>();
+    for (const d of destinations) {
+      const k = (d.location || '').trim() || 'Lainnya';
+      const arr = m.get(k);
+      if (arr) arr.push(d);
+      else m.set(k, [d]);
+    }
+    return Array.from(m.entries()).sort(
+      (a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0])
+    );
+  }, [destinations]);
+
+  const renderCard = (dest: Destination, i: number) => (
+    <div key={dest.id} className="animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
+      <DesktopDestinationCard
+        {...dest}
+        rating={ratings[dest.id]}
+        saved={savedIds.includes(dest.id)}
+        onToggleSave={user ? () => toggle(dest.id) : undefined}
+        priceFrom={priceFrom(dest)}
+      />
+    </div>
+  );
+
   return (
     <section id="destinasi" className="relative scroll-mt-16 overflow-hidden bg-shore-50">
       {/* Aksen atmosfer — cahaya teal lembut di belakang grid. */}
       <div className="pointer-events-none absolute -right-28 top-16 h-96 w-96 rounded-full bg-teal-400/[0.06] blur-3xl" />
       <div className="pointer-events-none absolute -left-28 bottom-8 h-80 w-80 rounded-full bg-teal-200/[0.05] blur-3xl" />
 
-      <div className="relative max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-10">
-        {/* Header — heading serif menyambung gaya editorial hero, search di kanan. */}
-        <div className="mb-7 flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
-          <div>
-            <span className="section-label mb-2">Pilihan Terbaik</span>
+      <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-10 lg:py-20">
+        {/* Header — positioning paragraph (Ecosystem Index) + search di kanan. */}
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
+          <div className="max-w-xl">
+            <span className="section-label mb-2">Jelajahi</span>
             <h2 className="mt-2 font-serif text-3xl font-medium tracking-tight text-navy sm:text-4xl">
-              Destinasi Populer
+              Destinasi Sulawesi Utara
             </h2>
-            <p className="mt-2 text-[13px] font-light text-navy-soft">
-              Spot selam, pantai & ekowisata pilihan di Sulawesi Utara.
+            <p className="mt-3 text-[13px] font-light leading-relaxed text-navy-soft">
+              {loading
+                ? 'Menyiapkan permukaan discovery…'
+                : `${destinations.length} destinasi di ${byLocation.length} wilayah — dari terumbu Bunaken sampai muck-diving Lembeh. Cari, atau telusuri per wilayah di bawah.`}
             </p>
           </div>
           <div className="flex w-full items-center gap-2.5 rounded-full border border-shore-200 bg-surface px-4 py-2.5 shadow-soft transition-colors focus-within:border-teal-400 sm:w-72">
@@ -117,55 +175,51 @@ export default function DesktopDestinationGrid() {
         </div>
 
         {/* Filter chips */}
-        <div className="mb-8 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="mb-10 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {filters.map((f) => (
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              className={clsx(
-                'chip',
-                activeFilter === f && 'chip-active'
-              )}
+              className={clsx('chip', activeFilter === f && 'chip-active')}
             >
               {f}
             </button>
           ))}
         </div>
 
-        {/* Grid */}
+        {/* Body */}
         {loading ? (
-          <div className="grid grid-cols-1 gap-5 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className={gridClass}>
             {Array.from({ length: 8 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </div>
-        ) : shown.length === 0 ? (
-          <div className="flex flex-col items-center py-24 gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-shore-100 flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-navy-soft">
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-            </div>
-            <p className="text-sm text-navy-soft">
-              Tidak ada destinasi ditemukan
-            </p>
-          </div>
+        ) : hasFilter ? (
+          shown.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className={gridClass}>{shown.map(renderCard)}</div>
+          )
         ) : (
-          <div className="grid grid-cols-1 gap-5 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {shown.map((dest, i) => (
-              <div
-                key={dest.id}
-                className="animate-fade-in"
-                style={{ animationDelay: `${i * 60}ms` }}
-              >
-                <DesktopDestinationCard
-                  {...dest}
-                  rating={ratings[dest.id]}
-                  saved={savedIds.includes(dest.id)}
-                  onToggleSave={user ? () => toggle(dest.id) : undefined}
-                  priceFrom={priceFrom(dest)}
-                />
+          <div className="space-y-14">
+            {byLocation.map(([loc, items]) => (
+              <div key={loc}>
+                <div className="mb-5 flex items-end justify-between gap-4 border-b border-shore-200 pb-3">
+                  <div>
+                    <h3 className="font-serif text-2xl font-medium capitalize tracking-tight text-navy">
+                      {loc}
+                    </h3>
+                    <span className="text-[12px] text-navy-soft">{items.length} destinasi</span>
+                  </div>
+                  <button
+                    onClick={() => setActiveFilter(loc)}
+                    className="group inline-flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-teal-600 transition-colors hover:text-teal-700"
+                  >
+                    Lihat semua
+                    <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                  </button>
+                </div>
+                <div className={gridClass}>{items.map(renderCard)}</div>
               </div>
             ))}
           </div>

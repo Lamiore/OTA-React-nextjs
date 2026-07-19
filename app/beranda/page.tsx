@@ -1,3 +1,5 @@
+/* Hallmark · genre: atmospheric · macrostructure: Ecosystem Index · theme: Lautara (preserved) · nav: N5 floating-pill · footer: Ft5 statement · 2026-07-20 */
+import { Suspense } from 'react';
 import TopNav from '@/components/desktop/TopNav';
 import HeroBanner from '@/components/desktop/HeroBanner';
 import DesktopDestinationGrid from '@/components/desktop/DesktopDestinationGrid';
@@ -9,7 +11,9 @@ export default function Beranda() {
     <main className="min-h-dvh bg-shore-50 pb-24 md:pb-0">
       <TopNav />
       <HeroBanner />
-      <DesktopDestinationGrid />
+      <Suspense>
+        <DesktopDestinationGrid />
+      </Suspense>
       <Footer />
       <BottomNav />
     </main>
