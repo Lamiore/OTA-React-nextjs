@@ -126,7 +126,9 @@ export default function DestinationDetail() {
     );
 
   const goToBooking = () => {
-    if (!user) {
+    // Butuh akun terverifikasi. Belum login / belum verifikasi → ke /profile
+    // (di sana tampil form masuk atau layar verifikasi email).
+    if (!user || !user.emailVerified) {
       router.push('/profile');
       return;
     }

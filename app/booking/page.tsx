@@ -93,7 +93,7 @@ function BookingContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
+    if (!user || !user.emailVerified) {
       router.push('/profile');
       return;
     }
@@ -357,11 +357,15 @@ function BookingContent() {
               {submitting ? 'Memproses...' : 'Konfirmasi Booking'}
             </button>
 
-            {!user && (
+            {!user ? (
               <p className="text-center text-[12px] text-navy-soft">
                 Kamu perlu <button type="button" onClick={() => router.push('/profile')} className="text-teal-600 font-medium hover:text-teal-700">masuk</button> terlebih dahulu untuk booking.
               </p>
-            )}
+            ) : !user.emailVerified ? (
+              <p className="text-center text-[12px] text-navy-soft">
+                <button type="button" onClick={() => router.push('/profile')} className="text-teal-600 font-medium hover:text-teal-700">Verifikasi email</button> kamu dulu sebelum booking.
+              </p>
+            ) : null}
           </div>
         </aside>
       </form>

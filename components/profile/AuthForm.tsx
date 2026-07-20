@@ -8,6 +8,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   sendPasswordResetEmail,
+  sendEmailVerification,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -136,6 +137,8 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
           await updateProfile(cred.user, { displayName: name.trim() });
         }
         await ensureUserDoc(cred.user);
+        // Kirim link verifikasi; gate ProfileContent menahan akun sampai diklik.
+        await sendEmailVerification(cred.user);
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
