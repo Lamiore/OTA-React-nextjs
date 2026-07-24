@@ -9,11 +9,17 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 const navLinks = [
   { label: 'Beranda', href: '/beranda' },
   { label: 'Booking', href: '/booking' },
+  { label: 'Profil', href: '/profile' },
 ];
 
-// N5 · Floating pill — nav detached & content-sized, blur backdrop mengambang di
-// atas kanvas. Search dipindah ke hero, jadi pill tetap ramping.
-export default function TopNav() {
+// Bar horizontal desktop — logo kiri, tombol nav + aksi akun kanan. Pil hover
+// menggantikan masthead terpusat N6: lebih ramah-pengguna, terbaca sebagai
+// aplikasi, bukan halaman koran.
+//
+// `hidden md:block` — di mobile navbar ini tidak dirender sama sekali; navigasi
+// sudah ditangani BottomNav floating. `compact` sedikit merapatkan tinggi bar
+// untuk halaman aplikasi (booking, profil, dashboard).
+export default function TopNav({ compact = false }: { compact?: boolean }) {
   const pathname = usePathname();
   const { user } = useAuthState();
   const initials = user?.displayName
@@ -21,53 +27,69 @@ export default function TopNav() {
     : 'LA';
 
   return (
-    <header className="sticky top-0 z-50 px-4 pt-3">
-      <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between gap-2 rounded-full border border-shore-200/60 bg-surface/70 pl-4 pr-2 shadow-soft backdrop-blur-xl">
-        {/* Wordmark */}
-        <Link href="/" className="flex shrink-0 items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-500">
-            <span className="font-serif text-[13px] font-semibold tracking-tight text-white">L</span>
-          </div>
-          <span className="font-serif text-base font-semibold tracking-tight text-navy">
+    <header className="sticky top-0 z-50 hidden border-b border-shore-200 bg-surface/90 backdrop-blur-md md:block">
+      <div
+        className={clsx(
+          'mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 lg:px-10',
+          compact ? 'h-14' : 'h-16'
+        )}
+      >
+        {/* Logo kiri */}
+        <Link href="/beranda" className="flex items-baseline gap-2">
+          <span
+            className={clsx(
+              'font-serif font-semibold tracking-tight text-navy',
+              compact ? 'text-lg' : 'text-xl'
+            )}
+          >
             Lautara
+          </span>
+          <span className="hidden text-2xs uppercase tracking-[0.18em] text-navy-soft lg:inline">
+            Sulawesi Utara
           </span>
         </Link>
 
-        {/* Links */}
-        <nav className="hidden items-center gap-1 sm:flex">
-          {navLinks.map(({ label, href }) => {
-            const isActive = pathname === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={clsx(
-                  'rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all duration-200',
-                  isActive
-                    ? 'bg-teal-500 text-white shadow-sm'
-                    : 'text-navy-soft hover:bg-shore-100 hover:text-navy'
-                )}
-              >
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Tombol nav + aksi akun kanan */}
+        <div className="flex items-center gap-1">
+          <nav aria-label="Utama">
+            <ul className="flex items-center gap-1">
+              {navLinks.map(({ label, href }) => {
+                const isActive = pathname === href;
+                return (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={clsx(
+                        'inline-block rounded-full px-4 py-2 text-sm transition-colors duration-micro ease-out',
+                        isActive
+                          ? 'bg-teal-50 font-semibold text-teal-700'
+                          : 'font-medium text-navy-soft hover:bg-shore-100 hover:text-navy'
+                      )}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
 
-        {/* Right */}
-        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="mx-2 h-6 w-px bg-shore-200" aria-hidden="true" />
+
           {user ? (
             <>
               <NotificationBell variant="light" />
               <Link
                 href="/profile"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-b from-teal-100 to-teal-200 text-[11px] font-semibold text-teal-700 transition-all duration-200 hover:shadow-glow"
+                aria-label="Profil"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-shore-200 bg-shore-100 text-2xs font-semibold text-navy transition-colors duration-micro ease-out hover:border-teal-500"
               >
                 {initials}
               </Link>
             </>
           ) : (
-            <Link href="/profile" className="btn-primary rounded-full px-4 py-1.5 text-[13px]">
+            <Link href="/profile" className="btn-primary px-4 py-1.5">
               Masuk
             </Link>
           )}

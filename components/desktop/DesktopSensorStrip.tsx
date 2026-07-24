@@ -90,12 +90,12 @@ export default function DesktopSensorStrip() {
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <h2 className="text-base font-semibold text-navy">Kondisi Laut</h2>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-[10px] font-medium text-teal-600">
+            <span className="inline-flex items-center gap-1.5 rounded-xs border border-teal-200 bg-teal-50 px-2.5 py-1 text-2xs font-medium text-teal-600">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
               Real-time
             </span>
           </div>
-          <button className="btn-ghost rounded-full px-4 py-2 text-xs">
+          <button className="btn-ghost px-4 py-2 text-xs">
             Lihat Detail
           </button>
         </div>
@@ -115,15 +115,15 @@ export default function DesktopSensorStrip() {
                 style={{ animationDelay: `${i * 80}ms` }}
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-shore-100 text-navy-soft group-hover:bg-teal-50 group-hover:text-teal-600 transition-colors duration-300">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-shore-100 text-navy-soft group-hover:bg-teal-50 group-hover:text-teal-600 transition-colors duration-short">
                     {s.icon}
                   </div>
                   <span
                     className={clsx(
-                      'rounded-full px-2.5 py-1 text-[10px] font-medium',
+                      'rounded-xs px-2.5 py-1 text-2xs font-medium',
                       statusType === 'ok'
                         ? 'bg-teal-50 text-teal-600'
-                        : 'bg-amber-50 text-amber-700'
+                        : 'bg-warn-soft text-warn'
                     )}
                   >
                     {status}
@@ -131,7 +131,7 @@ export default function DesktopSensorStrip() {
                 </div>
 
                 <div>
-                  <span className="text-[11px] uppercase tracking-[0.14em] text-navy-soft">
+                  <span className="text-2xs text-navy-soft">
                     {s.label}
                   </span>
                   <div className="flex items-baseline gap-1 mt-1">

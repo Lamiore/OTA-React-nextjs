@@ -46,7 +46,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-50 mx-auto rounded-2xl border border-shore-200/80 bg-surface/85 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom,6px)+6px)] backdrop-blur-xl shadow-soft md:hidden">
+    <nav className="fixed inset-x-3 bottom-3 z-50 mx-auto rounded-md border border-shore-200/80 bg-surface/85 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom,6px)+6px)] backdrop-blur-xl shadow-float md:hidden">
       <div className="flex items-end justify-around">
         {navItems.map(({ label, href, Icon, center }) => {
           const isActive = pathname === href;
@@ -58,10 +58,10 @@ export default function BottomNav() {
                 href={href}
                 className="flex flex-col items-center -mt-5"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-500 border-[3px] border-shore-50 shadow-glow">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-500 border-[3px] border-shore-50">
                   <CalendarIcon />
                 </div>
-                <span className="mt-1 text-[9px] font-medium text-teal-600">
+                <span className="mt-1 text-2xs font-medium text-teal-600">
                   {label}
                 </span>
               </Link>
@@ -77,7 +77,7 @@ export default function BottomNav() {
               <Icon active={isActive} />
               <span
                 className={clsx(
-                  'mt-1 text-[9px] font-medium',
+                  'mt-1 text-2xs font-medium',
                   isActive ? 'text-teal-600' : 'text-navy-soft'
                 )}
               >

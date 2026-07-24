@@ -1,15 +1,17 @@
 import { Suspense } from 'react';
 import TopNav from '@/components/desktop/TopNav';
+import Footer from '@/components/desktop/Footer';
 import BottomNav from '@/components/mobile/BottomNav';
 import ProfileContent from '@/components/profile/ProfileContent';
 
 export default function Profile() {
   return (
-    <main className="min-h-dvh bg-shore-50 pb-24 md:pb-0">
-      <TopNav />
+    <main className="flex min-h-dvh flex-col bg-shore-50 pb-24 md:pb-0">
+      <TopNav compact />
       <Suspense>
         <ProfileContent />
       </Suspense>
+      <Footer />
       <BottomNav />
     </main>
   );

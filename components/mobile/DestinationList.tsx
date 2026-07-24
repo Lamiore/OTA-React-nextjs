@@ -9,7 +9,7 @@ import DestinationCard from './DestinationCard';
 import FilterChips from './FilterChips';
 
 function SkeletonCard() {
-  return <div className="h-24 rounded-2xl bg-shore-100 animate-pulse" />;
+  return <div className="h-24 rounded-md bg-shore-100 animate-pulse" />;
 }
 
 function SearchIcon() {
@@ -73,20 +73,20 @@ export default function DestinationList() {
       {/* Section header */}
       <div className="flex items-center justify-between px-4 pt-1 pb-2.5">
         <h2 className="text-sm font-semibold text-navy">Destinasi Populer</h2>
-        <button className="text-[11px] text-teal-600 font-medium">
+        <button className="text-2xs text-teal-600 font-medium">
           Lihat Semua
         </button>
       </div>
 
       {/* Search */}
       <div className="px-4 pb-2.5">
-        <div className="flex items-center gap-2.5 rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5">
+        <div className="flex items-center gap-2.5 rounded-md border border-shore-200 bg-surface px-3.5 py-2.5">
           <SearchIcon />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari destinasi..."
-            className="w-full bg-transparent text-[13px] text-navy placeholder:text-navy-soft/60 outline-none"
+            className="w-full bg-transparent text-sm text-navy placeholder:text-navy-soft/60 outline-none"
           />
         </div>
       </div>
@@ -102,7 +102,7 @@ export default function DestinationList() {
           </>
         ) : shown.length === 0 ? (
           <div className="flex flex-col items-center py-12 gap-3">
-            <div className="w-12 h-12 rounded-xl bg-shore-100 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-md bg-shore-100 flex items-center justify-center">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-navy-soft">
                 <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
                 <circle cx="12" cy="10" r="3" />

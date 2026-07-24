@@ -1,0 +1,166 @@
+/* Hallmark · genre: editorial · design-system: design.md · designed-as-app
+ * Lautara design tokens — the single source of truth for colour, type, radius,
+ * and motion. `app/globals.css` imports this file; `tailwind.config.ts` reads the
+ * `--c-*` channel triplets so Tailwind utilities and plain CSS stay in step.
+ *
+ * Two forms of every colour, one set of numbers:
+ *   --c-*      "L C H" channels, consumed by Tailwind as oklch(var(--c-x) / <alpha>)
+ *   --color-*  complete oklch(), consumed by the component classes in globals.css
+ *
+ * Nothing in this project may declare a raw hex, a raw oklch(), or a bare
+ * font-family. If a value is missing, add it here first, then reference it.
+ */
+
+:root {
+  /* ---- Colour · channels (Tailwind) ------------------------------------ */
+  /* Warm paper, cool ink, teal anchor at 193°. */
+  --c-shore-50: 98.0% 0.005 78; /* paper      */
+  --c-shore-100: 95.7% 0.008 74; /* paper-2    */
+  --c-shore-200: 91.5% 0.014 78; /* rule       */
+  --c-shore-300: 84.6% 0.018 73; /* rule-2     */
+
+  --c-teal-50: 96.8% 0.011 190; /* accent-soft */
+  --c-teal-100: 92.6% 0.027 182;
+  --c-teal-200: 85.3% 0.054 183;
+  --c-teal-400: 66.9% 0.098 192; /* decoration only — 3.0:1, never text */
+  --c-teal-500: 57.8% 0.092 200; /* borders, marks — 3.9:1, never body text */
+  --c-teal-600: 49.5% 0.080 193; /* accent — 5.55:1 on paper, 5.88:1 on surface */
+  --c-teal-700: 40.9% 0.065 192;
+
+  --c-navy: 27.6% 0.046 238; /* ink        */
+  --c-navy-light: 34.4% 0.055 238;
+  --c-navy-soft: 52.0% 0.030 234; /* muted — 4.94:1, body-grade */
+  --c-navy-subtle: 58.5% 0.026 233; /* subtle — 4.08:1, large text only */
+
+  --c-seafoam: 86.7% 0.086 186;
+  --c-surface: 99.4% 0.003 78; /* card face — tinted, never pure white */
+  --c-ink: 27.6% 0.046 238; /* scrim over photos — must NOT flip with theme */
+
+  /* ---- Status ---------------------------------------------------------- */
+  /* Tailwind's built-in palette (red-500, amber-100, …) is NOT part of this
+     system: those values are fixed, so every one of them stayed light when the
+     page went dark. Status colour goes through these tokens instead.
+     `-soft` is a background, `-rule` a border; neither may carry text. */
+  --c-danger: 50.0% 0.190 25; /* 6.26:1 on paper, 5.78:1 on danger-soft */
+  --c-danger-soft: 95.5% 0.020 25;
+  --c-danger-rule: 88.0% 0.045 25;
+  --c-warn: 47.0% 0.100 70; /* 6.59:1 on paper */
+  --c-warn-soft: 95.5% 0.030 80;
+  --c-warn-rule: 88.0% 0.055 78;
+  --c-ok: 49.0% 0.110 155; /* 5.60:1 on paper */
+  --c-ok-soft: 95.5% 0.025 155;
+  --c-info: 50.0% 0.130 250; /* 5.66:1 on paper */
+  --c-info-soft: 95.5% 0.020 250;
+  /* Bintang rating adalah tanda, bukan status — 3.24:1, ambang komponen UI. */
+  --c-star: 64.0% 0.150 75;
+
+  /* ---- Colour · semantic (plain CSS) ----------------------------------- */
+  --color-paper: oklch(var(--c-shore-50));
+  --color-paper-2: oklch(var(--c-shore-100));
+  --color-surface: oklch(var(--c-surface));
+  --color-rule: oklch(var(--c-shore-200));
+  --color-rule-2: oklch(var(--c-shore-300));
+  --color-ink: oklch(var(--c-navy));
+  --color-muted: oklch(var(--c-navy-soft));
+  --color-subtle: oklch(var(--c-navy-subtle));
+  --color-accent: oklch(var(--c-teal-600));
+  --color-accent-2: oklch(var(--c-teal-500));
+  --color-accent-hover: oklch(var(--c-teal-700));
+  --color-accent-soft: oklch(var(--c-teal-50));
+  --color-accent-ink: oklch(99% 0.003 190);
+  --color-focus: oklch(var(--c-teal-600));
+
+  /* ---- Type ------------------------------------------------------------ */
+  /* `--font-display` / `--font-body` are declared on `body`, not here: Next's
+     `next/font` puts `--font-serif` and `--font-sans` on the body element, and a
+     custom property is substituted at the element that declares it. Aliasing
+     them at `:root` — where those two are undefined — makes the alias
+     invalid-at-computed-value-time, and every descendant inherits the invalid
+     value. See the `body` rule below. */
+
+  --text-2xs: 0.6875rem; /* 11px — chips, meta. Never a sentence. */
+  --text-xs: 0.75rem; /* 12px — dense cells, captions            */
+  --text-sm: 0.875rem; /* 14px — secondary body, UI labels        */
+  --text-base: 1rem; /* 16px — body                             */
+  --text-md: 1.125rem; /* 18px — lede                             */
+  --text-lg: 1.375rem; /* 22px — h4 / card title                  */
+  --text-xl: 1.75rem; /* 28px — h3                               */
+  --text-2xl: 2.25rem; /* 36px — h2                               */
+  --text-3xl: 2.75rem; /* 44px — section display                  */
+  --text-display: clamp(2.5rem, 4.5vw + 1rem, 4.5rem);
+
+  /* ---- Radius · one per role, not one for everything ------------------- */
+  --radius-xs: 4px; /* checkbox, tag, badge        */
+  --radius-sm: 6px; /* button, input, select       */
+  --radius-md: 10px; /* card, panel, price item     */
+  --radius-lg: 16px; /* modal, sheet                */
+  --radius-pill: 9999px; /* filter chips + avatars ONLY */
+
+  /* ---- Motion ---------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+
+  /* ---- Elevation · floating things only -------------------------------- */
+  /* Cards do not get a shadow. Sticky nav, modals, sheets and dropdowns do. */
+  --shadow-float: 0 1px 2px oklch(27.6% 0.046 238 / 0.06),
+    0 8px 24px oklch(27.6% 0.046 238 / 0.08);
+  --shadow-overlay: 0 8px 24px oklch(27.6% 0.046 238 / 0.12),
+    0 24px 64px oklch(27.6% 0.046 238 / 0.16);
+}
+
+/* Type aliases live here because `next/font` scopes `--font-serif` and
+   `--font-sans` to the body element (see the note in `:root`). */
+body {
+  --font-display: var(--font-serif), ui-serif, Georgia, serif;
+  --font-body: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+html.dark {
+  /* Hue is held constant across themes; only lightness and chroma move.
+     Elevation in dark mode is carried by lightness, not shadow. */
+  --c-shore-50: 18.4% 0.016 227;
+  --c-shore-100: 23.3% 0.022 240;
+  --c-shore-200: 32.9% 0.027 227;
+  --c-shore-300: 40.0% 0.028 227;
+
+  --c-teal-50: 26.0% 0.035 192;
+  --c-teal-100: 30.0% 0.045 190;
+  --c-teal-200: 36.0% 0.060 188;
+  --c-teal-400: 73.4% 0.112 192;
+  --c-teal-500: 66.8% 0.103 197;
+  --c-teal-600: 66.8% 0.103 197; /* 5.81:1 on paper-2 */
+  --c-teal-700: 78.0% 0.100 190;
+
+  --c-navy: 95.1% 0.009 225;
+  --c-navy-light: 88.0% 0.012 228;
+  --c-navy-soft: 68.2% 0.025 232; /* 5.89:1 */
+  --c-navy-subtle: 58.0% 0.022 230;
+
+  --c-seafoam: 86.7% 0.086 186;
+  --c-surface: 23.3% 0.022 240;
+  --c-ink: 27.6% 0.046 238; /* scrim stays dark in both themes */
+
+  /* Status: hue dipertahankan, hanya lightness/chroma yang bergerak. */
+  --c-danger: 70.0% 0.150 25; /* 6.53:1 on paper, 5.05:1 on danger-soft */
+  --c-danger-soft: 29.0% 0.055 25;
+  --c-danger-rule: 38.0% 0.070 25;
+  --c-warn: 79.0% 0.115 80; /* 9.54:1 on paper */
+  --c-warn-soft: 30.0% 0.045 75;
+  --c-warn-rule: 40.0% 0.060 75;
+  --c-ok: 74.0% 0.120 155; /* 8.49:1 on paper */
+  --c-ok-soft: 29.0% 0.045 155;
+  --c-info: 73.0% 0.110 250; /* 7.84:1 on paper */
+  --c-info-soft: 29.0% 0.045 250;
+  --c-star: 80.0% 0.140 80;
+
+  --color-accent-ink: oklch(20% 0.03 195); /* dark label on light-teal fill */
+  --color-accent-hover: oklch(var(--c-teal-700));
+
+  --shadow-float: 0 1px 2px oklch(0% 0 0 / 0.4), 0 8px 24px oklch(0% 0 0 / 0.36);
+  --shadow-overlay: 0 8px 24px oklch(0% 0 0 / 0.44),
+    0 24px 64px oklch(0% 0 0 / 0.5);
+}

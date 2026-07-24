@@ -89,31 +89,31 @@ export default function KameraPanel({ role, location }: Props) {
                 <div key={c.id} className="card flex flex-wrap items-center gap-4 px-5 py-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-[14px] font-medium text-navy truncate">{c.name}</p>
+                      <p className="text-sm font-medium text-navy truncate">{c.name}</p>
                       {status === 'pending' && (
-                        <span className="rounded-lg bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600 shrink-0">Menunggu admin</span>
+                        <span className="rounded-sm bg-warn-soft px-2 py-0.5 text-2xs font-medium text-warn shrink-0">Menunggu admin</span>
                       )}
                       {status === 'rejected' && (
-                        <span className="rounded-lg bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600 shrink-0">Ditolak</span>
+                        <span className="rounded-sm bg-danger-soft px-2 py-0.5 text-2xs font-medium text-danger shrink-0">Ditolak</span>
                       )}
                     </div>
-                    <p className="text-[12px] text-navy-soft truncate mt-0.5">
+                    <p className="text-xs text-navy-soft truncate mt-0.5">
                       ID: {c.cameraId}
                       {c.location && ` — ${c.location}`}
                     </p>
-                    <p className="text-[12px] text-navy-soft truncate mt-0.5">
+                    <p className="text-xs text-navy-soft truncate mt-0.5">
                       Pemilik: {c.ownerName || 'Tanpa Nama'} ({c.ownerEmail})
                     </p>
                   </div>
                   {status === 'approved' ? (
                     <button
                       onClick={() => setLiveCamera(c)}
-                      className="btn-primary rounded-xl px-4 py-2 text-[12px] shrink-0"
+                      className="btn-primary px-4 py-2 text-xs shrink-0"
                     >
                       Lihat Live
                     </button>
                   ) : (
-                    <span className="text-[12px] text-navy-soft shrink-0">Belum aktif</span>
+                    <span className="text-xs text-navy-soft shrink-0">Belum aktif</span>
                   )}
                 </div>
               );

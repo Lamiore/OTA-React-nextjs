@@ -8,9 +8,9 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   sendPasswordResetEmail,
-  sendEmailVerification,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
+import { requestVerificationEmail } from '@/lib/sendVerification';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 function EyeIcon() {
@@ -137,8 +137,16 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
           await updateProfile(cred.user, { displayName: name.trim() });
         }
         await ensureUserDoc(cred.user);
-        // Kirim link verifikasi; gate ProfileContent menahan akun sampai diklik.
-        await sendEmailVerification(cred.user);
+        // Kirim link verifikasi via SMTP sendiri; gate ProfileContent menahan
+        // akun sampai diklik. Gagal kirim email tidak menggagalkan registrasi —
+        // user bisa "kirim ulang" di layar verifikasi.
+        if (cred.user.email) {
+          try {
+            await requestVerificationEmail(cred.user.email);
+          } catch {
+            /* diabaikan: tampil layar verifikasi dengan tombol kirim ulang */
+          }
+        }
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -191,11 +199,10 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
     <div className="w-full max-w-md mx-auto animate-fade-in">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-500 mb-5 shadow-glow">
-          <span className="font-serif text-xl font-semibold text-white">D</span>
-        </div>
-        <h2 className="font-serif text-2xl font-medium text-navy sm:text-3xl">
-          {isLogin ? 'Selamat Datang' : 'Buat Akun Baru'}
+        {/* Tanpa wordmark di sini: masthead tepat di atasnya sudah membawanya,
+            dan dulu kotak ini malah berisi inisial nyasar "D". */}
+        <h2 className="section-title">
+          {isLogin ? 'Selamat datang' : 'Buat akun baru'}
         </h2>
         <p className="mt-2 text-sm text-navy-soft">
           {isLogin
@@ -208,7 +215,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
       <button
         onClick={handleGoogle}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-3 rounded-xl border border-shore-200 bg-surface px-4 py-3 text-[13px] font-medium text-navy transition-all duration-200 hover:border-shore-300 hover:shadow-soft disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-3 rounded-md border border-shore-200 bg-surface px-4 py-3 text-sm font-medium text-navy transition-colors duration-micro hover:border-shore-300 hover: disabled:opacity-50"
       >
         <GoogleIcon />
         {isLogin ? 'Masuk dengan Google' : 'Daftar dengan Google'}
@@ -217,7 +224,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
       {/* Divider */}
       <div className="flex items-center gap-4 my-6">
         <div className="flex-1 h-px bg-shore-200" />
-        <span className="text-[11px] text-navy-soft uppercase tracking-widest">atau</span>
+        <span className="text-xs text-navy-soft">atau</span>
         <div className="flex-1 h-px bg-shore-200" />
       </div>
 
@@ -226,17 +233,17 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
         {/* Name — register only */}
         {!isLogin && (
           <div className="animate-fade-up">
-            <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-medium text-navy-soft mb-1.5">
               Nama Lengkap
             </label>
-            <div className="flex items-center gap-3 rounded-xl border border-shore-200 bg-surface px-3.5 py-3 transition-all duration-200 focus-within:border-teal-400 focus-within:shadow-glow">
+            <div className="flex items-center gap-3 rounded-md border border-shore-200 bg-surface px-3.5 py-3 transition-colors duration-micro focus-within:border-teal-400 focus-within:">
               <span className="text-navy-soft"><UserIcon /></span>
-              <input
+              <input aria-label="Nama Lengkap"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Masukkan nama lengkap"
-                className="flex-1 bg-transparent text-[13px] text-navy placeholder:text-[#A3AEB5] outline-none"
+                className="flex-1 bg-transparent text-sm text-navy placeholder:text-navy-soft outline-none"
               />
             </div>
           </div>
@@ -244,37 +251,37 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
 
         {/* Email */}
         <div>
-          <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-medium text-navy-soft mb-1.5">
             Email
           </label>
-          <div className="flex items-center gap-3 rounded-xl border border-shore-200 bg-surface px-3.5 py-3 transition-all duration-200 focus-within:border-teal-400 focus-within:shadow-glow">
+          <div className="flex items-center gap-3 rounded-md border border-shore-200 bg-surface px-3.5 py-3 transition-colors duration-micro focus-within:border-teal-400 focus-within:">
             <span className="text-navy-soft"><MailIcon /></span>
-            <input
+            <input aria-label="Email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="nama@email.com"
               required
-              className="flex-1 bg-transparent text-[13px] text-navy placeholder:text-[#A3AEB5] outline-none"
+              className="flex-1 bg-transparent text-sm text-navy placeholder:text-navy-soft outline-none"
             />
           </div>
         </div>
 
         {/* Password */}
         <div>
-          <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-medium text-navy-soft mb-1.5">
             Password
           </label>
-          <div className="flex items-center gap-3 rounded-xl border border-shore-200 bg-surface px-3.5 py-3 transition-all duration-200 focus-within:border-teal-400 focus-within:shadow-glow">
+          <div className="flex items-center gap-3 rounded-md border border-shore-200 bg-surface px-3.5 py-3 transition-colors duration-micro focus-within:border-teal-400 focus-within:">
             <span className="text-navy-soft"><LockIcon /></span>
-            <input
+            <input aria-label="Password"
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={isLogin ? 'Masukkan password' : 'Minimal 6 karakter'}
               required
               minLength={6}
-              className="flex-1 bg-transparent text-[13px] text-navy placeholder:text-[#A3AEB5] outline-none"
+              className="flex-1 bg-transparent text-sm text-navy placeholder:text-navy-soft outline-none"
             />
             <button
               type="button"
@@ -293,7 +300,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
               type="button"
               onClick={handleForgot}
               disabled={loading}
-              className="text-[12px] font-medium text-teal-600 hover:text-teal-700 transition-colors disabled:opacity-50"
+              className="text-xs font-medium text-teal-600 hover:text-teal-700 transition-colors disabled:opacity-50"
             >
               Lupa password?
             </button>
@@ -302,14 +309,14 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
 
         {/* Notice */}
         {notice && (
-          <div className="rounded-xl bg-teal-50 border border-teal-100 px-4 py-3 text-[13px] text-teal-700 animate-fade-up">
+          <div className="rounded-md bg-teal-50 border border-teal-100 px-4 py-3 text-sm text-teal-700 animate-fade-up">
             {notice}
           </div>
         )}
 
         {/* Error */}
         {error && (
-          <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-[13px] text-red-600 animate-fade-up">
+          <div className="rounded-md bg-danger-soft border border-danger-rule px-4 py-3 text-sm text-danger animate-fade-up">
             {error}
           </div>
         )}
@@ -318,7 +325,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
         <button
           type="submit"
           disabled={loading}
-          className="btn-primary w-full rounded-xl px-4 py-3 text-[14px] font-medium shadow-glow disabled:opacity-50 disabled:transform-none"
+          className="btn-primary w-full px-4 py-3 text-sm font-medium disabled:opacity-50 disabled:transform-none"
         >
           {loading ? (
             <LoadingSpinner />
@@ -331,7 +338,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
       </form>
 
       {/* Toggle mode */}
-      <p className="mt-6 text-center text-[13px] text-navy-soft">
+      <p className="mt-6 text-center text-sm text-navy-soft">
         {isLogin ? 'Belum punya akun?' : 'Sudah punya akun?'}{' '}
         <button
           onClick={() => {

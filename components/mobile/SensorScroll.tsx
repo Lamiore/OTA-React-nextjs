@@ -86,7 +86,7 @@ export default function SensorScroll() {
       {/* Section header */}
       <div className="flex items-center justify-between px-4 pt-3 pb-2.5">
         <h2 className="text-sm font-semibold text-navy">Kondisi Laut</h2>
-        <span className="flex items-center gap-1.5 text-[10px] font-medium text-teal-600">
+        <span className="flex items-center gap-1.5 text-2xs font-medium text-teal-600">
           <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
           Real-time
         </span>
@@ -103,32 +103,32 @@ export default function SensorScroll() {
           return (
             <div
               key={s.key}
-              className="min-w-[92px] shrink-0 rounded-2xl border border-shore-200/80 bg-surface p-3 flex flex-col gap-2"
+              className="min-w-[92px] shrink-0 rounded-md border border-shore-200/80 bg-surface p-3 flex flex-col gap-2"
             >
               {/* Icon */}
-              <div className="w-7 h-7 rounded-lg bg-shore-100 flex items-center justify-center text-navy-soft">
+              <div className="w-7 h-7 rounded-sm bg-shore-100 flex items-center justify-center text-navy-soft">
                 {s.icon}
               </div>
 
-              <span className="text-[10px] text-navy-soft leading-tight">
+              <span className="text-2xs text-navy-soft leading-tight">
                 {s.label}
               </span>
 
               <div className="flex items-baseline gap-0.5">
-                <span className="font-semibold text-[14px] text-navy tracking-tight">
+                <span className="font-semibold text-sm text-navy tracking-tight">
                   {numVal !== null ? numVal.toFixed(1) : '—'}
                 </span>
                 {s.unit && (
-                  <span className="text-[9px] text-navy-soft">{s.unit}</span>
+                  <span className="text-2xs text-navy-soft">{s.unit}</span>
                 )}
               </div>
 
               <span
                 className={clsx(
-                  'text-[9px] font-medium px-1.5 py-0.5 rounded-full w-fit',
+                  'text-2xs font-medium px-1.5 py-0.5 rounded-xs w-fit',
                   statusType === 'ok'
                     ? 'bg-teal-50 text-teal-600'
-                    : 'bg-amber-50 text-amber-700'
+                    : 'bg-warn-soft text-warn'
                 )}
               >
                 {status}

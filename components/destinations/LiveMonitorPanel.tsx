@@ -16,7 +16,6 @@ interface Metric {
   label: string;
   value: string;
   unit: string;
-  color: string;
   icon: ReactNode;
 }
 
@@ -121,7 +120,6 @@ export default function LiveMonitorPanel({
       label: 'Suhu Udara',
       value: fmt(data?.tempDHT),
       unit: '°C',
-      color: 'bg-red-100 text-red-600',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z" />
@@ -132,7 +130,6 @@ export default function LiveMonitorPanel({
       label: 'Kelembapan Udara',
       value: fmt(data?.humidity),
       unit: '%',
-      color: 'bg-blue-100 text-blue-600',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7Z" />
@@ -143,7 +140,6 @@ export default function LiveMonitorPanel({
       label: 'Suhu Air',
       value: fmt(data?.tempDS18),
       unit: '°C',
-      color: 'bg-teal-100 text-teal-600',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
@@ -157,7 +153,6 @@ export default function LiveMonitorPanel({
       // Status utama besar, nilai mentah sensor ditaruh di slot unit (kecil & redup).
       value: data?.rainStatus ?? '--',
       unit: data?.rainStatus && typeof data.rainValue === 'number' ? `(${data.rainValue})` : '',
-      color: 'bg-purple-100 text-purple-600',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
@@ -171,7 +166,6 @@ export default function LiveMonitorPanel({
       label: 'Kecepatan Angin',
       value: fmt(data?.windSpeed, 2),
       unit: 'km/h',
-      color: 'bg-cyan-100 text-cyan-600',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12.8 19.6A2 2 0 1 0 14 16H2" />
@@ -184,7 +178,6 @@ export default function LiveMonitorPanel({
       label: 'Debit Air',
       value: fmt(data?.flowRate, 2),
       unit: 'L/min',
-      color: 'bg-sky-100 text-sky-600',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 4.8 7 3c-.29 1.8-1.14 3.13-2.29 4.06S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05Z" />
@@ -198,20 +191,20 @@ export default function LiveMonitorPanel({
   const metricCols = bothSides ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3';
 
   const cameraBlock = hasCamera && (
-    <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-ink">
+    <div className="relative w-full aspect-video rounded-md overflow-hidden bg-ink">
       {src === null ? (
         <div className="absolute inset-0 animate-pulse bg-white/5" />
       ) : src === '' ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
           <p className="text-sm">Alamat server kamera belum diatur.</p>
-          <p className="text-[12px] text-white/50">
+          <p className="text-xs text-white/50">
             Isi &quot;Alamat Server Kamera&quot; di dashboard admin, lalu buka kembali halaman ini.
           </p>
         </div>
       ) : error ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
           <p className="text-sm">Tidak bisa terhubung ke kamera.</p>
-          <p className="text-[12px] text-white/50">
+          <p className="text-xs text-white/50">
             Pastikan server kamera berjalan dan ID kamera benar.
           </p>
         </div>
@@ -228,14 +221,14 @@ export default function LiveMonitorPanel({
           {!loaded && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 text-white/70">
               <span className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white/80 animate-spin" />
-              <p className="text-[13px]">Menghubungkan ke kamera…</p>
+              <p className="text-sm">Menghubungkan ke kamera…</p>
             </div>
           )}
         </>
       )}
 
       {streaming && (
-        <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-teal-500 px-2.5 py-1 text-[11px] font-medium text-white shadow-sm">
+        <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-xs bg-teal-500 px-2.5 py-1 text-2xs font-medium text-white shadow-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
           Live
         </span>
@@ -243,7 +236,7 @@ export default function LiveMonitorPanel({
 
       {cameraName && (
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 via-ink/40 to-transparent px-4 pt-10 pb-3">
-          <p className="text-[13px] font-medium text-white drop-shadow-sm">{cameraName}</p>
+          <p className="text-sm font-medium text-white drop-shadow-sm">{cameraName}</p>
         </div>
       )}
     </div>
@@ -252,7 +245,7 @@ export default function LiveMonitorPanel({
   const sensorBlock = hasMonitoring && (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[11px] font-medium text-navy-soft uppercase tracking-wider">Sensor Lingkungan</p>
+        <p className="text-sm font-semibold text-navy">Sensor Lingkungan</p>
         <span className={`chip ${isLive ? 'chip-active' : ''}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-white animate-pulse' : 'bg-navy-soft'}`} />
           {!ready ? 'Menghubungkan…' : isLive ? 'Live' : 'Offline'}
@@ -261,15 +254,15 @@ export default function LiveMonitorPanel({
 
       <div className={`grid ${metricCols} gap-3`}>
         {metrics.map((m) => (
-          <div key={m.label} className="rounded-xl border border-shore-200/80 bg-surface p-3.5 transition-colors hover:border-teal-200">
-            <div className={`h-9 w-9 rounded-lg ${m.color} flex items-center justify-center mb-2.5`}>
+          <div key={m.label} className="rounded-md border border-shore-200/80 bg-surface p-3.5 transition-colors hover:border-teal-200">
+            <div className={`h-9 w-9 rounded-sm bg-shore-100 text-navy-soft flex items-center justify-center mb-2.5`}>
               {m.icon}
             </div>
             <p className="text-lg font-semibold text-navy leading-tight">
               {m.value}
-              {m.unit && <span className="ml-1 text-[12px] font-normal text-navy-soft">{m.unit}</span>}
+              {m.unit && <span className="ml-1 text-xs font-normal text-navy-soft">{m.unit}</span>}
             </p>
-            <p className="text-[11px] text-navy-soft mt-0.5">{m.label}</p>
+            <p className="text-2xs text-navy-soft mt-0.5">{m.label}</p>
           </div>
         ))}
       </div>
@@ -278,23 +271,23 @@ export default function LiveMonitorPanel({
   );
 
   const gpsBlock = hasMonitoring && (
-    <div className="rounded-xl border border-shore-200/80 bg-surface p-3.5">
+    <div className="rounded-md border border-shore-200/80 bg-surface p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+          <div className="h-9 w-9 rounded-sm bg-ok-soft text-ok flex items-center justify-center">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 10c0 4.4-8 12-8 12s-8-7.6-8-12a8 8 0 0 1 16 0Z" />
               <circle cx="12" cy="10" r="3" />
             </svg>
           </div>
           <div>
-            <p className="text-[11px] text-navy-soft">Lokasi Stasiun (GPS)</p>
+            <p className="text-2xs text-navy-soft">Lokasi Stasiun (GPS)</p>
             {hasFix ? (
-              <p className="text-[15px] font-semibold text-navy leading-tight">
+              <p className="text-base font-semibold text-navy leading-tight">
                 {lat!.toFixed(6)}, {lng!.toFixed(6)}
               </p>
             ) : (
-              <p className="text-[13px] font-medium text-navy-soft">
+              <p className="text-sm font-medium text-navy-soft">
                 Mencari sinyal satelit…
                 {typeof data?.satellites === 'number' && data.satellites > 0
                   ? ` (${data.satellites} terlihat)`
@@ -310,7 +303,7 @@ export default function LiveMonitorPanel({
         )}
       </div>
       {hasFix && (
-        <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-navy-soft">
+        <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1 text-2xs text-navy-soft">
           <span>Satelit: {data?.satellites ?? '--'}</span>
           {typeof data?.altitude === 'number' && <span>Ketinggian: {data.altitude.toFixed(0)} m</span>}
           {typeof data?.speed === 'number' && <span>Kecepatan: {data.speed.toFixed(1)} km/h</span>}
@@ -320,19 +313,13 @@ export default function LiveMonitorPanel({
   );
 
   return (
-    <div className="card p-4 sm:p-5 lg:p-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center shrink-0">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-          </svg>
-        </div>
-        <div className="min-w-0">
-          <h2 className="font-serif text-lg font-medium text-navy leading-tight">Pantau Langsung</h2>
-          <p className="text-[12px] text-navy-soft">{subtitle}</p>
-        </div>
-      </div>
+    // Bagian, bukan kartu: blok kamera / GPS / sensor di dalamnya sudah punya
+    // batas sendiri, jadi bungkus `.card` di sini menghasilkan kartu-dalam-kartu
+    // (design.md § Surface language). Kepala bagiannya kini sejajar dengan
+    // "Tentang", "Daftar harga", dan "Ulasan" di halaman yang sama.
+    <section className="animate-fade-in">
+      <h2 className="section-title">Pantau langsung</h2>
+      <p className="section-lede">{subtitle}</p>
 
       {/* Body: desktop dua kolom (kamera + GPS di kiri, sensor di kanan) bila
           keduanya ada — biar tinggi kedua kolom seimbang; selain itu ditumpuk. */}
@@ -353,8 +340,8 @@ export default function LiveMonitorPanel({
       )}
 
       {ageSec !== null && (
-        <p className="mt-4 text-[12px] text-navy-soft">Diperbarui {relTime(ageSec)}</p>
+        <p className="mt-4 text-xs text-navy-soft">Diperbarui {relTime(ageSec)}</p>
       )}
-    </div>
+    </section>
   );
 }

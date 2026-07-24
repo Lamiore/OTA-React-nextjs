@@ -67,22 +67,22 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
           <div className="card p-6">
             {paid ? (
               <div className="py-4 text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-100 text-teal-600">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-md bg-teal-100 text-teal-600">
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 6 9 17l-5-5" />
                   </svg>
                 </div>
                 <h2 className="font-serif text-xl font-medium text-navy">Pembayaran Berhasil</h2>
-                <p className="mt-2 text-[13px] text-navy-soft">
+                <p className="mt-2 text-sm text-navy-soft">
                   Terima kasih. Pembayaran untuk {booking.destinationName} sudah tercatat.
                 </p>
-                <button onClick={onClose} className="btn-primary mt-5 w-full rounded-xl px-4 py-2.5 text-[13px]">
+                <button onClick={onClose} className="btn-primary mt-5 w-full px-4 py-2.5 text-sm">
                   Selesai
                 </button>
               </div>
             ) : (
               <>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-600">
+                <span className="text-xs font-semibold text-teal-600">
                   Pembayaran
                 </span>
                 <h2 className="mt-2 font-serif text-xl font-medium text-navy">{booking.destinationName}</h2>
@@ -90,7 +90,7 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
                 {booking.items && booking.items.length > 0 && (
                   <ul className="mt-4 space-y-1.5">
                     {booking.items.map((it, i) => (
-                      <li key={i} className="flex items-center justify-between gap-3 text-[13px]">
+                      <li key={i} className="flex items-center justify-between gap-3 text-sm">
                         <span className="text-navy-soft">{it.label} ×{it.qty}</span>
                         <span className="font-medium text-navy shrink-0">{formatIDR(it.price * it.qty)}</span>
                       </li>
@@ -98,12 +98,12 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
                   </ul>
                 )}
 
-                <div className="mt-3 flex items-center justify-between rounded-xl bg-shore-50 px-4 py-3">
-                  <span className="text-[13px] text-navy-soft">Total</span>
+                <div className="mt-3 flex items-center justify-between rounded-md bg-shore-50 px-4 py-3">
+                  <span className="text-sm text-navy-soft">Total</span>
                   <span className="text-lg font-semibold text-navy">{formatIDR(booking.amount ?? 0)}</span>
                 </div>
 
-                <p className="mt-5 text-[11px] font-medium uppercase tracking-wider text-navy-soft">
+                <p className="mt-5 text-sm font-semibold text-navy">
                   Metode Pembayaran
                 </p>
                 <div className="mt-2 space-y-2">
@@ -112,18 +112,18 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
                       key={m.id}
                       onClick={() => setMethod(m.id)}
                       className={clsx(
-                        'w-full rounded-xl border px-4 py-3 text-left transition-colors',
+                        'w-full rounded-md border px-4 py-3 text-left transition-colors',
                         method === m.id ? 'border-teal-400 bg-teal-50/60' : 'border-shore-200 hover:border-shore-300',
                       )}
                     >
-                      <p className="text-[13px] font-medium text-navy">{m.label}</p>
-                      <p className="text-[11px] text-navy-soft">{m.desc}</p>
+                      <p className="text-sm font-medium text-navy">{m.label}</p>
+                      <p className="text-2xs text-navy-soft">{m.desc}</p>
                     </button>
                   ))}
                 </div>
 
                 {error && (
-                  <div className="mt-4 rounded-xl bg-red-100 px-3 py-2 text-[13px] font-medium text-red-600">
+                  <div className="mt-4 rounded-md bg-danger-soft px-3 py-2 text-sm font-medium text-danger">
                     {error}
                   </div>
                 )}
@@ -131,7 +131,7 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
                 <button
                   onClick={handlePay}
                   disabled={!method || paying}
-                  className="btn-primary mt-5 w-full rounded-xl px-4 py-2.5 text-[13px] disabled:opacity-50"
+                  className="btn-primary mt-5 w-full px-4 py-2.5 text-sm disabled:opacity-50"
                 >
                   {paying ? 'Memproses…' : 'Konfirmasi Pembayaran'}
                 </button>

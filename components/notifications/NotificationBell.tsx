@@ -65,7 +65,7 @@ export default function NotificationBell({ variant }: NotificationBellProps) {
         className={clsx(
           'relative',
           variant === 'light'
-            ? 'rounded-full border border-shore-200 bg-surface/70 p-2 text-navy-soft transition-all duration-200 hover:border-shore-300 hover:text-navy'
+            ? 'rounded-full border border-shore-200 bg-surface/70 p-2 text-navy-soft transition-colors duration-micro hover:border-shore-300 hover:text-navy'
             : 'text-white',
         )}
       >
@@ -73,7 +73,7 @@ export default function NotificationBell({ variant }: NotificationBellProps) {
         {count > 0 && (
           <span
             className={clsx(
-              'absolute flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[9px] font-semibold text-white bg-teal-500',
+              'absolute flex h-4 min-w-[16px] items-center justify-center rounded-xs px-1 text-2xs font-semibold text-white bg-teal-500',
               variant === 'light' ? '-right-1 -top-1 border-2 border-white' : '-right-1.5 -top-1.5 border-2 border-navy',
             )}
           >
@@ -83,27 +83,27 @@ export default function NotificationBell({ variant }: NotificationBellProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-shore-200 bg-surface p-2 shadow-soft">
-          <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-navy-soft">
+        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-md border border-shore-200 bg-surface p-2 shadow-float">
+          <p className="px-3 py-2 text-xs font-semibold text-navy-soft">
             Notifikasi
           </p>
           {count === 0 ? (
-            <p className="px-3 py-4 text-center text-[12px] text-navy-soft">Tidak ada notifikasi.</p>
+            <p className="px-3 py-4 text-center text-xs text-navy-soft">Tidak ada notifikasi.</p>
           ) : (
             <div className="space-y-1">
               {unpaid.map((b) => (
-                <div key={b.id} className="rounded-xl px-3 py-2.5 hover:bg-shore-50">
-                  <p className="text-[13px] font-medium text-navy">Check-in berhasil</p>
-                  <p className="mt-0.5 text-[12px] text-navy-soft">
+                <div key={b.id} className="rounded-md px-3 py-2.5 hover:bg-shore-50">
+                  <p className="text-sm font-medium text-navy">Check-in berhasil</p>
+                  <p className="mt-0.5 text-xs text-navy-soft">
                     Silakan selesaikan pembayaran untuk {b.destinationName}.
                   </p>
-                  <p className="mt-1 text-[12px] font-semibold text-navy">{formatIDR(b.amount ?? 0)}</p>
+                  <p className="mt-1 text-xs font-semibold text-navy">{formatIDR(b.amount ?? 0)}</p>
                   <button
                     onClick={() => {
                       setPayTarget(b);
                       setOpen(false);
                     }}
-                    className="btn-primary mt-2 rounded-lg px-3 py-1.5 text-[12px]"
+                    className="btn-primary mt-2 px-3 py-1.5 text-xs"
                   >
                     Bayar
                   </button>

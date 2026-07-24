@@ -65,17 +65,17 @@ function checkedInLabel(v: unknown): string | null {
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-navy-soft">{label}</p>
-      <p className="mt-0.5 truncate text-[13px] font-medium text-navy">{value}</p>
+      <p className="text-sm font-semibold text-navy">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-medium text-navy">{value}</p>
     </div>
   );
 }
 
 function BookingCard({ booking }: { booking: Booking }) {
   return (
-    <div className="rounded-2xl border border-shore-200 bg-surface p-4">
+    <div className="rounded-md border border-shore-200 bg-surface p-4">
       <p className="font-serif text-lg font-medium text-navy">{booking.destinationName}</p>
-      <p className="mt-0.5 text-[12px] text-navy-soft">{dateLabel(booking.date)}</p>
+      <p className="mt-0.5 text-xs text-navy-soft">{dateLabel(booking.date)}</p>
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
         <Detail label="Pemesan" value={booking.name} />
         <Detail label="Jumlah" value={`${booking.guests} orang`} />
@@ -202,36 +202,36 @@ export default function ScanPanel() {
       <div className="mt-6 max-w-md">
         {scanning ? (
           <div className="card p-5">
-            <div id={READER_ID} className="overflow-hidden rounded-2xl border border-shore-200 bg-ink/5" />
+            <div id={READER_ID} className="overflow-hidden rounded-md border border-shore-200 bg-ink/5" />
             {camError ? (
               <div className="mt-4 text-center">
-                <p className="text-[13px] text-red-600">Tidak bisa mengakses kamera. Pastikan izin kamera diberikan dan halaman dibuka via localhost/HTTPS.</p>
-                <button onClick={reset} className="btn-primary rounded-xl px-5 py-2.5 text-[13px] mt-3">Coba Lagi</button>
+                <p className="text-sm text-danger">Tidak bisa mengakses kamera. Pastikan izin kamera diberikan dan halaman dibuka via localhost/HTTPS.</p>
+                <button onClick={reset} className="btn-primary px-5 py-2.5 text-sm mt-3">Coba Lagi</button>
               </div>
             ) : (
-              <p className="mt-3 text-center text-[12px] text-navy-soft">Mencari QR tiket…</p>
+              <p className="mt-3 text-center text-xs text-navy-soft">Mencari QR tiket…</p>
             )}
           </div>
         ) : (
           <div className="card p-5 space-y-4">
             {result?.kind === 'invalid' && (
-              <p className="text-[14px] font-medium text-red-600">QR tidak valid. Bukan tiket OTA.</p>
+              <p className="text-sm font-medium text-danger">QR tidak valid. Bukan tiket OTA.</p>
             )}
             {result?.kind === 'notfound' && (
-              <p className="text-[14px] font-medium text-red-600">Tiket tidak ditemukan.</p>
+              <p className="text-sm font-medium text-danger">Tiket tidak ditemukan.</p>
             )}
             {result?.kind === 'error' && (
-              <p className="text-[14px] font-medium text-red-600">Gagal membaca tiket. Periksa koneksi atau izin akses Firestore.</p>
+              <p className="text-sm font-medium text-danger">Gagal membaca tiket. Periksa koneksi atau izin akses Firestore.</p>
             )}
             {result?.kind === 'cancelled' && (
               <>
-                <div className="rounded-xl bg-red-100 px-3 py-2 text-[13px] font-medium text-red-600">Tiket ini sudah dibatalkan.</div>
+                <div className="rounded-md bg-danger-soft px-3 py-2 text-sm font-medium text-danger">Tiket ini sudah dibatalkan.</div>
                 <BookingCard booking={result.booking} />
               </>
             )}
             {result?.kind === 'used' && (
               <>
-                <div className="rounded-xl bg-amber-100 px-3 py-2 text-[13px] font-medium text-amber-700">
+                <div className="rounded-md bg-warn-soft px-3 py-2 text-sm font-medium text-warn">
                   Tiket sudah digunakan{checkedInLabel(result.booking.checkedInAt) ? ` · ${checkedInLabel(result.booking.checkedInAt)}` : ''}.
                 </div>
                 <BookingCard booking={result.booking} />
@@ -239,15 +239,15 @@ export default function ScanPanel() {
             )}
             {result?.kind === 'valid' && !checkedIn && (
               <>
-                <div className="rounded-xl bg-teal-100 px-3 py-2 text-[13px] font-medium text-teal-700">Tiket valid.</div>
+                <div className="rounded-md bg-teal-100 px-3 py-2 text-sm font-medium text-teal-700">Tiket valid.</div>
                 <BookingCard booking={result.booking} />
                 {checkInError && (
-                  <div className="rounded-xl bg-red-100 px-3 py-2 text-[13px] font-medium text-red-600">{checkInError}</div>
+                  <div className="rounded-md bg-danger-soft px-3 py-2 text-sm font-medium text-danger">{checkInError}</div>
                 )}
                 <button
                   onClick={handleCheckIn}
                   disabled={checkingIn}
-                  className="btn-primary w-full rounded-xl px-4 py-2.5 text-[13px] disabled:opacity-50"
+                  className="btn-primary w-full px-4 py-2.5 text-sm disabled:opacity-50"
                 >
                   {checkingIn ? 'Memproses…' : 'Konfirmasi Check-in'}
                 </button>
@@ -255,12 +255,12 @@ export default function ScanPanel() {
             )}
             {result?.kind === 'valid' && checkedIn && (
               <>
-                <div className="rounded-xl bg-teal-100 px-3 py-2 text-[13px] font-medium text-teal-700">Check-in berhasil! Tiket dicatat sebagai terjual.</div>
+                <div className="rounded-md bg-teal-100 px-3 py-2 text-sm font-medium text-teal-700">Check-in berhasil! Tiket dicatat sebagai terjual.</div>
                 <BookingCard booking={result.booking} />
               </>
             )}
 
-            <button onClick={reset} className="btn-ghost w-full rounded-xl px-4 py-2.5 text-[13px]">Scan Lagi</button>
+            <button onClick={reset} className="btn-ghost w-full px-4 py-2.5 text-sm">Scan Lagi</button>
           </div>
         )}
       </div>

@@ -15,8 +15,8 @@ import {
 
 const roleColors: Record<AppUser['role'], string> = {
   user: 'bg-shore-100 text-navy-soft',
-  mitra: 'bg-sky-100 text-sky-700',
-  pengelola: 'bg-amber-100 text-amber-700',
+  mitra: 'bg-shore-100 text-navy-soft',
+  pengelola: 'bg-warn-soft text-warn',
   admin: 'bg-teal-100 text-teal-700',
 };
 
@@ -95,8 +95,8 @@ export default function PenggunaPanel() {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-medium text-navy truncate">{u.name || 'Tanpa Nama'}</p>
-                <p className="text-[12px] text-navy-soft truncate">{u.email}</p>
+                <p className="text-sm font-medium text-navy truncate">{u.name || 'Tanpa Nama'}</p>
+                <p className="text-xs text-navy-soft truncate">{u.email}</p>
               </div>
 
               {/* Role selector */}
@@ -104,7 +104,7 @@ export default function PenggunaPanel() {
                 value={u.role}
                 onChange={(e) => handleRoleChange(u.uid, e.target.value as AppUser['role'])}
                 disabled={updatingUid === u.uid}
-                className={`rounded-lg px-3 py-1.5 text-[12px] font-medium border border-shore-200 outline-none cursor-pointer transition-colors focus:border-teal-400 disabled:opacity-50 ${roleColors[u.role]}`}
+                className={`rounded-sm px-3 py-1.5 text-xs font-medium border border-shore-200 outline-none cursor-pointer transition-colors focus:border-teal-400 disabled:opacity-50 ${roleColors[u.role]}`}
               >
                 <option value="user">User</option>
                 <option value="mitra">Mitra</option>
@@ -116,12 +116,12 @@ export default function PenggunaPanel() {
             {/* Wilayah kelola — hanya untuk pengelola. Membatasi kamera & statistik. */}
             {u.role === 'pengelola' && (
               <div className="mt-3 flex flex-wrap items-center gap-2 pl-14">
-                <span className="text-[12px] text-navy-soft">Wilayah kelola:</span>
+                <span className="text-xs text-navy-soft">Wilayah kelola:</span>
                 <select
                   value={u.location ?? ''}
                   onChange={(e) => handleLocationChange(u.uid, e.target.value)}
                   disabled={updatingUid === u.uid}
-                  className="rounded-lg px-3 py-1.5 text-[12px] font-medium border border-shore-200 bg-surface text-navy outline-none cursor-pointer transition-colors focus:border-teal-400 disabled:opacity-50"
+                  className="rounded-sm px-3 py-1.5 text-xs font-medium border border-shore-200 bg-surface text-navy outline-none cursor-pointer transition-colors focus:border-teal-400 disabled:opacity-50"
                 >
                   <option value="">Pilih wilayah…</option>
                   {regions.map((r) => (
@@ -129,18 +129,18 @@ export default function PenggunaPanel() {
                   ))}
                 </select>
                 {!u.location && (
-                  <span className="text-[11px] text-amber-600">Belum ditetapkan</span>
+                  <span className="text-2xs text-warn">Belum ditetapkan</span>
                 )}
               </div>
             )}
 
             {/* Pengajuan verifikasi mitra */}
             {u.verification?.status === 'pending' && (
-              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
-                <span className="inline-flex rounded-lg bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+              <div className="mt-4 rounded-md border border-warn-rule bg-warn-soft/60 p-4">
+                <span className="inline-flex rounded-sm bg-warn-soft px-2.5 py-1 text-2xs font-medium text-warn">
                   Pengajuan Mitra
                 </span>
-                <div className="mt-3 space-y-1 text-[13px] text-navy">
+                <div className="mt-3 space-y-1 text-sm text-navy">
                   <p><span className="text-navy-soft">Nama:</span> {u.verification.fullName}</p>
                   <p><span className="text-navy-soft">No. HP:</span> {u.verification.phone}</p>
                   <p><span className="text-navy-soft">Instansi:</span> {u.verification.organization}</p>
@@ -149,14 +149,14 @@ export default function PenggunaPanel() {
                   <button
                     onClick={() => handleReview(u.uid, true)}
                     disabled={reviewingUid === u.uid}
-                    className="btn-primary flex-1 rounded-xl px-4 py-2 text-[12px] disabled:opacity-50"
+                    className="btn-primary flex-1 px-4 py-2 text-xs disabled:opacity-50"
                   >
                     Setujui
                   </button>
                   <button
                     onClick={() => handleReview(u.uid, false)}
                     disabled={reviewingUid === u.uid}
-                    className="btn-ghost flex-1 rounded-xl px-4 py-2 text-[12px] hover:border-red-200 hover:text-red-500 disabled:opacity-50"
+                    className="btn-ghost flex-1 px-4 py-2 text-xs hover:border-danger-rule hover:text-danger disabled:opacity-50"
                   >
                     Tolak
                   </button>

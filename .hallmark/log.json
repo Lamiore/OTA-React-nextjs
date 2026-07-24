@@ -1,3 +1,23 @@
 [
-  { "date": "2026-07-20", "macrostructure": "Ecosystem Index", "theme": "Lautara (preserved)", "enrichment": "none", "brief": "Lautara OTA · beranda atmospheric redesign (hero + discovery bands + Ft5)" }
+  {
+    "date": "2026-07-22",
+    "scope": "app",
+    "genre": "editorial",
+    "macrostructure": "Photographic (marketing) / Workbench (app) / Long Document (content)",
+    "theme": "Lautara (preserved, tokenized to OKLCH)",
+    "nav": "N6 newspaper masthead",
+    "footer": "Ft1 mast-headed",
+    "enrichment": "none — real photography only",
+    "design_system": "design.md",
+    "brief": "Lautara OTA · redesain sistem seluruh aplikasi: token, skala tipe, skala radius, bahasa permukaan, focus ring, hapus eyebrow/orb/parallax/emoji-art/statistik karangan · pass kedua (review admin/login): token status danger/warn/ok/info/star menggantikan 120 warna palet mentah Tailwind yang tidak pernah membalik di dark mode; 22 kontrol diberi nama aksesibel; kartu-dalam-kartu di LiveMonitorPanel dibongkar; ubin ikon dekoratif dinetralkan; emoji-as-art dihapus dari kartu mobile + panel admin; PageParallaxHero (nol pemanggil) dihapus",
+    "status_tokens": "danger 6.26:1 · warn 6.59:1 · ok 5.60:1 · info 5.66:1 · star 3.24:1 (terang); semua ≥5:1 di gelap",
+    "known_open": "panel sensor menampilkan data basi sebagai data hidup + nilai ADC mentah bocor — sengaja tidak disentuh, keputusan produk"
+  },
+  {
+    "date": "2026-07-20",
+    "macrostructure": "Ecosystem Index",
+    "theme": "Lautara (preserved)",
+    "enrichment": "none",
+    "brief": "Lautara OTA · beranda atmospheric redesign (hero + discovery bands + Ft5)"
+  }
 ]

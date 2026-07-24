@@ -1,138 +1,116 @@
+/* Hallmark · genre: editorial · macrostructure: family (see design.md)
+ * design-system: design.md · designed-as-app · nav: N6 masthead · footer: Ft1
+ *
+ * Tokens live in ../tokens.css. Nothing in this file may declare a raw hex, a
+ * raw oklch(), or a bare font-family — add the token there, reference it here.
+ */
+@import "../tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* Color tokens as channel triplets (consumed by tailwind.config.ts). */
-  --c-shore-50: 250 248 245;
-  --c-shore-100: 244 240 235;
-  --c-shore-200: 232 226 217;
-  --c-shore-300: 212 203 192;
-  --c-teal-50: 237 247 246;
-  --c-teal-100: 212 237 232;
-  --c-teal-200: 168 219 210;
-  --c-teal-400: 58 168 164;
-  --c-teal-500: 27 138 143;
-  --c-teal-600: 20 112 110;
-  --c-teal-700: 15 85 83;
-  --c-navy: 15 43 60;
-  --c-navy-light: 26 61 82;
-  --c-navy-soft: 122 139 149;
-  --c-seafoam: 212 237 232;
-  --c-surface: 255 255 255;
-  --c-ink: 15 43 60;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
 
-  /* Semantic variables used by component classes below. */
-  --bg: #FAF8F5;
-  --fg: #0F2B3C;
-  --surface: #FFFFFF;
-  --surface-hover: #FAFAF8;
-  --border: #E8E2D9;
-  --border-light: #F0EBE4;
-  --accent: #1B8A8F;
-  --accent-hover: #14706E;
-  --accent-soft: #EDF7F6;
-  --ink-muted: #7A8B95;
-  --ink-subtle: #A3AEB5;
-  --shadow-soft: 0 1px 3px rgba(15, 43, 60, 0.04), 0 8px 24px rgba(15, 43, 60, 0.06);
-  --shadow-lift: 0 4px 12px rgba(15, 43, 60, 0.06), 0 20px 48px rgba(15, 43, 60, 0.08);
-}
+  body {
+    color: var(--color-ink);
+    background: var(--color-paper);
+    min-height: 100dvh;
+    position: relative;
+    /* `clip` (not `hidden`) so position:sticky still works on descendants. */
+    overflow-x: clip;
+    transition: background-color var(--dur-short) var(--ease-in-out),
+      color var(--dur-short) var(--ease-in-out);
+  }
 
-html.dark {
-  --c-shore-50: 17 30 36;
-  --c-shore-100: 26 42 49;
-  --c-shore-200: 38 56 64;
-  --c-shore-300: 54 74 84;
-  --c-teal-50: 18 46 47;
-  --c-teal-100: 22 56 57;
-  --c-teal-200: 30 78 78;
-  --c-teal-400: 74 192 186;
-  --c-teal-500: 45 168 170;
-  --c-teal-600: 90 205 200;
-  --c-teal-700: 150 225 218;
-  --c-navy: 233 240 243;
-  --c-navy-light: 210 222 228;
-  --c-navy-soft: 138 156 166;
-  --c-seafoam: 30 78 78;
-  --c-surface: 20 31 39;
-  --c-ink: 15 43 60;
+  html {
+    overflow-x: clip;
+  }
 
-  --bg: #0B1418;
-  --fg: #E9F0F3;
-  --surface: #141F27;
-  --surface-hover: #18242C;
-  --border: #263840;
-  --border-light: #1E2A31;
-  --accent: #2DA8AA;
-  --accent-hover: #3ABFBB;
-  --accent-soft: #122E2F;
-  --ink-muted: #8A9CA6;
-  --ink-subtle: #6B7C85;
-  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.36);
-  --shadow-lift: 0 4px 12px rgba(0, 0, 0, 0.36), 0 20px 48px rgba(0, 0, 0, 0.5);
-}
+  /* The app shipped with three focus states across fifty components — it was
+     not keyboard-operable. One base rule restores that everywhere. The ring is
+     never transitioned: a focus indicator that fades in is not an indicator. */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+    transition: none;
+  }
 
-html {
-  scroll-behavior: smooth;
-}
+  /* Dark surfaces need the ring to read against the accent fill too. */
+  .btn-primary:focus-visible {
+    outline-color: var(--color-ink);
+  }
 
-body {
-  color: var(--fg);
-  background: var(--bg);
-  min-height: 100dvh;
-  position: relative;
-  overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
+  ::selection {
+    background: oklch(var(--c-teal-600) / 0.16);
+  }
 
-::selection {
-  background: rgba(27, 138, 143, 0.15);
+  /* Prices, sensor readings, dates — anything that sits in a column. */
+  :where(table, .tabular) {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 @layer components {
+  /* Cards are hairline-on-paper, not floating rectangles. Shadow belongs to
+     things that genuinely float: sticky nav, modal, sheet, dropdown. */
   .card {
-    background: var(--surface);
-    border: 1px solid var(--border-light);
-    border-radius: 1.25rem;
-    box-shadow: var(--shadow-soft);
-    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    background: var(--color-surface);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-md);
+    transition: border-color var(--dur-short) var(--ease-out);
   }
 
   .card:hover {
-    box-shadow: var(--shadow-lift);
-    border-color: var(--border);
+    border-color: var(--color-rule-2);
   }
 
+  /* Opt-in elevation for the few surfaces that really do float. */
+  .floating {
+    box-shadow: var(--shadow-float);
+  }
+
+  .overlay {
+    box-shadow: var(--shadow-overlay);
+  }
+
+  /* Chips are the one place the pill radius survives — they are tokens of
+     selection, and the pill is what makes them read as toggles. */
   .chip {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    border-radius: 9999px;
+    border-radius: var(--radius-pill);
     padding: 0.375rem 0.75rem;
-    font-size: 0.6875rem;
+    font-size: var(--text-2xs);
     font-weight: 500;
     letter-spacing: 0.02em;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--ink-muted);
-    transition: all 0.2s ease;
+    border: 1px solid var(--color-rule);
+    background: var(--color-surface);
+    color: var(--color-muted);
+    transition: border-color var(--dur-micro) var(--ease-out),
+      color var(--dur-micro) var(--ease-out);
   }
 
   .chip:hover {
-    border-color: #D4CBC0;
-    color: var(--fg);
+    border-color: var(--color-rule-2);
+    color: var(--color-ink);
   }
 
   .chip-active {
-    background: var(--accent);
-    color: white;
-    border-color: var(--accent);
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    border-color: var(--color-accent);
   }
 
   .chip-active:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
-    color: white;
+    background: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+    color: var(--color-accent-ink);
   }
 
   .btn-primary {
@@ -140,16 +118,31 @@ body {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    background: var(--accent);
-    color: white;
-    border-radius: 9999px;
-    font-weight: 500;
-    transition: all 0.2s ease;
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background-color var(--dur-micro) var(--ease-out);
   }
 
   .btn-primary:hover {
-    background: var(--accent-hover);
-    transform: translateY(-1px);
+    background: var(--color-accent-hover);
+  }
+
+  /* One signal per state: hover shifts colour, press moves. No lift, no glow. */
+  .btn-primary:active {
+    transform: translateY(1px);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .btn-primary:disabled:active {
+    transform: none;
   }
 
   .btn-ghost {
@@ -158,86 +151,136 @@ body {
     justify-content: center;
     gap: 0.375rem;
     background: transparent;
-    color: var(--ink-muted);
-    border: 1px solid var(--border);
-    border-radius: 9999px;
+    color: var(--color-ink);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
     font-weight: 500;
-    transition: all 0.2s ease;
+    white-space: nowrap;
+    transition: border-color var(--dur-micro) var(--ease-out),
+      background-color var(--dur-micro) var(--ease-out);
   }
 
   .btn-ghost:hover {
-    border-color: #D4CBC0;
-    color: var(--fg);
-    background: var(--surface);
+    border-color: var(--color-rule-2);
+    background: var(--color-paper-2);
   }
 
-  .section-label {
+  .btn-ghost:active {
+    transform: translateY(1px);
+  }
+
+  /* Tertiary: text + a rule drawn on hover. No box. */
+  .btn-text {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    font-size: 0.625rem;
+    color: var(--color-accent);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    white-space: nowrap;
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--dur-micro) var(--ease-out);
+  }
+
+  .btn-text:hover {
+    border-bottom-color: var(--color-accent);
+  }
+
+  /* Section heads carry no eyebrow. The heading is the head. */
+  .section-title {
+    font-family: var(--font-display);
     font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--accent);
+    font-size: var(--text-2xl);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+  }
+
+  .section-lede {
+    margin-top: 0.75rem;
+    max-width: 58ch;
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    color: var(--color-muted);
+  }
+
+  /* A hairline is how sections separate. Not a wave, not a gradient fade. */
+  .rule {
+    border: 0;
+    border-top: 1px solid var(--color-rule);
   }
 }
 
 /* Scrollbar hide */
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* Animations */
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-@keyframes fade-in {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes slide-in-right {
-  from { opacity: 0; transform: translateX(16px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.animate-fade-up {
-  animation: fade-up 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-}
-
-.animate-fade-in {
-  animation: fade-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-}
-
-.animate-slide-in-right {
-  animation: slide-in-right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-}
-
-/* Slow, decorative drift for atmospheric light accents (transform-only). */
-@keyframes hero-drift {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(20px, -16px, 0) scale(1.1); }
-}
-
-.hero-drift {
-  animation: hero-drift 16s ease-in-out infinite;
-}
-
-/* Respect users who prefer reduced motion: drop entrance + looping motion. */
-@media (prefers-reduced-motion: reduce) {
-  .animate-fade-up,
-  .animate-fade-in,
-  .animate-slide-in-right,
-  .hero-drift {
-    animation: none !important;
+/* One orchestrated entrance per page load, staggered by DOM index via --i.
+   Nothing reveals on scroll; content below the fold is simply there. */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
-/* Subtle grain texture overlay */
+.reveal {
+  animation: reveal var(--dur-long) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-up {
+  animation: reveal var(--dur-long) var(--ease-out) both;
+}
+
+.animate-fade-in {
+  animation: fade-in var(--dur-short) var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 150ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 150ms !important;
+  }
+
+  .reveal,
+  .animate-fade-up,
+  .animate-fade-in {
+    animation: fade-in 150ms linear both;
+    animation-delay: 0ms;
+  }
+}
+
+/* Grain — the honest alternative to a gradient mesh. Sits over photographic
+   surfaces only, at an opacity you feel rather than see. */
 .grain::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   opacity: 0.025;

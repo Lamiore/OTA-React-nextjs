@@ -6,7 +6,6 @@ interface Props {
   id: string;
   name: string;
   location: string;
-  emoji: string;
   thumbColor: string;
   tags: string[];
   isLive?: boolean;
@@ -28,7 +27,7 @@ function PinIcon() {
 
 function StarIcon() {
   return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" className="text-amber-400 shrink-0">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" className="text-star shrink-0">
       <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
     </svg>
   );
@@ -46,7 +45,6 @@ export default function DestinationCard({
   id,
   name,
   location,
-  emoji,
   thumbColor,
   tags,
   isLive,
@@ -58,30 +56,40 @@ export default function DestinationCard({
   const router = useRouter();
 
   return (
-    <div className="flex rounded-2xl border border-shore-200/80 bg-surface overflow-hidden shadow-soft hover:shadow-lift transition-all duration-300">
-      {/* Thumbnail */}
+    <div className="flex rounded-md border border-shore-200/80 bg-surface overflow-hidden transition-colors duration-short">
+      {/* Thumbnail — pelat tipografis bila belum ada foto, sama seperti kartu
+          desktop. Gradien lama memakai hex mentah yang tidak membalik di tema
+          gelap; bidang warna destinasi saja sudah cukup. */}
       <div
-        className="w-[90px] shrink-0 flex items-center justify-center relative overflow-hidden"
-        style={{ background: image ? undefined : `linear-gradient(160deg, ${thumbColor} 0%, #F4F0EB 100%)` }}
+        className="relative flex w-[90px] shrink-0 items-center justify-center overflow-hidden"
+        style={{ background: image ? undefined : thumbColor }}
       >
         {image ? (
-          <img src={image} alt={name} className="absolute inset-0 w-full h-full object-cover" />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt={name}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
         ) : (
-          <span className="text-3xl">{emoji}</span>
+          <span className="font-serif text-xl font-semibold text-white/85" aria-hidden="true">
+            {name.trim().charAt(0).toUpperCase()}
+          </span>
         )}
       </div>
 
       {/* Content */}
       <div className="flex-1 p-3.5 flex flex-col gap-1.5">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-[13px] font-semibold text-navy leading-tight capitalize">
+          <h3 className="text-sm font-semibold text-navy leading-tight capitalize">
             {name}
           </h3>
           {onToggleSave && (
             <button
               onClick={onToggleSave}
               aria-label={saved ? 'Hapus dari tersimpan' : 'Simpan destinasi'}
-              className={`shrink-0 -mt-1 -mr-1 p-1 transition-colors ${saved ? 'text-red-400' : 'text-shore-300 hover:text-red-300'}`}
+              className={`shrink-0 -mt-1 -mr-1 p-1 transition-colors ${saved ? 'text-danger' : 'text-shore-300 hover:text-danger'}`}
             >
               <HeartIcon filled={!!saved} />
             </button>
@@ -90,20 +98,20 @@ export default function DestinationCard({
 
         <div className="flex items-center gap-1">
           <PinIcon />
-          <span className="text-[11px] text-navy-soft capitalize">{location}</span>
+          <span className="text-2xs text-navy-soft capitalize">{location}</span>
         </div>
 
         {/* Tags */}
         <div className="flex items-center gap-1.5 flex-wrap">
           {isLive && (
-            <span className="bg-teal-50 text-teal-600 text-[9px] font-medium px-2 py-0.5 rounded-full">
+            <span className="bg-teal-50 text-teal-600 text-2xs font-medium px-2 py-0.5 rounded-xs">
               LIVE
             </span>
           )}
           {tags.map((tag) => (
             <span
               key={tag}
-              className="bg-shore-100 text-navy-soft text-[9px] font-medium px-2 py-0.5 rounded-full"
+              className="bg-shore-100 text-navy-soft text-2xs font-medium px-2 py-0.5 rounded-xs"
             >
               {tag}
             </span>
@@ -113,7 +121,7 @@ export default function DestinationCard({
         {/* Footer */}
         <div className="flex items-center justify-between mt-auto pt-1.5">
           {rating && rating.count > 0 ? (
-            <span className="flex items-center gap-1 text-[10px] text-navy-soft">
+            <span className="flex items-center gap-1 text-2xs text-navy-soft">
               <StarIcon />
               <span className="font-semibold text-navy">{rating.avg.toFixed(1)}</span>
               ({rating.count})
@@ -123,7 +131,7 @@ export default function DestinationCard({
           )}
           <button
             onClick={() => router.push(`/destinations/${id}`)}
-            className="bg-teal-500 text-white rounded-lg px-3 py-1 text-[10px] font-medium hover:bg-teal-600 transition-colors duration-200"
+            className="bg-teal-500 text-white rounded-sm px-3 py-1 text-2xs font-medium hover:bg-teal-600 transition-colors duration-micro"
           >
             Booking
           </button>

@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { sendEmailVerification, signOut, type User } from 'firebase/auth';
+import { signOut, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { requestVerificationEmail } from '@/lib/sendVerification';
 
 function MailCheckIcon() {
   return (
@@ -76,16 +77,12 @@ export default function VerifyEmail({ user }: { user: User }) {
     setNotice('');
     setSending(true);
     try {
-      await sendEmailVerification(auth.currentUser);
+      if (!auth.currentUser.email) throw new Error('no-email');
+      await requestVerificationEmail(auth.currentUser.email);
       setNotice('Email verifikasi terkirim. Cek inbox (atau folder spam).');
       setCooldown(60);
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      setError(
-        code === 'auth/too-many-requests'
-          ? 'Terlalu banyak percobaan. Tunggu sebentar sebelum kirim ulang.'
-          : 'Gagal mengirim ulang. Coba lagi.',
-      );
+    } catch {
+      setError('Gagal mengirim ulang. Coba lagi.');
     } finally {
       setSending(false);
     }
@@ -97,7 +94,7 @@ export default function VerifyEmail({ user }: { user: User }) {
 
   return (
     <div className="w-full max-w-md mx-auto animate-fade-in text-center">
-      <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-500 mb-5 text-white shadow-glow">
+      <div className="inline-flex h-14 w-14 items-center justify-center rounded-md bg-teal-500 mb-5 text-white">
         <MailCheckIcon />
       </div>
 
@@ -109,18 +106,18 @@ export default function VerifyEmail({ user }: { user: User }) {
       </p>
 
       {/* Status menunggu */}
-      <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3.5 py-1.5 text-[12px] font-medium text-teal-700">
+      <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3.5 py-1.5 text-xs font-medium text-teal-700">
         <span className="text-teal-500"><LoadingSpinner /></span>
         Menunggu verifikasi…
       </div>
 
       {notice && (
-        <div className="mt-4 rounded-xl bg-teal-50 border border-teal-100 px-4 py-3 text-[13px] text-teal-700 animate-fade-up">
+        <div className="mt-4 rounded-md bg-teal-50 border border-teal-100 px-4 py-3 text-sm text-teal-700 animate-fade-up">
           {notice}
         </div>
       )}
       {error && (
-        <div className="mt-4 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-[13px] text-red-600 animate-fade-up">
+        <div className="mt-4 rounded-md bg-danger-soft border border-danger-rule px-4 py-3 text-sm text-danger animate-fade-up">
           {error}
         </div>
       )}
@@ -129,14 +126,14 @@ export default function VerifyEmail({ user }: { user: User }) {
         <button
           onClick={checkNow}
           disabled={checking}
-          className="btn-primary w-full rounded-xl px-4 py-3 text-[14px] font-medium shadow-glow disabled:opacity-50"
+          className="btn-primary w-full px-4 py-3 text-sm font-medium disabled:opacity-50"
         >
           {checking ? <LoadingSpinner /> : 'Saya sudah verifikasi'}
         </button>
         <button
           onClick={resend}
           disabled={sending || cooldown > 0}
-          className="w-full rounded-xl border border-shore-200 bg-surface px-4 py-3 text-[13px] font-medium text-navy transition-all duration-200 hover:border-shore-300 hover:shadow-soft disabled:opacity-50"
+          className="w-full rounded-md border border-shore-200 bg-surface px-4 py-3 text-sm font-medium text-navy transition-colors duration-micro hover:border-shore-300 hover: disabled:opacity-50"
         >
           {sending
             ? 'Mengirim…'
@@ -146,7 +143,7 @@ export default function VerifyEmail({ user }: { user: User }) {
         </button>
       </div>
 
-      <p className="mt-6 text-[13px] text-navy-soft">
+      <p className="mt-6 text-sm text-navy-soft">
         Salah email?{' '}
         <button onClick={logout} className="font-medium text-teal-600 hover:text-teal-700 transition-colors">
           Keluar & daftar ulang

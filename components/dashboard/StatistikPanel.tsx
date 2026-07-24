@@ -32,7 +32,6 @@ export default function StatistikPanel() {
     {
       label: 'Total Destinasi',
       value: destinations.length,
-      color: 'bg-teal-100 text-teal-600',
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
@@ -44,7 +43,6 @@ export default function StatistikPanel() {
     {
       label: 'Total Pengguna',
       value: users.length,
-      color: 'bg-blue-100 text-blue-600',
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -57,7 +55,6 @@ export default function StatistikPanel() {
     {
       label: 'Pengelola',
       value: totalPengelola,
-      color: 'bg-amber-100 text-amber-600',
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
@@ -68,7 +65,6 @@ export default function StatistikPanel() {
     {
       label: 'Admin',
       value: totalAdmin,
-      color: 'bg-purple-100 text-purple-600',
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -78,7 +74,6 @@ export default function StatistikPanel() {
     {
       label: 'Tiket Terjual',
       value: usedTickets,
-      color: 'bg-teal-100 text-teal-600',
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
@@ -92,17 +87,17 @@ export default function StatistikPanel() {
 
   return (
     <div className="animate-fade-in">
-      <h1 className="font-serif text-2xl font-medium text-navy">Statistik</h1>
-      <p className="mt-1 text-sm text-navy-soft">Ringkasan data platform</p>
+      <h1 className="section-title">Statistik</h1>
+      <p className="section-lede">Ringkasan data platform</p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <div key={s.label} className="card p-5">
-            <div className={`h-11 w-11 rounded-xl ${s.color} flex items-center justify-center mb-3`}>
+            <div className={`h-11 w-11 rounded-md bg-shore-100 text-navy-soft flex items-center justify-center mb-3`}>
               {s.icon}
             </div>
-            <p className="text-2xl font-semibold text-navy">{s.value}</p>
-            <p className="text-[12px] text-navy-soft mt-0.5">{s.label}</p>
+            <p className="tabular font-serif text-2xl font-semibold text-navy">{s.value}</p>
+            <p className="text-xs text-navy-soft mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>

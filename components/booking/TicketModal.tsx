@@ -25,8 +25,8 @@ function CloseIcon() {
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-navy-soft">{label}</p>
-      <p className="mt-0.5 truncate text-[13px] font-medium text-navy">{value}</p>
+      <p className="text-sm font-semibold text-navy">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-medium text-navy">{value}</p>
     </div>
   );
 }
@@ -73,10 +73,10 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
           {/* Bagian atas — info tiket */}
           <div className="p-6">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-600">
+              <span className="text-xs font-semibold text-teal-600">
                 OTA · Tiket Wisata
               </span>
-              <span className="rounded-lg bg-teal-100 px-2.5 py-1 text-[11px] font-medium text-teal-700">
+              <span className="rounded-sm bg-teal-100 px-2.5 py-1 text-2xs font-medium text-teal-700">
                 Dikonfirmasi
               </span>
             </div>
@@ -84,7 +84,7 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
             <h2 className="mt-4 font-serif text-2xl font-medium leading-tight text-navy">
               {booking.destinationName}
             </h2>
-            <p className="mt-1 text-[12px] text-navy-soft">{dateLabel}</p>
+            <p className="mt-1 text-xs text-navy-soft">{dateLabel}</p>
 
             <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4">
               <Detail label="Pemesan" value={booking.name} />
@@ -104,13 +104,13 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
           {/* Bagian bawah — QR */}
           <div className="flex flex-col items-center gap-3 p-6">
             {/* QR selalu hitam-di-putih + padding (quiet zone) agar tetap ter-scan di dark mode */}
-            <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-shore-200">
+            <div className="rounded-md bg-white p-3 shadow-sm ring-1 ring-shore-200">
               <QRCodeSVG value={qrPayload(booking)} size={160} level="M" />
             </div>
-            <p className="font-mono text-[15px] font-semibold tracking-[0.15em] text-navy">
+            <p className="font-mono text-base font-semibold tracking-[0.15em] text-navy">
               {ticketCode(booking.id)}
             </p>
-            <p className="text-center text-[12px] text-navy-soft">
+            <p className="text-center text-xs text-navy-soft">
               Tunjukkan QR ini kepada petugas saat check-in.
             </p>
           </div>

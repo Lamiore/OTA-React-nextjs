@@ -60,14 +60,14 @@ export default function CameraSection({ user, role }: Props) {
           </div>
         ) : verification?.status === 'pending' ? (
           <div className="card p-6">
-            <span className="inline-flex rounded-lg bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+            <span className="inline-flex rounded-sm bg-warn-soft px-2.5 py-1 text-2xs font-medium text-warn">
               Menunggu Persetujuan
             </span>
-            <p className="text-[13px] text-navy-soft mt-3 leading-relaxed">
+            <p className="text-sm text-navy-soft mt-3 leading-relaxed">
               Pengajuan sedang ditinjau admin. Kamu akan bisa menambahkan kamera
               setelah pengajuan disetujui.
             </p>
-            <div className="mt-4 space-y-1.5 text-[13px] text-navy">
+            <div className="mt-4 space-y-1.5 text-sm text-navy">
               <p><span className="text-navy-soft">Nama:</span> {verification.fullName}</p>
               <p><span className="text-navy-soft">No. HP:</span> {verification.phone}</p>
               <p><span className="text-navy-soft">Instansi:</span> {verification.organization}</p>
@@ -75,16 +75,16 @@ export default function CameraSection({ user, role }: Props) {
           </div>
         ) : verification?.status === 'rejected' && !resubmitting ? (
           <div className="card p-6">
-            <span className="inline-flex rounded-lg bg-red-100 px-2.5 py-1 text-[11px] font-medium text-red-600">
+            <span className="inline-flex rounded-sm bg-danger-soft px-2.5 py-1 text-2xs font-medium text-danger">
               Pengajuan Ditolak
             </span>
-            <p className="text-[13px] text-navy-soft mt-3 leading-relaxed">
+            <p className="text-sm text-navy-soft mt-3 leading-relaxed">
               Pengajuan verifikasimu ditolak admin. Periksa kembali datamu lalu
               ajukan ulang.
             </p>
             <button
               onClick={() => setResubmitting(true)}
-              className="btn-primary w-full rounded-xl px-6 py-3 text-[14px] mt-5"
+              className="btn-primary w-full px-6 py-3 text-sm mt-5"
             >
               Ajukan Ulang
             </button>

@@ -40,21 +40,21 @@ export default function CameraLiveModal({ camera, onClose }: Props) {
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="min-w-0">
               <h2 className="font-serif text-lg font-medium text-navy truncate">{camera.name}</h2>
-              <p className="text-[12px] text-navy-soft mt-0.5 truncate">
+              <p className="text-xs text-navy-soft mt-0.5 truncate">
                 ID: {camera.cameraId}
                 {camera.location && ` — ${camera.location}`}
               </p>
             </div>
-            <button onClick={onClose} className="btn-ghost rounded-xl px-3 py-1.5 text-[12px] shrink-0">
+            <button onClick={onClose} className="btn-ghost px-3 py-1.5 text-xs shrink-0">
               Tutup
             </button>
           </div>
 
-          <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-ink">
+          <div className="relative w-full aspect-video rounded-md overflow-hidden bg-ink">
             {src === null ? null : src === '' ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
                 <p className="text-sm">Alamat server kamera belum diatur.</p>
-                <p className="text-[12px] text-white/50">
+                <p className="text-xs text-white/50">
                   Isi kolom &quot;Alamat Server Kamera&quot; dengan alamat dari
                   website kamera, lalu buka lagi live view ini.
                 </p>
@@ -62,7 +62,7 @@ export default function CameraLiveModal({ camera, onClose }: Props) {
             ) : error ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
                 <p className="text-sm">Tidak bisa terhubung ke kamera.</p>
-                <p className="text-[12px] text-white/50">
+                <p className="text-xs text-white/50">
                   Pastikan server kamera jalan, ID benar, dan semua perangkat satu
                   jaringan. Bila aplikasi dibuka lewat HTTPS, stream http:// jaringan
                   lokal akan diblokir browser.

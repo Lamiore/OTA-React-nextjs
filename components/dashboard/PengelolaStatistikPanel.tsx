@@ -49,7 +49,6 @@ export default function PengelolaStatistikPanel({ location }: { location: string
     {
       label: 'Total Destinasi',
       value: regionIds.size,
-      color: 'bg-teal-100 text-teal-600',
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
@@ -61,7 +60,6 @@ export default function PengelolaStatistikPanel({ location }: { location: string
     {
       label: 'Total Booking',
       value: totalBookings,
-      color: 'bg-blue-100 text-blue-600',
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
@@ -74,7 +72,6 @@ export default function PengelolaStatistikPanel({ location }: { location: string
     {
       label: 'Tiket Terjual',
       value: usedTickets,
-      color: 'bg-teal-100 text-teal-600',
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
@@ -87,7 +84,6 @@ export default function PengelolaStatistikPanel({ location }: { location: string
     {
       label: 'Total Pengunjung',
       value: totalGuests,
-      color: 'bg-purple-100 text-purple-600',
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -106,8 +102,8 @@ export default function PengelolaStatistikPanel({ location }: { location: string
 
   return (
     <div className="animate-fade-in">
-      <h1 className="font-serif text-2xl font-medium text-navy">Statistik</h1>
-      <p className="mt-1 text-sm text-navy-soft">
+      <h1 className="section-title">Statistik</h1>
+      <p className="section-lede">
         {location ? `Ringkasan wisata wilayah ${location}` : 'Wilayah belum ditetapkan admin'}
       </p>
 
@@ -122,11 +118,11 @@ export default function PengelolaStatistikPanel({ location }: { location: string
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <div key={s.label} className="card p-5">
-            <div className={`h-11 w-11 rounded-xl ${s.color} flex items-center justify-center mb-3`}>
+            <div className={`h-11 w-11 rounded-md bg-shore-100 text-navy-soft flex items-center justify-center mb-3`}>
               {s.icon}
             </div>
-            <p className="text-2xl font-semibold text-navy">{s.value}</p>
-            <p className="text-[12px] text-navy-soft mt-0.5">{s.label}</p>
+            <p className="tabular font-serif text-2xl font-semibold text-navy">{s.value}</p>
+            <p className="text-xs text-navy-soft mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
@@ -142,7 +138,7 @@ export default function PengelolaStatistikPanel({ location }: { location: string
           <div className="space-y-3">
             {recentBookings.map((b) => (
               <div key={b.id} className="card flex items-center gap-4 px-5 py-4">
-                <div className="h-10 w-10 rounded-xl bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
+                <div className="h-10 w-10 rounded-md bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                     <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
                     <line x1="16" x2="16" y1="2" y2="6" />
@@ -151,16 +147,16 @@ export default function PengelolaStatistikPanel({ location }: { location: string
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-medium text-navy truncate">{b.destinationName}</p>
-                  <p className="text-[12px] text-navy-soft">
+                  <p className="text-sm font-medium text-navy truncate">{b.destinationName}</p>
+                  <p className="text-xs text-navy-soft">
                     {new Date(b.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} — {b.guests} orang
                   </p>
                 </div>
-                <span className={`rounded-lg px-2.5 py-1 text-[11px] font-medium ${
+                <span className={`rounded-sm px-2.5 py-1 text-2xs font-medium ${
                   b.status === 'used' ? 'bg-shore-100 text-navy-soft' :
                   b.status === 'confirmed' ? 'bg-teal-100 text-teal-700' :
-                  b.status === 'cancelled' ? 'bg-red-100 text-red-600' :
-                  'bg-amber-100 text-amber-700'
+                  b.status === 'cancelled' ? 'bg-danger-soft text-danger' :
+                  'bg-warn-soft text-warn'
                 }`}>
                   {b.status === 'used' ? 'Sudah Digunakan' : b.status === 'confirmed' ? 'Dikonfirmasi' : b.status === 'cancelled' ? 'Dibatalkan' : 'Menunggu'}
                 </span>

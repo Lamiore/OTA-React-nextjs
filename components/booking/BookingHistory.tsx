@@ -91,15 +91,15 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
           <div className="absolute inset-0 bg-shore-50/60 backdrop-blur-lg" onClick={() => !cancelling && setCancellingBooking(null)} />
           <div className="relative flex min-h-full items-center justify-center p-4">
             <div className="w-full max-w-sm card p-6 animate-fade-up" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-red-100 mx-auto mb-4">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-danger-soft mx-auto mb-4">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-danger">
                   <path d="M3 6h18" />
                   <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                   <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                 </svg>
               </div>
               <h2 className="font-serif text-lg font-medium text-navy text-center">Batalkan Booking?</h2>
-              <p className="text-[13px] text-navy-soft text-center mt-2">
+              <p className="text-sm text-navy-soft text-center mt-2">
                 Booking untuk <span className="font-medium text-navy">{cancellingBooking.destinationName}</span> pada{' '}
                 <span className="font-medium text-navy">
                   {new Date(cancellingBooking.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -110,14 +110,14 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                 <button
                   onClick={() => setCancellingBooking(null)}
                   disabled={cancelling}
-                  className="btn-ghost flex-1 rounded-xl px-4 py-2.5 text-[13px]"
+                  className="btn-ghost flex-1 px-4 py-2.5 text-sm"
                 >
                   Kembali
                 </button>
                 <button
                   onClick={handleCancel}
                   disabled={cancelling}
-                  className="flex-1 rounded-xl px-4 py-2.5 text-[13px] font-medium bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 inline-flex items-center justify-center"
+                  className="flex-1 rounded-md px-4 py-2.5 text-sm font-medium bg-danger text-white hover:bg-danger transition-colors disabled:opacity-50 inline-flex items-center justify-center"
                 >
                   {cancelling ? 'Membatalkan...' : 'Ya, Batalkan'}
                 </button>
@@ -140,11 +140,11 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
       <div className="mt-6 space-y-3">
         {!user ? (
           <div className="card p-8 text-center">
-            <div className="h-12 w-12 rounded-xl bg-shore-100 flex items-center justify-center mx-auto mb-3 text-navy-soft">
+            <div className="h-12 w-12 rounded-md bg-shore-100 flex items-center justify-center mx-auto mb-3 text-navy-soft">
               <CalendarIcon />
             </div>
             <p className="text-sm text-navy-soft">Masuk untuk melihat riwayat booking kamu.</p>
-            <button onClick={() => router.push('/profile')} className="btn-primary rounded-xl px-5 py-2.5 text-[13px] mt-4">
+            <button onClick={() => router.push('/profile')} className="btn-primary px-5 py-2.5 text-sm mt-4">
               Masuk
             </button>
           </div>
@@ -157,13 +157,13 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
           ))
         ) : visibleBookings.length === 0 ? (
           <div className="card p-8 text-center">
-            <div className="h-12 w-12 rounded-xl bg-shore-100 flex items-center justify-center mx-auto mb-3 text-navy-soft">
+            <div className="h-12 w-12 rounded-md bg-shore-100 flex items-center justify-center mx-auto mb-3 text-navy-soft">
               <CalendarIcon />
             </div>
             <p className="text-sm text-navy-soft">
               {variant === 'active' ? 'Belum ada booking yang berlangsung.' : 'Belum ada booking.'}
             </p>
-            <button onClick={() => router.push('/beranda#destinasi')} className="btn-primary rounded-xl px-5 py-2.5 text-[13px] mt-4">
+            <button onClick={() => router.push('/beranda#destinasi')} className="btn-primary px-5 py-2.5 text-sm mt-4">
               Buat Booking
             </button>
           </div>
@@ -179,20 +179,20 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                 <div key={b.id} className="card p-5 animate-fade-in">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[15px] font-medium text-navy capitalize">{b.destinationName}</p>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[12px] text-navy-soft">
+                      <p className="text-base font-medium text-navy capitalize">{b.destinationName}</p>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-navy-soft">
                         <span>{new Date(b.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                         <span>{b.guests} orang</span>
                         <span>{b.phone}</span>
                       </div>
                       {b.notes && (
-                        <p className="mt-2 text-[12px] text-navy-soft italic">{b.notes}</p>
+                        <p className="mt-2 text-xs text-navy-soft italic">{b.notes}</p>
                       )}
                     </div>
                     <span className={clsx(
-                      'rounded-lg px-2.5 py-1 text-[11px] font-medium shrink-0',
+                      'rounded-sm px-2.5 py-1 text-2xs font-medium shrink-0',
                       used && 'bg-shore-100 text-navy-soft',
-                      cancelled && 'bg-red-100 text-red-600',
+                      cancelled && 'bg-danger-soft text-danger',
                       !used && !cancelled && past && 'bg-shore-100 text-navy-soft',
                       !used && !cancelled && !past && 'bg-teal-100 text-teal-700',
                     )}>
@@ -204,7 +204,7 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                     <div className="flex gap-2 mt-4 pt-4 border-t border-shore-200">
                       <button
                         onClick={() => setTicketBooking(b)}
-                        className="btn-primary flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-[12px]"
+                        className="btn-primary flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-xs"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
@@ -216,7 +216,7 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                       </button>
                       <button
                         onClick={() => setCancellingBooking(b)}
-                        className="btn-ghost flex-1 rounded-xl px-4 py-2 text-[12px] hover:border-red-200 hover:text-red-500"
+                        className="btn-ghost flex-1 px-4 py-2 text-xs hover:border-danger-rule hover:text-danger"
                       >
                         Batalkan
                       </button>

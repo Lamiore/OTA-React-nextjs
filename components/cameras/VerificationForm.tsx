@@ -40,20 +40,20 @@ export default function VerificationForm({ uid, initial }: Props) {
   };
 
   const inputClass =
-    'w-full rounded-xl border border-shore-200 bg-surface px-4 py-2.5 text-[14px] text-navy outline-none transition-colors focus:border-teal-400';
+    'w-full rounded-md border border-shore-200 bg-surface px-4 py-2.5 text-sm text-navy outline-none transition-colors focus:border-teal-400';
 
   return (
     <div className="card p-6">
       <h2 className="font-serif text-lg font-medium text-navy">Verifikasi Akun Mitra</h2>
-      <p className="text-[13px] text-navy-soft mt-2 leading-relaxed">
+      <p className="text-sm text-navy-soft mt-2 leading-relaxed">
         Untuk mendaftarkan kamera, akunmu perlu diverifikasi admin terlebih dahulu.
         Lengkapi data di bawah — setelah disetujui, role akunmu naik menjadi mitra.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-5 space-y-4">
         <div>
-          <label className="block text-[12px] font-medium text-navy mb-1.5">Nama Lengkap</label>
-          <input
+          <label className="block text-xs font-medium text-navy mb-1.5">Nama Lengkap</label>
+          <input aria-label="Nama Lengkap"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Nama penanggung jawab"
@@ -61,8 +61,8 @@ export default function VerificationForm({ uid, initial }: Props) {
           />
         </div>
         <div>
-          <label className="block text-[12px] font-medium text-navy mb-1.5">No. HP</label>
-          <input
+          <label className="block text-xs font-medium text-navy mb-1.5">No. HP</label>
+          <input aria-label="No. HP"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             inputMode="tel"
@@ -71,8 +71,8 @@ export default function VerificationForm({ uid, initial }: Props) {
           />
         </div>
         <div>
-          <label className="block text-[12px] font-medium text-navy mb-1.5">Instansi/Organisasi</label>
-          <input
+          <label className="block text-xs font-medium text-navy mb-1.5">Instansi/Organisasi</label>
+          <input aria-label="Instansi/Organisasi"
             value={organization}
             onChange={(e) => setOrganization(e.target.value)}
             placeholder="Operator dive, resort, komunitas, ..."
@@ -80,12 +80,12 @@ export default function VerificationForm({ uid, initial }: Props) {
           />
         </div>
 
-        {error && <p className="text-[12px] text-red-500">{error}</p>}
+        {error && <p className="text-xs text-danger">{error}</p>}
 
         <button
           type="submit"
           disabled={submitting}
-          className="btn-primary w-full rounded-xl px-6 py-3 text-[14px] disabled:opacity-50"
+          className="btn-primary w-full px-6 py-3 text-sm disabled:opacity-50"
         >
           {submitting ? 'Mengirim...' : 'Ajukan Verifikasi'}
         </button>

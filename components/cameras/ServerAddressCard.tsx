@@ -54,12 +54,12 @@ export default function ServerAddressCard() {
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-serif text-base font-medium text-navy">Alamat Server Kamera</h2>
         {!dirty && saved && (
-          <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-600">
+          <span className="rounded-sm bg-teal-50 px-2 py-0.5 text-2xs font-medium text-teal-600">
             Tersimpan
           </span>
         )}
       </div>
-      <p className="text-[12px] text-navy-soft mt-1.5 leading-relaxed">
+      <p className="text-xs text-navy-soft mt-1.5 leading-relaxed">
         Salin dari halaman utama website kamera. Bila WiFi/IP berubah, cukup ganti
         di sini — semua kamera langsung mengikuti.
       </p>
@@ -69,17 +69,17 @@ export default function ServerAddressCard() {
           onChange={(e) => setValue(e.target.value)}
           inputMode="url"
           placeholder="http://192.168.1.5:5001"
-          className="min-w-0 flex-1 rounded-xl border border-shore-200 bg-surface px-4 py-2.5 text-[14px] text-navy outline-none transition-colors focus:border-teal-400"
+          className="min-w-0 flex-1 rounded-md border border-shore-200 bg-surface px-4 py-2.5 text-sm text-navy outline-none transition-colors focus:border-teal-400"
         />
         <button
           type="submit"
           disabled={saving || !dirty}
-          className="btn-primary rounded-xl px-4 py-2.5 text-[13px] shrink-0 disabled:opacity-50"
+          className="btn-primary px-4 py-2.5 text-sm shrink-0 disabled:opacity-50"
         >
           {saving ? 'Menyimpan...' : 'Simpan'}
         </button>
       </form>
-      {error && <p className="text-[12px] text-red-500 mt-2">{error}</p>}
+      {error && <p className="text-xs text-danger mt-2">{error}</p>}
     </div>
   );
 }

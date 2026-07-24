@@ -12,6 +12,7 @@ import {
   type Review,
 } from '@/lib/firestore';
 import TopNav from '@/components/desktop/TopNav';
+import Footer from '@/components/desktop/Footer';
 import BottomNav from '@/components/mobile/BottomNav';
 import LiveMonitorPanel from '@/components/destinations/LiveMonitorPanel';
 import DestinationReviews, { StarRow } from '@/components/destinations/DestinationReviews';
@@ -90,12 +91,12 @@ export default function DestinationDetail() {
   if (loading) {
     return (
       <main className="min-h-dvh bg-shore-50">
-        <TopNav />
+        <TopNav compact />
         <div className="mx-auto max-w-4xl animate-pulse space-y-6 px-4 py-10 sm:px-6 lg:px-10">
-          <div className="h-64 rounded-2xl bg-shore-100 sm:h-80" />
+          <div className="h-64 rounded-md bg-shore-100 sm:h-80" />
           <div className="h-6 w-2/3 rounded-full bg-shore-100" />
           <div className="h-4 w-1/3 rounded-full bg-shore-100" />
-          <div className="h-20 rounded-xl bg-shore-100" />
+          <div className="h-20 rounded-md bg-shore-100" />
         </div>
         <BottomNav />
       </main>
@@ -105,10 +106,10 @@ export default function DestinationDetail() {
   if (!dest) {
     return (
       <main className="min-h-dvh bg-shore-50">
-        <TopNav />
+        <TopNav compact />
         <div className="flex flex-col items-center justify-center gap-4 py-32">
           <p className="text-sm text-navy-soft">Destinasi tidak ditemukan.</p>
-          <button onClick={() => router.push('/beranda')} className="btn-primary rounded-xl px-5 py-2.5 text-[13px]">
+          <button onClick={() => router.push('/beranda')} className="btn-primary px-5 py-2.5 text-sm">
             Kembali ke Beranda
           </button>
         </div>
@@ -138,34 +139,41 @@ export default function DestinationDetail() {
   };
 
   return (
-    <main className="min-h-dvh bg-shore-50 pb-28 md:pb-0">
-      <TopNav />
+    <main className="flex min-h-dvh flex-col bg-shore-50 pb-28 md:pb-0">
+      <TopNav compact />
 
       {/* Hero immersive — foto full-bleed, scrim laut-dalam, judul di-overlay. */}
       <section className="grain relative h-[58vh] min-h-[400px] w-full overflow-hidden">
         {dest.image ? (
-          <img src={dest.image} alt={dest.name} className="absolute inset-0 h-full w-full object-cover" />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={dest.image}
+            alt={dest.name}
+            fetchPriority="high"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
         ) : (
-          <div className="absolute inset-0" style={{ background: dest.thumbColor }}>
-            <div
-              className="absolute inset-0"
-              style={{ background: 'radial-gradient(120% 90% at 20% -10%, rgba(255,255,255,0.35), transparent 60%)' }}
-            />
-            <div className="flex h-full items-center justify-center">
-              <span className="text-8xl drop-shadow-[0_16px_28px_rgba(15,43,60,0.45)]">{dest.emoji}</span>
-            </div>
+          // Pelat tipografis, bukan emoji — lihat design.md § Per-page allowances.
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ background: dest.thumbColor }}
+            aria-hidden="true"
+          >
+            <span className="font-serif text-display font-semibold text-white/80">
+              {dest.name.trim().charAt(0).toUpperCase()}
+            </span>
           </div>
         )}
         {/* Scrim kedalaman — dibangun di token `ink` yang selalu gelap. */}
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/25 via-ink/40 to-ink/90" />
-        <div className="absolute inset-0 bg-gradient-to-tr from-ink/70 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/30 to-ink/85" />
 
         {/* Back button */}
         <div className="absolute inset-x-0 top-0 z-10">
           <div className="mx-auto max-w-4xl px-4 pt-5 sm:px-6 lg:px-10">
             <button
               onClick={() => router.back()}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-ink/40 px-3.5 py-2 text-[13px] font-medium text-white/90 backdrop-blur-md transition-colors hover:bg-ink/60"
+              className="inline-flex items-center gap-1.5 rounded-sm border border-white/20 bg-ink/40 px-3.5 py-2 text-sm font-medium text-white/90 backdrop-blur-md transition-colors hover:bg-ink/60"
             >
               <ArrowLeftIcon />
               Kembali
@@ -176,19 +184,19 @@ export default function DestinationDetail() {
         {/* Judul + lokasi + rating */}
         <div className="absolute inset-x-0 bottom-0 z-10">
           <div className="mx-auto max-w-4xl px-4 pb-12 sm:px-6 lg:px-10">
-            <h1 className="animate-fade-up font-serif text-4xl font-medium capitalize leading-[1.03] tracking-tight text-white sm:text-5xl lg:text-6xl">
+            <h1 className="animate-fade-up font-serif text-display font-semibold capitalize text-white">
               {dest.name}
             </h1>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
-              <span className="inline-flex items-center gap-1.5 text-[13px] text-white/80">
+              <span className="inline-flex items-center gap-1.5 text-sm text-white/80">
                 <PinIcon />
                 <span className="capitalize">{dest.location}</span>
               </span>
               {count > 0 && (
                 <span className="inline-flex items-center gap-1.5">
                   <StarRow value={avg} size={15} />
-                  <span className="text-[13px] font-semibold text-white">{avg.toFixed(1)}</span>
-                  <span className="text-[12px] text-white/60">· {count} ulasan</span>
+                  <span className="text-sm font-semibold text-white">{avg.toFixed(1)}</span>
+                  <span className="text-xs text-white/60">· {count} ulasan</span>
                 </span>
               )}
             </div>
@@ -197,9 +205,9 @@ export default function DestinationDetail() {
       </section>
 
       {/* Sheet konten naik di atas foto. */}
-      <div className="relative z-10 -mt-6 rounded-t-[2rem] bg-shore-50">
-        <article className="mx-auto max-w-4xl animate-fade-in px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
-          <div className="space-y-5">
+      <div className="relative z-10 -mt-6 rounded-t-lg bg-shore-50">
+        <article className="mx-auto max-w-4xl animate-fade-in px-4 py-10 sm:px-6 sm:py-12 lg:px-10">
+          <div className="space-y-10">
             {/* Tags */}
             {dest.tags?.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
@@ -209,17 +217,20 @@ export default function DestinationDetail() {
               </div>
             )}
 
-            {/* Description */}
+            {/* Deskripsi — kolom prosa terukur, bukan kartu di dalam kolom yang
+                sudah punya batas sendiri (design.md § Surface language). */}
             {dest.description && (
-              <div className="card p-5 sm:p-6">
-                <h2 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-navy-soft">Tentang</h2>
-                <p className="whitespace-pre-line text-[14px] leading-relaxed text-navy">{dest.description}</p>
-              </div>
+              <section>
+                <h2 className="section-title">Tentang</h2>
+                <p className="mt-4 max-w-[65ch] whitespace-pre-line text-base leading-relaxed text-navy">
+                  {dest.description}
+                </p>
+              </section>
             )}
 
-            {/* Daftar Harga + Booking — tiap item kartu berdiri sendiri (seperti beranda) */}
-            <div className="space-y-3">
-              <h2 className="text-[11px] font-medium uppercase tracking-wider text-navy-soft">Daftar Harga</h2>
+            {/* Daftar harga + booking — tiap item berdiri sendiri. */}
+            <section className="space-y-4">
+              <h2 className="section-title">Daftar harga</h2>
               {priceItems.length > 0 ? (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {priceItems.map((item) => {
@@ -230,52 +241,52 @@ export default function DestinationDetail() {
                         type="button"
                         onClick={() => toggleItem(item.id)}
                         aria-pressed={isSelected}
-                        className={`flex flex-col rounded-2xl border p-4 text-left shadow-soft transition-all ${
+                        className={`flex flex-col rounded-md border p-4 text-left transition-colors duration-micro ease-out ${
                           isSelected
-                            ? 'border-teal-400 bg-teal-50 shadow-glow'
-                            : 'border-shore-200 bg-surface hover:border-shore-300 hover:shadow-lift'
+                            ? 'border-teal-600 bg-teal-50'
+                            : 'border-shore-200 bg-surface hover:border-shore-300'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="text-[14px] font-semibold capitalize leading-snug text-navy">{item.label}</h3>
+                          <h3 className="text-sm font-semibold capitalize leading-snug text-navy">{item.label}</h3>
                           <span
-                            className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[6px] border transition-colors ${
-                              isSelected ? 'border-teal-500 bg-teal-500 text-white' : 'border-shore-300 bg-surface'
+                            className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-xs border transition-colors duration-micro ease-out ${
+                              isSelected ? 'border-teal-600 bg-teal-600 text-white' : 'border-shore-300 bg-surface'
                             }`}
                           >
                             {isSelected && <CheckIcon />}
                           </span>
                         </div>
                         {item.description && (
-                          <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-navy-soft">
+                          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-navy-soft">
                             {item.description}
                           </p>
                         )}
-                        <p className="mt-auto pt-3 text-[15px] font-semibold text-navy">
+                        <p className="tabular mt-auto pt-3 text-base font-semibold text-navy">
                           {formatRp(item.price)}
-                          <span className="text-[12px] font-normal text-navy-soft"> {item.unit}</span>
+                          <span className="text-xs font-normal text-navy-soft"> {item.unit}</span>
                         </p>
                       </button>
                     );
                   })}
                 </div>
               ) : (
-                <div className="card p-5">
-                  <p className="text-[13px] text-navy-soft">Belum ada daftar harga untuk destinasi ini.</p>
-                </div>
+                <p className="text-sm text-navy-soft">
+                  Belum ada daftar harga untuk destinasi ini.
+                </p>
               )}
               <button
                 onClick={goToBooking}
                 disabled={priceItems.length > 0 && selectedIds.length === 0}
-                className="btn-primary w-full rounded-xl px-6 py-3 text-[14px] disabled:opacity-50"
+                className="btn-primary w-full px-6 py-3"
               >
                 {priceItems.length > 0
                   ? selectedIds.length > 0
-                    ? `Booking Sekarang · ${selectedIds.length} item`
+                    ? `Booking · ${selectedIds.length} item`
                     : 'Pilih item dulu'
-                  : 'Booking Sekarang'}
+                  : 'Booking'}
               </button>
-            </div>
+            </section>
 
             {/* Pantau langsung — kamera (kalau di-link) + sensor IoT dalam satu card */}
             {(dest.cameraStreamId || dest.cameraStreamUrl || dest.hasMonitoring) && (
@@ -293,6 +304,7 @@ export default function DestinationDetail() {
         </article>
       </div>
 
+      <Footer />
       <BottomNav />
     </main>
   );

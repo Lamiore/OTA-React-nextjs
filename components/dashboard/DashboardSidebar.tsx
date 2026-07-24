@@ -105,7 +105,7 @@ export default function DashboardSidebar({ active, onNavigate, mobileOpen, onMob
     <>
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 inset-x-0 z-50 flex items-center justify-between h-14 px-4 border-b border-shore-200/60 bg-shore-50/90 backdrop-blur-xl">
-        <button onClick={onMobileToggle} className="text-navy-soft hover:text-navy transition-colors">
+        <button onClick={onMobileToggle} aria-label="Buka menu" className="text-navy-soft hover:text-navy transition-colors">
           <MenuIcon />
         </button>
         <span className="font-serif text-lg font-semibold text-navy">Dashboard</span>
@@ -125,7 +125,7 @@ export default function DashboardSidebar({ active, onNavigate, mobileOpen, onMob
       {/* Sidebar */}
       <aside
         className={clsx(
-          'fixed top-0 left-0 z-50 h-dvh w-64 bg-surface border-r border-shore-200/60 flex flex-col transition-transform duration-300 ease-out',
+          'fixed top-0 left-0 z-50 h-dvh w-64 bg-surface border-r border-shore-200/60 flex flex-col transition-transform duration-short ease-out',
           'md:translate-x-0 md:static md:z-auto',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
@@ -133,15 +133,15 @@ export default function DashboardSidebar({ active, onNavigate, mobileOpen, onMob
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-5 border-b border-shore-200/60 shrink-0">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500 shadow-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-teal-500 shadow-sm">
               <span className="font-serif text-sm font-semibold text-white tracking-tight">L</span>
             </div>
             <div>
               <span className="font-serif text-base font-semibold tracking-tight text-navy">Lautara</span>
-              <p className="text-[10px] text-navy-soft -mt-0.5">{role === 'admin' ? 'Admin Panel' : 'Panel Pengelola'}</p>
+              <p className="text-2xs text-navy-soft -mt-0.5">{role === 'admin' ? 'Admin Panel' : 'Panel Pengelola'}</p>
             </div>
           </Link>
-          <button onClick={onMobileToggle} className="md:hidden text-navy-soft hover:text-navy transition-colors">
+          <button onClick={onMobileToggle} aria-label="Tutup menu" className="md:hidden text-navy-soft hover:text-navy transition-colors">
             <CloseIcon />
           </button>
         </div>
@@ -158,7 +158,7 @@ export default function DashboardSidebar({ active, onNavigate, mobileOpen, onMob
                   onMobileToggle();
                 }}
                 className={clsx(
-                  'w-full flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[13px] font-medium transition-all duration-200',
+                  'w-full flex items-center gap-3 rounded-md px-3.5 py-2.5 text-sm font-medium transition-colors duration-micro',
                   isActive
                     ? 'bg-teal-50 text-teal-700 border border-teal-100'
                     : 'text-navy-soft hover:bg-shore-50 hover:text-navy border border-transparent'
@@ -175,7 +175,7 @@ export default function DashboardSidebar({ active, onNavigate, mobileOpen, onMob
         <div className="px-3 pb-4 shrink-0">
           <Link
             href="/profile"
-            className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-[13px] font-medium text-navy-soft hover:bg-shore-50 hover:text-navy transition-all duration-200 border border-transparent"
+            className="flex items-center gap-2.5 rounded-md px-3.5 py-2.5 text-sm font-medium text-navy-soft hover:bg-shore-50 hover:text-navy transition-colors duration-micro border border-transparent"
           >
             <ArrowLeftIcon />
             Kembali ke Profil

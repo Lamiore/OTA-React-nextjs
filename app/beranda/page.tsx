@@ -8,7 +8,7 @@ import BottomNav from '@/components/mobile/BottomNav';
 
 export default function Beranda() {
   return (
-    <main className="min-h-dvh bg-shore-50 pb-24 md:pb-0">
+    <main className="flex min-h-dvh flex-col bg-shore-50 pb-24 md:pb-0">
       <TopNav />
       <HeroBanner />
       <Suspense>

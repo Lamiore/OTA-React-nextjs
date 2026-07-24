@@ -31,7 +31,7 @@ function StarIcon({ filled, size = 16 }: { filled: boolean; size?: number }) {
 export function StarRow({ value, size = 16 }: { value: number; size?: number }) {
   const rounded = Math.round(value);
   return (
-    <span className="inline-flex items-center gap-0.5 text-amber-400">
+    <span className="inline-flex items-center gap-0.5 text-star">
       {[1, 2, 3, 4, 5].map((i) => (
         <StarIcon key={i} filled={i <= rounded} size={size} />
       ))}
@@ -106,12 +106,12 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-[11px] font-medium text-navy-soft uppercase tracking-wider">Ulasan</h2>
+        <h2 className="section-title">Ulasan</h2>
         {count > 0 && (
           <div className="flex items-center gap-2">
             <StarRow value={avg} />
-            <span className="text-[13px] font-semibold text-navy">{avg.toFixed(1)}</span>
-            <span className="text-[12px] text-navy-soft">({count})</span>
+            <span className="text-sm font-semibold text-navy">{avg.toFixed(1)}</span>
+            <span className="text-xs text-navy-soft">({count})</span>
           </div>
         )}
       </div>
@@ -119,7 +119,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
       {/* Form tulis ulasan / prompt login */}
       {user ? (
         <div className="card p-5 sm:p-6 space-y-3">
-          <p className="text-[13px] font-medium text-navy">
+          <p className="text-sm font-medium text-navy">
             {myReview ? 'Ubah ulasanmu' : 'Tulis ulasan'}
           </p>
           <div className="flex items-center gap-1" onMouseLeave={() => setHover(0)}>
@@ -130,7 +130,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
                 aria-label={`Beri ${i} bintang`}
                 onMouseEnter={() => setHover(i)}
                 onClick={() => setRating(i)}
-                className={`transition-colors ${(hover || rating) >= i ? 'text-amber-400' : 'text-shore-300'}`}
+                className={`transition-colors ${(hover || rating) >= i ? 'text-star' : 'text-shore-300'}`}
               >
                 <StarIcon filled={(hover || rating) >= i} size={26} />
               </button>
@@ -141,13 +141,13 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
             onChange={(e) => setComment(e.target.value)}
             placeholder="Ceritakan pengalamanmu di sini… (opsional)"
             rows={3}
-            className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors resize-none"
+            className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors resize-none"
           />
           <div className="flex gap-3">
             <button
               onClick={handleSubmit}
               disabled={saving || rating < 1}
-              className="btn-primary rounded-xl px-5 py-2.5 text-[13px] disabled:opacity-50"
+              className="btn-primary px-5 py-2.5 text-sm disabled:opacity-50"
             >
               {saving ? 'Menyimpan…' : myReview ? 'Perbarui' : 'Kirim Ulasan'}
             </button>
@@ -155,7 +155,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
               <button
                 onClick={handleDelete}
                 disabled={saving}
-                className="btn-ghost rounded-xl px-4 py-2.5 text-[13px] hover:border-red-200 hover:text-red-500 disabled:opacity-50"
+                className="btn-ghost px-4 py-2.5 text-sm hover:border-danger-rule hover:text-danger disabled:opacity-50"
               >
                 Hapus
               </button>
@@ -164,7 +164,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
         </div>
       ) : (
         <div className="card p-5 text-center">
-          <p className="text-[13px] text-navy-soft">
+          <p className="text-sm text-navy-soft">
             <Link href="/profile" className="text-teal-600 font-medium hover:underline">
               Masuk
             </Link>{' '}
@@ -176,7 +176,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
       {/* Daftar ulasan */}
       {sorted.length === 0 ? (
         <div className="card p-6 text-center">
-          <p className="text-[13px] text-navy-soft">Belum ada ulasan. Jadilah yang pertama!</p>
+          <p className="text-sm text-navy-soft">Belum ada ulasan. Jadilah yang pertama!</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -192,21 +192,21 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
                   />
                 ) : (
                   <div className="h-9 w-9 rounded-full bg-gradient-to-br from-teal-100 to-teal-200 flex items-center justify-center border border-shore-200 shrink-0">
-                    <span className="text-[13px] font-semibold text-teal-700">
+                    <span className="text-sm font-semibold text-teal-700">
                       {r.userName ? r.userName[0].toUpperCase() : 'U'}
                     </span>
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium text-navy truncate">{r.userName || 'Anonim'}</p>
+                  <p className="text-sm font-medium text-navy truncate">{r.userName || 'Anonim'}</p>
                   <div className="flex items-center gap-2">
                     <StarRow value={r.rating} size={13} />
-                    <span className="text-[11px] text-navy-soft">{fmtDate(r.createdAt)}</span>
+                    <span className="text-2xs text-navy-soft">{fmtDate(r.createdAt)}</span>
                   </div>
                 </div>
               </div>
               {r.comment && (
-                <p className="text-[13px] text-navy leading-relaxed mt-3 whitespace-pre-line">{r.comment}</p>
+                <p className="text-sm text-navy leading-relaxed mt-3 whitespace-pre-line">{r.comment}</p>
               )}
             </div>
           ))}

@@ -177,7 +177,7 @@ export default function DestinasiPanel() {
           <h1 className="font-serif text-2xl font-medium text-navy">Destinasi</h1>
           <p className="mt-1 text-sm text-navy-soft">{destinations.length} destinasi terdaftar</p>
         </div>
-        <button onClick={openAdd} className="btn-primary rounded-xl px-4 py-2.5 text-[13px]">
+        <button onClick={openAdd} className="btn-primary px-4 py-2.5 text-sm">
           <PlusIcon />
           Tambah
         </button>
@@ -191,7 +191,7 @@ export default function DestinasiPanel() {
               <h2 className="font-serif text-lg font-medium text-navy">
                 {editingId ? 'Edit Destinasi' : 'Tambah Destinasi'}
               </h2>
-              <button onClick={closeForm} className="text-navy-soft hover:text-navy transition-colors">
+              <button onClick={closeForm} aria-label="Tutup" className="text-navy-soft hover:text-navy transition-colors">
                 <CloseIcon />
               </button>
             </div>
@@ -199,50 +199,48 @@ export default function DestinasiPanel() {
             <div className="space-y-4">
               {/* Name */}
               <div>
-                <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Nama *</label>
-                <input
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Nama *</label>
+                <input aria-label="Nama"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="Nama destinasi"
-                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                 />
               </div>
 
               {/* Location */}
               <div>
-                <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Lokasi *</label>
-                <input
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Lokasi *</label>
+                <input aria-label="Lokasi"
                   value={form.location}
                   onChange={(e) => setForm({ ...form, location: e.target.value })}
                   placeholder="Kota/Kabupaten"
-                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                 />
               </div>
 
-              {/* Emoji + Color */}
+              {/* Warna thumb — dipakai sebagai bidang pelat tipografis pada
+                  kartu destinasi yang belum punya foto.
+                  Input Emoji dihapus: situs publik tidak lagi merender emoji
+                  (lihat design.md § Per-page allowances), jadi mengeditnya di
+                  sini berarti mengurus data yang tak pernah dilihat pengunjung.
+                  Nilai `emoji` yang sudah ada di Firestore tetap dibawa apa
+                  adanya saat menyimpan — tidak ada data yang dihapus. */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Emoji</label>
-                  <input
-                    value={form.emoji}
-                    onChange={(e) => setForm({ ...form, emoji: e.target.value })}
-                    placeholder="e.g. 🏖️"
-                    className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Warna Thumb</label>
+                  <label className="block text-xs font-medium text-navy-soft mb-1.5">Warna Thumb</label>
                   <div className="flex items-center gap-2">
-                    <input
+                    <input aria-label="Warna Thumb"
                       type="color"
                       value={form.thumbColor}
                       onChange={(e) => setForm({ ...form, thumbColor: e.target.value })}
-                      className="h-10 w-10 rounded-lg border border-shore-200 cursor-pointer"
+                      className="h-10 w-10 rounded-sm border border-shore-200 cursor-pointer"
                     />
                     <input
+                      aria-label="Warna thumb (kode hex)"
                       value={form.thumbColor}
                       onChange={(e) => setForm({ ...form, thumbColor: e.target.value })}
-                      className="flex-1 rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                      className="flex-1 rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                     />
                   </div>
                 </div>
@@ -250,16 +248,16 @@ export default function DestinasiPanel() {
 
               {/* Daftar Harga */}
               <div>
-                <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Daftar Harga</label>
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Daftar Harga</label>
                 <div className="space-y-2">
                   {(form.priceItems ?? []).map((item, i) => (
-                    <div key={item.id} className="rounded-xl border border-shore-200 bg-surface/60 p-2.5 space-y-2">
+                    <div key={item.id} className="rounded-md border border-shore-200 bg-surface/60 p-2.5 space-y-2">
                       <div className="flex items-center gap-2">
-                        <input
+                        <input aria-label="Daftar Harga"
                           value={item.label}
                           onChange={(e) => updateItem(i, { label: e.target.value })}
                           placeholder="Nama item (mis. Tiket Masuk)"
-                          className="flex-1 min-w-0 rounded-xl border border-shore-200 bg-surface px-3 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                          className="flex-1 min-w-0 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                         />
                         <input
                           type="number"
@@ -267,19 +265,19 @@ export default function DestinasiPanel() {
                           value={item.price || ''}
                           onChange={(e) => updateItem(i, { price: Math.max(0, Number(e.target.value)) })}
                           placeholder="Harga"
-                          className="w-24 rounded-xl border border-shore-200 bg-surface px-3 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                          className="w-24 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                         />
                         <input
                           value={item.unit}
                           onChange={(e) => updateItem(i, { unit: e.target.value })}
                           placeholder="/pax"
-                          className="w-20 rounded-xl border border-shore-200 bg-surface px-3 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                          className="w-20 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                         />
                         <button
                           type="button"
                           aria-label={`Hapus ${item.label || 'item'}`}
                           onClick={() => removeItem(i)}
-                          className="h-8 w-8 shrink-0 rounded-lg border border-shore-200 flex items-center justify-center text-navy-soft hover:text-red-500 hover:border-red-200 transition-colors"
+                          className="h-8 w-8 shrink-0 rounded-sm border border-shore-200 flex items-center justify-center text-navy-soft hover:text-danger hover:border-danger-rule transition-colors"
                         >
                           <TrashIcon />
                         </button>
@@ -288,11 +286,11 @@ export default function DestinasiPanel() {
                         value={item.description ?? ''}
                         onChange={(e) => updateItem(i, { description: e.target.value })}
                         placeholder="Deskripsi singkat (opsional) — mis. Sudah termasuk pemandu & alat"
-                        className="w-full rounded-xl border border-shore-200 bg-surface px-3 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                        className="w-full rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                       />
                     </div>
                   ))}
-                  <button type="button" onClick={addItem} className="btn-ghost w-full rounded-xl px-4 py-2.5 text-[13px]">
+                  <button type="button" onClick={addItem} className="btn-ghost w-full px-4 py-2.5 text-sm">
                     <PlusIcon />
                     Tambah Item
                   </button>
@@ -301,45 +299,45 @@ export default function DestinasiPanel() {
 
               {/* Tags */}
               <div>
-                <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Tags (pisahkan dengan koma)</label>
-                <input
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Tags (pisahkan dengan koma)</label>
+                <input aria-label="Tags (pisahkan dengan koma)"
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   placeholder="Pantai, Diving, Snorkeling"
-                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                 />
               </div>
 
               {/* Image URL */}
               <div>
-                <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">URL Gambar</label>
-                <input
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">URL Gambar</label>
+                <input aria-label="URL Gambar"
                   value={form.image}
                   onChange={(e) => setForm({ ...form, image: e.target.value })}
                   placeholder="https://..."
-                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Deskripsi</label>
-                <textarea
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Deskripsi</label>
+                <textarea aria-label="Deskripsi"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Deskripsi singkat tentang destinasi..."
                   rows={3}
-                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors resize-none"
+                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors resize-none"
                 />
               </div>
 
               {/* Hubungkan Kamera */}
               <div>
-                <label className="block text-[11px] font-medium text-navy-soft uppercase tracking-wider mb-1.5">Hubungkan Kamera Mitra/Pengelola</label>
-                <select
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Hubungkan Kamera Mitra/Pengelola</label>
+                <select aria-label="Hubungkan Kamera Mitra/Pengelola"
                   value={form.cameraId || ''}
                   onChange={(e) => setForm({ ...form, cameraId: e.target.value })}
-                  className="w-full rounded-xl border border-shore-200 bg-surface px-3.5 py-2.5 text-[13px] text-navy outline-none focus:border-teal-400 transition-colors"
+                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                 >
                   <option value="">-- Tanpa Kamera --</option>
                   {cameras.map((cam) => (
@@ -351,10 +349,10 @@ export default function DestinasiPanel() {
               </div>
 
               {/* Monitoring IoT */}
-              <label className="flex items-center justify-between gap-3 rounded-xl border border-shore-200 bg-surface px-3.5 py-3 cursor-pointer">
+              <label className="flex items-center justify-between gap-3 rounded-md border border-shore-200 bg-surface px-3.5 py-3 cursor-pointer">
                 <span>
-                  <span className="block text-[13px] font-medium text-navy">Lokasi stasiun sensor IoT</span>
-                  <span className="block text-[11px] text-navy-soft mt-0.5">Tampilkan panel sensor lengkap di destinasi ini. Hanya 1 destinasi — mengaktifkan di sini otomatis mematikan yang lain.</span>
+                  <span className="block text-sm font-medium text-navy">Lokasi stasiun sensor IoT</span>
+                  <span className="block text-2xs text-navy-soft mt-0.5">Tampilkan panel sensor lengkap di destinasi ini. Hanya 1 destinasi — mengaktifkan di sini otomatis mematikan yang lain.</span>
                 </span>
                 <input
                   type="checkbox"
@@ -366,13 +364,13 @@ export default function DestinasiPanel() {
 
               {/* Actions */}
               <div className="flex gap-3 pt-2">
-                <button onClick={closeForm} className="btn-ghost flex-1 rounded-xl px-4 py-2.5 text-[13px]">
+                <button onClick={closeForm} className="btn-ghost flex-1 px-4 py-2.5 text-sm">
                   Batal
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving || !form.name.trim() || !form.location.trim()}
-                  className="btn-primary flex-1 rounded-xl px-4 py-2.5 text-[13px] disabled:opacity-50"
+                  className="btn-primary flex-1 px-4 py-2.5 text-sm disabled:opacity-50"
                 >
                   {saving ? 'Menyimpan...' : editingId ? 'Simpan' : 'Tambah'}
                 </button>
@@ -391,31 +389,46 @@ export default function DestinasiPanel() {
         )}
         {destinations.map((d) => (
           <div key={d.id} className="card flex items-center gap-4 px-5 py-4">
-            {/* Thumb */}
-            <div
-              className="h-12 w-12 rounded-xl flex items-center justify-center text-xl shrink-0"
-              style={{ backgroundColor: d.thumbColor + '20', color: d.thumbColor }}
-            >
-              {d.emoji || '📍'}
-            </div>
+            {/* Thumb — foto kalau ada, selain itu pelat tipografis yang sama
+                seperti yang dilihat pengunjung di kartu destinasi. Admin jadi
+                melihat persis tampilan publiknya. */}
+            {d.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={d.image}
+                alt=""
+                loading="lazy"
+                className="h-12 w-12 shrink-0 rounded-md object-cover"
+              />
+            ) : (
+              <div
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md font-serif text-lg font-semibold text-white"
+                style={{ background: d.thumbColor }}
+                aria-hidden="true"
+              >
+                {d.name.trim().charAt(0).toUpperCase()}
+              </div>
+            )}
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-medium text-navy truncate">{d.name}</p>
-              <p className="text-[12px] text-navy-soft mt-0.5">{d.location} — {getPriceItems(d).length} item harga</p>
+              <p className="text-sm font-medium text-navy truncate">{d.name}</p>
+              <p className="text-xs text-navy-soft mt-0.5">{d.location} — {getPriceItems(d).length} item harga</p>
             </div>
 
             {/* Actions */}
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => openEdit(d)}
-                className="h-8 w-8 rounded-lg border border-shore-200 flex items-center justify-center text-navy-soft hover:text-teal-600 hover:border-teal-200 transition-colors"
+                aria-label={`Ubah `}
+                className="h-8 w-8 rounded-sm border border-shore-200 flex items-center justify-center text-navy-soft hover:text-teal-600 hover:border-teal-200 transition-colors"
               >
                 <EditIcon />
               </button>
               <button
                 onClick={() => handleDelete(d.id)}
-                className="h-8 w-8 rounded-lg border border-shore-200 flex items-center justify-center text-navy-soft hover:text-red-500 hover:border-red-200 transition-colors"
+                aria-label={`Hapus `}
+                className="h-8 w-8 rounded-sm border border-shore-200 flex items-center justify-center text-navy-soft hover:text-danger hover:border-danger-rule transition-colors"
               >
                 <TrashIcon />
               </button>

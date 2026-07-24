@@ -34,7 +34,7 @@ function CheckIcon() {
 }
 
 const inputClass =
-  'w-full rounded-xl border border-shore-200 bg-surface px-4 py-2.5 text-[14px] text-navy outline-none transition-colors focus:border-teal-400';
+  'w-full rounded-md border border-shore-200 bg-surface px-4 py-2.5 text-sm text-navy outline-none transition-colors focus:border-teal-400';
 
 function fbMessage(code: string) {
   switch (code) {
@@ -155,8 +155,8 @@ export default function AccountSettings({ user }: { user: User }) {
   const banner = (m: { ok: boolean; text: string } | null) =>
     m && (
       <p
-        className={`mt-3 rounded-xl px-4 py-2.5 text-[12px] ${
-          m.ok ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-600'
+        className={`mt-3 rounded-md px-4 py-2.5 text-xs ${
+          m.ok ? 'bg-teal-50 text-teal-700' : 'bg-danger-soft text-danger'
         }`}
       >
         {m.text}
@@ -167,31 +167,31 @@ export default function AccountSettings({ user }: { user: User }) {
     <div className="card overflow-hidden mb-4">
       <div className="px-5 py-4 border-b border-shore-200/80">
         <h2 className="font-serif text-lg font-medium text-navy">Pengaturan Akun</h2>
-        <p className="text-[11px] text-navy-soft mt-0.5">Kelola data akun & keamanan</p>
+        <p className="text-2xs text-navy-soft mt-0.5">Kelola data akun & keamanan</p>
       </div>
 
       {/* Profil */}
       <form onSubmit={saveProfile} className="px-5 py-4">
-        <p className="section-label mb-3">Profil</p>
+        <p className="mb-3 text-sm font-semibold text-navy">Profil</p>
         <div className="space-y-3">
           <div>
-            <label className="block text-[12px] font-medium text-navy mb-1.5">Nama</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="Nama lengkap" />
+            <label className="block text-xs font-medium text-navy mb-1.5">Nama</label>
+            <input aria-label="Nama" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="Nama lengkap" />
           </div>
           <div>
-            <label className="block text-[12px] font-medium text-navy mb-1.5">Nomor Telepon</label>
-            <input
+            <label className="block text-xs font-medium text-navy mb-1.5">Nomor Telepon</label>
+            <input aria-label="Nomor Telepon"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className={inputClass}
               placeholder="cth: 0812-3456-7890"
               inputMode="tel"
             />
-            <p className="text-[11px] text-navy-soft mt-1.5">Dipakai admin untuk menghubungi kamu (mis. via WhatsApp).</p>
+            <p className="text-2xs text-navy-soft mt-1.5">Dipakai admin untuk menghubungi kamu (mis. via WhatsApp).</p>
           </div>
         </div>
         {banner(profileMsg)}
-        <button type="submit" disabled={savingProfile} className="btn-primary w-full rounded-xl px-4 py-2.5 text-[13px] mt-4 disabled:opacity-50">
+        <button type="submit" disabled={savingProfile} className="btn-primary w-full px-4 py-2.5 text-sm mt-4 disabled:opacity-50">
           {savingProfile ? 'Menyimpan...' : 'Simpan Profil'}
         </button>
       </form>
@@ -199,16 +199,16 @@ export default function AccountSettings({ user }: { user: User }) {
       {/* Hubungkan Google — hanya kalau belum terhubung */}
       {!googleLinked && (
         <div className="px-5 py-4 border-t border-shore-200/80">
-          <p className="section-label mb-3">Akun Tertaut</p>
+          <p className="mb-3 text-sm font-semibold text-navy">Akun Tertaut</p>
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[13px] font-medium text-navy">Hubungkan Google</p>
-              <p className="text-[11px] text-navy-soft mt-0.5">Biar lain kali bisa masuk tanpa password.</p>
+              <p className="text-sm font-medium text-navy">Hubungkan Google</p>
+              <p className="text-2xs text-navy-soft mt-0.5">Biar lain kali bisa masuk tanpa password.</p>
             </div>
             <button
               onClick={linkGoogle}
               disabled={linking}
-              className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-shore-200 bg-surface px-4 py-2.5 text-[12px] font-medium text-navy transition-colors hover:border-shore-300 disabled:opacity-50"
+              className="inline-flex shrink-0 items-center gap-2 rounded-md border border-shore-200 bg-surface px-4 py-2.5 text-xs font-medium text-navy transition-colors hover:border-shore-300 disabled:opacity-50"
             >
               <GoogleIcon />
               {linking ? 'Menghubungkan...' : 'Hubungkan'}
@@ -220,10 +220,10 @@ export default function AccountSettings({ user }: { user: User }) {
 
       {googleLinked && (
         <div className="px-5 py-4 border-t border-shore-200/80">
-          <p className="section-label mb-3">Akun Tertaut</p>
+          <p className="mb-3 text-sm font-semibold text-navy">Akun Tertaut</p>
           <div className="flex items-center gap-3">
             <GoogleIcon />
-            <p className="text-[13px] font-medium text-navy">Google terhubung</p>
+            <p className="text-sm font-medium text-navy">Google terhubung</p>
             <span className="ml-auto text-teal-500"><CheckIcon /></span>
           </div>
         </div>
@@ -232,7 +232,7 @@ export default function AccountSettings({ user }: { user: User }) {
       {/* Ubah password — hanya untuk akun email/password */}
       {hasPassword && (
         <form onSubmit={changePassword} className="px-5 py-4 border-t border-shore-200/80">
-          <p className="section-label mb-3">Ubah Password</p>
+          <p className="mb-3 text-sm font-semibold text-navy">Ubah Password</p>
           <div className="space-y-3">
             <input
               type="password"
@@ -263,7 +263,7 @@ export default function AccountSettings({ user }: { user: User }) {
             />
           </div>
           {banner(pwMsg)}
-          <button type="submit" disabled={savingPw} className="btn-primary w-full rounded-xl px-4 py-2.5 text-[13px] mt-4 disabled:opacity-50">
+          <button type="submit" disabled={savingPw} className="btn-primary w-full px-4 py-2.5 text-sm mt-4 disabled:opacity-50">
             {savingPw ? 'Menyimpan...' : 'Ubah Password'}
           </button>
         </form>

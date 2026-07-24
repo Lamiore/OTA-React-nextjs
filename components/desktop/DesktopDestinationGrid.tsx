@@ -46,7 +46,7 @@ function SkeletonCard() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center gap-4 py-24">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-shore-100">
+      <div className="flex h-16 w-16 items-center justify-center rounded-md bg-shore-100">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-navy-soft">
           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
           <circle cx="12" cy="10" r="3" />
@@ -144,32 +144,26 @@ export default function DesktopDestinationGrid() {
   );
 
   return (
-    <section id="destinasi" className="relative scroll-mt-16 overflow-hidden bg-shore-50">
-      {/* Aksen atmosfer — cahaya teal lembut di belakang grid. */}
-      <div className="pointer-events-none absolute -right-28 top-16 h-96 w-96 rounded-full bg-teal-400/[0.06] blur-3xl" />
-      <div className="pointer-events-none absolute -left-28 bottom-8 h-80 w-80 rounded-full bg-teal-200/[0.05] blur-3xl" />
-
-      <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-10 lg:py-20">
-        {/* Header — positioning paragraph (Ecosystem Index) + search di kanan. */}
+    <section id="destinasi" className="scroll-mt-16 bg-shore-50">
+      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-10 lg:py-20">
+        {/* Kepala bagian tanpa eyebrow: judulnya sendiri yang jadi kepala. */}
         <div className="mb-8 flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
           <div className="max-w-xl">
-            <span className="section-label mb-2">Jelajahi</span>
-            <h2 className="mt-2 font-serif text-3xl font-medium tracking-tight text-navy sm:text-4xl">
-              Destinasi Sulawesi Utara
-            </h2>
-            <p className="mt-3 text-[13px] font-light leading-relaxed text-navy-soft">
+            <h2 className="section-title">Destinasi Sulawesi Utara</h2>
+            <p className="section-lede">
               {loading
-                ? 'Menyiapkan permukaan discovery…'
+                ? 'Memuat destinasi…'
                 : `${destinations.length} destinasi di ${byLocation.length} wilayah — dari terumbu Bunaken sampai muck-diving Lembeh. Cari, atau telusuri per wilayah di bawah.`}
             </p>
           </div>
-          <div className="flex w-full items-center gap-2.5 rounded-full border border-shore-200 bg-surface px-4 py-2.5 shadow-soft transition-colors focus-within:border-teal-400 sm:w-72">
+          <div className="flex w-full items-center gap-2.5 rounded-sm border border-shore-200 bg-surface px-4 py-2.5 transition-colors duration-micro ease-out focus-within:border-teal-600 sm:w-72">
             <SearchIcon />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari destinasi..."
-              className="w-full bg-transparent text-[13px] text-navy placeholder:text-navy-soft/60 outline-none"
+              placeholder="Cari destinasi…"
+              aria-label="Cari destinasi"
+              className="w-full min-w-0 bg-transparent text-sm text-navy placeholder:text-navy-soft outline-none"
             />
           </div>
         </div>
@@ -206,17 +200,16 @@ export default function DesktopDestinationGrid() {
               <div key={loc}>
                 <div className="mb-5 flex items-end justify-between gap-4 border-b border-shore-200 pb-3">
                   <div>
-                    <h3 className="font-serif text-2xl font-medium capitalize tracking-tight text-navy">
+                    <h3 className="font-serif text-xl font-semibold capitalize tracking-tight text-navy">
                       {loc}
                     </h3>
-                    <span className="text-[12px] text-navy-soft">{items.length} destinasi</span>
+                    <span className="text-xs text-navy-soft">{items.length} destinasi</span>
                   </div>
                   <button
                     onClick={() => setActiveFilter(loc)}
-                    className="group inline-flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-teal-600 transition-colors hover:text-teal-700"
+                    className="btn-text shrink-0"
                   >
                     Lihat semua
-                    <span className="transition-transform group-hover:translate-x-0.5">→</span>
                   </button>
                 </div>
                 <div className={gridClass}>{items.map(renderCard)}</div>

@@ -141,7 +141,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
       <div className="w-full max-w-lg mx-auto animate-fade-in">
         <button
           onClick={() => setView('menu')}
-          className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-navy-soft transition-colors hover:text-navy"
+          className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-navy-soft transition-colors hover:text-navy"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6" />
@@ -158,7 +158,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
       <div className="w-full max-w-lg mx-auto animate-fade-in">
         <button
           onClick={() => setView('menu')}
-          className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-navy-soft transition-colors hover:text-navy"
+          className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-navy-soft transition-colors hover:text-navy"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6" />
@@ -175,7 +175,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
       <div className="w-full max-w-lg mx-auto animate-fade-in">
         <button
           onClick={() => setView('menu')}
-          className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-navy-soft transition-colors hover:text-navy"
+          className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-navy-soft transition-colors hover:text-navy"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6" />
@@ -192,7 +192,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
       <div className="w-full max-w-lg mx-auto animate-fade-in">
         <button
           onClick={() => setView('menu')}
-          className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-navy-soft transition-colors hover:text-navy"
+          className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-navy-soft transition-colors hover:text-navy"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6" />
@@ -205,22 +205,22 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-shore-200/80">
             <h2 className="font-serif text-lg font-medium text-navy">Pengaturan</h2>
-            <p className="text-[11px] text-navy-soft mt-0.5">Sesuaikan tampilan aplikasi</p>
+            <p className="text-2xs text-navy-soft mt-0.5">Sesuaikan tampilan aplikasi</p>
           </div>
 
           {/* Theme section */}
           <div className="px-5 py-4">
-            <p className="section-label mb-3">Tampilan</p>
+            <p className="mb-3 text-sm font-semibold text-navy">Tampilan</p>
 
             {/* Dark mode toggle row */}
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="h-10 w-10 rounded-xl bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
+                <div className="h-10 w-10 rounded-md bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
                   {isDark ? <MoonIcon /> : <SunIcon />}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-navy">Mode Gelap</p>
-                  <p className="text-[11px] text-navy-soft mt-0.5">
+                  <p className="text-sm font-medium text-navy">Mode Gelap</p>
+                  <p className="text-2xs text-navy-soft mt-0.5">
                     {mounted ? (isDark ? 'Tema gelap aktif' : 'Tema terang aktif') : ' '}
                   </p>
                 </div>
@@ -232,12 +232,12 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
                 aria-checked={isDark}
                 aria-label="Aktifkan mode gelap"
                 onClick={() => setTheme(isDark ? 'light' : 'dark')}
-                className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 ${
+                className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-short focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 ${
                   isDark ? 'bg-teal-500' : 'bg-shore-300'
                 }`}
               >
                 <span
-                  className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 ${
+                  className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-short ${
                     isDark ? 'translate-x-6' : 'translate-x-1'
                   }`}
                 />
@@ -276,10 +276,10 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
             {user.displayName || 'Pengguna'}
           </h2>
 
-          <p className="text-[13px] text-navy-soft">{user.email}</p>
+          <p className="text-sm text-navy-soft">{user.email}</p>
 
           {/* Provider badge */}
-          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-shore-200 bg-shore-50 px-3 py-1.5 text-[10px] font-medium text-navy-soft">
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-xs border border-shore-200 bg-shore-50 px-3 py-1.5 text-2xs font-medium text-navy-soft">
             <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
             {user.providerData[0]?.providerId === 'google.com' ? 'Google Account' : 'Email & Password'}
           </div>
@@ -292,11 +292,11 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
         <div className="grid grid-cols-2 gap-4 text-center">
           <div>
             <span className="text-lg font-semibold text-navy">{bookingCount}</span>
-            <p className="text-[11px] text-navy-soft mt-0.5">Booking</p>
+            <p className="text-2xs text-navy-soft mt-0.5">Booking</p>
           </div>
           <div className="border-l border-shore-200">
             <span className="text-lg font-semibold text-navy">{reviewCount}</span>
-            <p className="text-[11px] text-navy-soft mt-0.5">Ulasan</p>
+            <p className="text-2xs text-navy-soft mt-0.5">Ulasan</p>
           </div>
         </div>
       </div>
@@ -319,12 +319,12 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
             }
             className="w-full flex items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-shore-50"
           >
-            <div className="h-10 w-10 rounded-xl bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
+            <div className="h-10 w-10 rounded-md bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
               {item.icon}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-navy">{item.label}</p>
-              <p className="text-[11px] text-navy-soft mt-0.5">{item.description}</p>
+              <p className="text-sm font-medium text-navy">{item.label}</p>
+              <p className="text-2xs text-navy-soft mt-0.5">{item.description}</p>
             </div>
             <span className="text-shore-300">
               <ChevronIcon />
@@ -339,7 +339,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
           href="/dashboard"
           className="card mt-4 flex items-center gap-4 px-5 py-4 transition-colors hover:bg-shore-50 overflow-hidden"
         >
-          <div className="h-10 w-10 rounded-xl bg-teal-100 flex items-center justify-center text-teal-600 shrink-0">
+          <div className="h-10 w-10 rounded-md bg-teal-100 flex items-center justify-center text-teal-600 shrink-0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
               <rect width="7" height="9" x="3" y="3" rx="1" />
               <rect width="7" height="5" x="14" y="3" rx="1" />
@@ -348,8 +348,8 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-medium text-navy">Dashboard</p>
-            <p className="text-[11px] text-navy-soft mt-0.5">Kelola destinasi dan pengguna</p>
+            <p className="text-sm font-medium text-navy">Dashboard</p>
+            <p className="text-2xs text-navy-soft mt-0.5">Kelola destinasi dan pengguna</p>
           </div>
           <span className="text-shore-300">
             <ChevronIcon />
@@ -360,7 +360,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
       {/* Logout */}
       <button
         onClick={handleLogout}
-        className="w-full mt-4 flex items-center justify-center gap-2.5 rounded-xl border border-red-100 bg-red-50/60 px-4 py-3.5 text-[13px] font-medium text-red-500 transition-all duration-200 hover:bg-red-50 hover:border-red-200"
+        className="w-full mt-4 flex items-center justify-center gap-2.5 rounded-md border border-danger-rule bg-danger-soft/60 px-4 py-3.5 text-sm font-medium text-danger transition-colors duration-micro hover:bg-danger-soft hover:border-danger-rule"
       >
         <LogOutIcon />
         Keluar
