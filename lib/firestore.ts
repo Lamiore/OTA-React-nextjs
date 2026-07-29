@@ -147,6 +147,11 @@ export interface MitraVerification {
   requestedRole?: "mitra" | "pengelola";
   /** Destinasi yang ingin dikelola — hanya untuk pengajuan pengelola. */
   destination?: string;
+  /** Versi Perjanjian Pengelola yang disetujui. Kosong pada pengajuan mitra
+   *  dan pengajuan pengelola sebelum v1.0 terbit. */
+  agreementVersion?: string;
+  /** Waktu checkbox persetujuan dicentang. unknown mengikuti submittedAt. */
+  agreedAt?: unknown;
   submittedAt: unknown;
   reviewedAt?: unknown;
 }
@@ -226,11 +231,19 @@ export async function submitRoleRequest(
     organization: string;
     requestedRole: "mitra" | "pengelola";
     destination?: string;
+    agreementVersion?: string;
   }
 ) {
   if (!db) return;
   await updateDoc(doc(db, "users", uid), {
-    verification: { ...data, status: "pending", submittedAt: serverTimestamp() },
+    verification: {
+      ...data,
+      status: "pending",
+      submittedAt: serverTimestamp(),
+      // Distempel di sini, bukan di komponen: waktu persetujuan harus datang
+      // dari server, dan pemanggil tidak perlu mengimpor SDK Firestore.
+      ...(data.agreementVersion && { agreedAt: serverTimestamp() }),
+    },
   });
 }
 

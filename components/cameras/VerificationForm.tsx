@@ -7,6 +7,10 @@ import {
   type Destination,
   type MitraVerification,
 } from '@/lib/firestore';
+import {
+  PENGELOLA_AGREEMENT_VERSION,
+  validateRoleRequest,
+} from '@/lib/verification';
 
 interface Props {
   uid: string;
@@ -33,6 +37,9 @@ export default function VerificationForm({
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // Selalu mulai false, termasuk saat ajukan ulang setelah ditolak: isi
+  // perjanjian bisa sudah berubah sejak pengajuan sebelumnya.
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     if (!isPengelola) return;
@@ -42,12 +49,16 @@ export default function VerificationForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim() || !phone.trim() || !organization.trim()) {
-      setError('Semua kolom wajib diisi.');
-      return;
-    }
-    if (isPengelola && !destination) {
-      setError('Pilih destinasi yang ingin dikelola.');
+    const invalid = validateRoleRequest({
+      fullName,
+      phone,
+      organization,
+      requestedRole,
+      destination,
+      agreed,
+    });
+    if (invalid) {
+      setError(invalid);
       return;
     }
     setError('');
@@ -58,7 +69,12 @@ export default function VerificationForm({
         phone: phone.trim(),
         organization: organization.trim(),
         requestedRole,
-        ...(isPengelola && { destination }),
+        // agreedAt tidak dikirim dari sini — submitRoleRequest yang
+        // menstempelnya dengan serverTimestamp() begitu agreementVersion ada.
+        ...(isPengelola && {
+          destination,
+          agreementVersion: PENGELOLA_AGREEMENT_VERSION,
+        }),
       });
       // Tidak reset/pindah view di sini: CameraSection berpindah ke kartu
       // status pending begitu onSnapshot dokumen user menerima perubahan.
@@ -126,6 +142,30 @@ export default function VerificationForm({
               Penetapan akhir destinasi tetap oleh admin setelah pengajuan disetujui.
             </p>
           </div>
+        )}
+
+        {isPengelola && (
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-teal-600"
+            />
+            <span className="text-xs leading-relaxed text-navy-soft">
+              Saya sudah membaca dan menyetujui{' '}
+              <a
+                href="/syarat-pengelola"
+                target="_blank"
+                rel="noopener"
+                className="font-medium text-teal-700 underline underline-offset-2"
+              >
+                Perjanjian Pengelola
+              </a>
+              , termasuk ketentuan pembelian paket sensor dan pembayaran
+              pengunjung yang diterima langsung oleh pengelola.
+            </span>
+          </label>
         )}
 
         {error && <p className="text-xs text-danger">{error}</p>}
