@@ -36,3 +36,19 @@ export function waLink(phone: string, text?: string): string | null {
       : `62${digits}`;
   return `https://wa.me/${intl}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 }
+
+/**
+ * Tanggal ringkas dari Timestamp Firestore, mis. "30 Jul 2026". Masuk sebagai
+ * unknown karena antarmuka Firestore di proyek ini menyimpan timestamp begitu.
+ * null bila nilainya bukan timestamp — dokumen lama, field yang belum terisi,
+ * atau tulisan yang belum tersinkron dari server.
+ */
+export function formatTimestamp(value: unknown): string | null {
+  const d = (value as { toDate?: () => Date } | null | undefined)?.toDate?.();
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}

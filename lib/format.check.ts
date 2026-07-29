@@ -5,7 +5,7 @@
  * Jalankan: node lib/format.check.ts
  */
 import assert from 'node:assert/strict';
-import { parseCoords, waLink } from './format.ts';
+import { formatTimestamp, parseCoords, waLink } from './format.ts';
 
 // Koordinat — bentuk yang disalin Google Maps.
 assert.deepEqual(parseCoords('1.4508, 125.0917'), { lat: 1.4508, lng: 125.0917 });
@@ -32,5 +32,16 @@ assert.equal(waLink('081234567890', 'Halo, Bahoi?'), `${expected}?text=Halo%2C%2
 // Terlalu pendek → null supaya tombolnya disembunyikan, bukan chat yang gagal.
 assert.equal(waLink(''), null);
 assert.equal(waLink('0812345'), null);
+
+// Tanggal — Timestamp Firestore hanya dikenali lewat toDate(). Tanggal lokal
+// dipakai supaya hasilnya tidak bergeser mengikuti zona waktu pelaksana.
+assert.equal(formatTimestamp({ toDate: () => new Date(2026, 6, 30) }), '30 Jul 2026');
+
+// Bukan timestamp → null, supaya pemanggil bisa menyembunyikan barisnya.
+assert.equal(formatTimestamp(null), null);
+assert.equal(formatTimestamp(undefined), null);
+assert.equal(formatTimestamp({}), null);
+assert.equal(formatTimestamp('30 Juli 2026'), null);
+assert.equal(formatTimestamp({ toDate: () => new Date('bukan tanggal') }), null);
 
 console.log('format.ts OK');

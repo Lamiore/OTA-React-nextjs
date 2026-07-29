@@ -10,6 +10,7 @@ import {
   type AppUser,
 } from '@/lib/firestore';
 import { notifyApproval } from '@/lib/sendVerification';
+import { formatTimestamp } from '@/lib/format';
 
 const roleColors: Record<AppUser['role'], string> = {
   user: 'bg-shore-100 text-navy-soft',
@@ -123,6 +124,17 @@ export default function PenggunaPanel() {
                   <p><span className="text-navy-soft">Instansi:</span> {u.verification.organization}</p>
                   {u.verification.destination && (
                     <p><span className="text-navy-soft">Destinasi diminta:</span> {u.verification.destination}</p>
+                  )}
+                  {u.verification.agreementVersion && (
+                    <p>
+                      <span className="text-navy-soft">Perjanjian:</span>{' '}
+                      {[
+                        `v${u.verification.agreementVersion}`,
+                        formatTimestamp(u.verification.agreedAt),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
                   )}
                 </div>
                 <div className="flex gap-2 mt-4">
