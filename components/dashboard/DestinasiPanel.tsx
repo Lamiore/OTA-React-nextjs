@@ -16,6 +16,7 @@ import {
   type AppUser,
 } from '@/lib/firestore';
 import { sanitizeStationId, stationPath } from '@/lib/realtime';
+import { parseCoords, waLink } from '@/lib/format';
 
 const emptyForm: DestinationInput = {
   name: '',
@@ -26,6 +27,10 @@ const emptyForm: DestinationInput = {
   priceItems: [],
   description: '',
   image: '',
+  images: [],
+  lat: null,
+  lng: null,
+  whatsapp: '',
   hasMonitoring: false,
   stationId: '',
   cameraId: '',
@@ -77,6 +82,10 @@ export default function DestinasiPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<DestinationInput>(emptyForm);
   const [tagInput, setTagInput] = useState('');
+  // Koordinat & galeri disunting sebagai teks mentah, baru diurai saat simpan —
+  // biar admin bebas mengetik setengah jalan tanpa field ikut jadi invalid.
+  const [coordInput, setCoordInput] = useState('');
+  const [imagesInput, setImagesInput] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -99,6 +108,8 @@ export default function DestinasiPanel() {
   const openAdd = () => {
     setForm(emptyForm);
     setTagInput('');
+    setCoordInput('');
+    setImagesInput('');
     setEditingId(null);
     setShowForm(true);
   };
@@ -113,12 +124,20 @@ export default function DestinasiPanel() {
       priceItems: getPriceItems(d),
       description: d.description ?? '',
       image: d.image ?? '',
+      images: d.images ?? [],
+      lat: d.lat ?? null,
+      lng: d.lng ?? null,
+      whatsapp: d.whatsapp ?? '',
       hasMonitoring: d.hasMonitoring ?? false,
       stationId: d.stationId ?? '',
       cameraId: d.cameraId ?? '',
       managerUid: d.managerUid ?? '',
     });
     setTagInput(d.tags.join(', '));
+    setCoordInput(
+      typeof d.lat === 'number' && typeof d.lng === 'number' ? `${d.lat}, ${d.lng}` : '',
+    );
+    setImagesInput((d.images ?? []).join('\n'));
     setEditingId(d.id);
     setShowForm(true);
   };
@@ -154,10 +173,17 @@ export default function DestinasiPanel() {
     // cameras yang privat. Saat unlink (cameraId kosong) field ini WAJIB
     // di-clear agar stream lama tidak "nyangkut" publik.
     const linkedCam = form.cameraId ? cameras.find((c) => c.id === form.cameraId) : null;
+    // Koordinat ditulis berpasangan sebagai null saat kosong/tidak valid —
+    // Firestore menolak undefined, dan null membersihkan nilai lama saat edit.
+    const coords = parseCoords(coordInput);
     const data: DestinationInput = {
       ...form,
       tags: tagInput.split(',').map((t) => t.trim()).filter(Boolean),
       priceItems: (form.priceItems ?? []).filter((it) => it.label.trim() !== ''),
+      images: imagesInput.split('\n').map((u) => u.trim()).filter(Boolean),
+      lat: coords?.lat ?? null,
+      lng: coords?.lng ?? null,
+      whatsapp: (form.whatsapp ?? '').trim(),
       // Stasiun dimatikan → id paket sensor ikut dibersihkan, biar destinasi ini
       // tidak diam-diam masih menempel ke cabang RTDB paket lama.
       stationId: form.hasMonitoring ? (form.stationId ?? '') : '',
@@ -226,6 +252,50 @@ export default function DestinasiPanel() {
                   placeholder="Kota/Kabupaten"
                   className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                 />
+              </div>
+
+              {/* Koordinat — satu kolom, bukan dua, karena Google Maps menyalin
+                  "lat, lng" sekaligus: klik kanan di titik lokasi lalu klik
+                  angkanya. Menempel apa adanya sudah benar. */}
+              <div>
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Koordinat</label>
+                <input aria-label="Koordinat"
+                  value={coordInput}
+                  onChange={(e) => setCoordInput(e.target.value)}
+                  placeholder="1.7241, 125.0631"
+                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+                />
+                <p className="mt-1.5 text-2xs text-navy-soft">
+                  {coordInput.trim() === '' ? (
+                    <>Kosongkan untuk menyembunyikan tombol &ldquo;Rute ke lokasi&rdquo;.</>
+                  ) : parseCoords(coordInput) ? (
+                    <>Valid — tombol &ldquo;Rute ke lokasi&rdquo; akan tampil di halaman destinasi.</>
+                  ) : (
+                    <span className="text-danger">
+                      Belum berbentuk <code>lat, lng</code>. Salin dari Google Maps: klik kanan di titik lokasi, lalu klik koordinatnya.
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              {/* WhatsApp pengelola */}
+              <div>
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">WhatsApp Pengelola</label>
+                <input aria-label="WhatsApp Pengelola"
+                  value={form.whatsapp ?? ''}
+                  onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+                  placeholder="0812xxxxxxxx"
+                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+                />
+                <p className="mt-1.5 text-2xs text-navy-soft">
+                  {(form.whatsapp ?? '').trim() === '' ? (
+                    <>Kosongkan untuk menyembunyikan tombol &ldquo;Chat pengelola&rdquo;.</>
+                  ) : waLink(form.whatsapp ?? '') ? (
+                    <>Tombol chat membuka <code className="text-navy">{waLink(form.whatsapp ?? '')?.replace('https://', '')}</code>.</>
+                  ) : (
+                    <span className="text-danger">Nomor terlalu pendek.</span>
+                  )}
+                </p>
               </div>
 
               {/* Warna thumb — dipakai sebagai bidang pelat tipografis pada
@@ -326,6 +396,22 @@ export default function DestinasiPanel() {
                   placeholder="https://..."
                   className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                 />
+              </div>
+
+              {/* Galeri — satu URL per baris; textarea, bukan daftar field
+                  dinamis, karena admin menempel beberapa tautan sekaligus. */}
+              <div>
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Galeri (satu URL per baris)</label>
+                <textarea aria-label="Galeri"
+                  value={imagesInput}
+                  onChange={(e) => setImagesInput(e.target.value)}
+                  placeholder={'https://...\nhttps://...'}
+                  rows={3}
+                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors resize-none"
+                />
+                <p className="mt-1.5 text-2xs text-navy-soft">
+                  Foto tambahan, tampil sebagai strip geser di bawah deskripsi. URL Gambar di atas tetap jadi foto utama.
+                </p>
               </div>
 
               {/* Description */}

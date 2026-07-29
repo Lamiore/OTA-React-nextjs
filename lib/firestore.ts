@@ -40,6 +40,17 @@ export interface Destination {
   priceItems?: PriceItem[];
   description: string;
   image: string;
+  /** Foto tambahan di bawah deskripsi. Kosong = galeri tidak dirender. */
+  images?: string[];
+  /**
+   * Koordinat destinasi — sumber tombol "Rute ke lokasi" di halaman publik.
+   * null (bukan undefined) saat admin mengosongkannya: Firestore menolak
+   * undefined, dan kedua field ini selalu ditulis berpasangan.
+   */
+  lat?: number | null;
+  lng?: number | null;
+  /** No. WhatsApp pengelola, ditulis bebas. Kosong = tombol chat disembunyikan. */
+  whatsapp?: string;
   /** True hanya untuk destinasi yang punya stasiun sensor IoT fisik. */
   hasMonitoring?: boolean;
   /**

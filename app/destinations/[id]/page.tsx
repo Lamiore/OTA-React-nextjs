@@ -12,6 +12,7 @@ import {
   type Review,
 } from '@/lib/firestore';
 import { stationPath } from '@/lib/realtime';
+import { waLink } from '@/lib/format';
 import TopNav from '@/components/desktop/TopNav';
 import Footer from '@/components/desktop/Footer';
 import BottomNav from '@/components/mobile/BottomNav';
@@ -32,6 +33,14 @@ function PinIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
       <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
       <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
+function ChatIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" />
     </svg>
   );
 }
@@ -122,6 +131,16 @@ export default function DestinationDetail() {
   const priceItems = getPriceItems(dest);
   const { avg, count } = reviewStats(reviews);
 
+  // Tautan keluar, bukan peta tertanam: pengunjung sudah punya aplikasi peta
+  // pilihannya sendiri, dan halaman ini tidak perlu menanggung bundel peta.
+  const mapsHref =
+    typeof dest.lat === 'number' && typeof dest.lng === 'number'
+      ? `https://www.google.com/maps/search/?api=1&query=${dest.lat},${dest.lng}`
+      : null;
+  const waHref = dest.whatsapp
+    ? waLink(dest.whatsapp, `Halo, saya mau tanya soal ${dest.name}.`)
+    : null;
+
   const toggleItem = (itemId: string) =>
     setSelectedIds((prev) =>
       prev.includes(itemId) ? prev.filter((x) => x !== itemId) : [...prev, itemId],
@@ -209,6 +228,35 @@ export default function DestinationDetail() {
       <div className="relative z-10 -mt-6 rounded-t-lg bg-shore-50">
         <article className="mx-auto max-w-4xl animate-fade-in px-4 py-10 sm:px-6 sm:py-12 lg:px-10">
           <div className="space-y-10">
+            {/* Aksi cepat — rute & kontak pengelola. Keduanya opsional per
+                destinasi; barisnya hilang sendiri kalau dua-duanya kosong. */}
+            {(mapsHref || waHref) && (
+              <div className="flex flex-wrap gap-3">
+                {mapsHref && (
+                  <a
+                    href={mapsHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-ghost px-4 py-2.5 text-sm"
+                  >
+                    <PinIcon />
+                    Rute ke lokasi
+                  </a>
+                )}
+                {waHref && (
+                  <a
+                    href={waHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-ghost px-4 py-2.5 text-sm"
+                  >
+                    <ChatIcon />
+                    Chat pengelola
+                  </a>
+                )}
+              </div>
+            )}
+
             {/* Tags */}
             {dest.tags?.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
@@ -226,6 +274,28 @@ export default function DestinationDetail() {
                 <p className="mt-4 max-w-[65ch] whitespace-pre-line text-base leading-relaxed text-navy">
                   {dest.description}
                 </p>
+              </section>
+            )}
+
+            {/* Galeri — strip geser ber-snap, keluar dari padding kolom supaya
+                foto terakhir "mengintip" di tepi layar dan jelas bisa digeser.
+                Foto hero (dest.image) sengaja tidak diulang di sini. */}
+            {dest.images && dest.images.length > 0 && (
+              <section>
+                <h2 className="section-title">Galeri</h2>
+                <div className="-mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+                  {dest.images.map((src, i) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={src}
+                      src={src}
+                      alt={`${dest.name} — foto ${i + 1}`}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-48 w-72 shrink-0 snap-start rounded-md object-cover sm:h-56 sm:w-80"
+                    />
+                  ))}
+                </div>
               </section>
             )}
 

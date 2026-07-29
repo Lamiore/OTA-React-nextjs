@@ -1,0 +1,36 @@
+/**
+ * Cek cepat parser koordinat & nomor WhatsApp — dua fungsi yang punya cabang
+ * dan validasi, jadi kalau logikanya rusak ini yang jatuh duluan.
+ *
+ * Jalankan: node lib/format.check.ts
+ */
+import assert from 'node:assert/strict';
+import { parseCoords, waLink } from './format.ts';
+
+// Koordinat — bentuk yang disalin Google Maps.
+assert.deepEqual(parseCoords('1.4508, 125.0917'), { lat: 1.4508, lng: 125.0917 });
+assert.deepEqual(parseCoords('  -8.65,115.216  '), { lat: -8.65, lng: 115.216 });
+assert.deepEqual(parseCoords('1.4508,125.0917'), { lat: 1.4508, lng: 125.0917 });
+
+// Ditolak: kosong, satu angka, ada teks, di luar rentang.
+assert.equal(parseCoords(''), null);
+assert.equal(parseCoords('1.4508'), null);
+assert.equal(parseCoords('1.4508, 125.0917 Bahoi'), null);
+assert.equal(parseCoords('91, 125'), null);
+assert.equal(parseCoords('1, 181'), null);
+
+// WhatsApp — semua bentuk lokal bermuara ke nomor internasional yang sama.
+const expected = 'https://wa.me/6281234567890';
+assert.equal(waLink('081234567890'), expected);
+assert.equal(waLink('+62 812-3456-7890'), expected);
+assert.equal(waLink('6281234567890'), expected);
+assert.equal(waLink('81234567890'), expected);
+
+// Teks awal ikut ter-encode.
+assert.equal(waLink('081234567890', 'Halo, Bahoi?'), `${expected}?text=Halo%2C%20Bahoi%3F`);
+
+// Terlalu pendek → null supaya tombolnya disembunyikan, bukan chat yang gagal.
+assert.equal(waLink(''), null);
+assert.equal(waLink('0812345'), null);
+
+console.log('format.ts OK');
