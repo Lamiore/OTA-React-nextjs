@@ -4,8 +4,24 @@
  * alasannya dengan format.ts.
  */
 
-/** Versi Perjanjian Pengelola yang berlaku. Dinaikkan bila isinya berubah. */
-export const PENGELOLA_AGREEMENT_VERSION = "1.0";
+/**
+ * Perjanjian per role: versi yang berlaku, tautan halamannya, dan namanya.
+ * Satu tempat supaya form, halaman perjanjian, dan catatan persetujuan tidak
+ * pernah menyebut versi atau tautan yang berbeda. Naikkan `version` bila isi
+ * dokumen yang bersangkutan berubah.
+ */
+export const AGREEMENT = {
+  mitra: {
+    version: "1.0",
+    path: "/syarat-mitra",
+    label: "Perjanjian Mitra",
+  },
+  pengelola: {
+    version: "1.0",
+    path: "/syarat-pengelola",
+    label: "Perjanjian Pengelola",
+  },
+} as const;
 
 export interface RoleRequestInput {
   fullName: string;
@@ -14,15 +30,15 @@ export interface RoleRequestInput {
   requestedRole: "mitra" | "pengelola";
   /** Hanya diisi pengajuan pengelola. */
   destination?: string;
-  /** Centang Perjanjian Pengelola; tidak berlaku bagi pengajuan mitra. */
+  /** Centang perjanjian yang sesuai rolenya. */
   agreed?: boolean;
 }
 
 /**
  * Pesan kesalahan pertama yang ditemukan, atau null bila pengajuan boleh
- * dikirim. Urutannya disengaja: kolom kosong diperiksa duluan, baru syarat
- * khusus pengelola — supaya orang tidak disuruh menyetujui perjanjian untuk
- * form yang belum diisi.
+ * dikirim. Urutannya disengaja: kolom wajib dan destinasi diperiksa duluan,
+ * persetujuan paling akhir — supaya orang tidak disuruh menyetujui perjanjian
+ * untuk form yang belum lengkap.
  */
 export function validateRoleRequest(input: RoleRequestInput): string | null {
   if (
@@ -32,8 +48,11 @@ export function validateRoleRequest(input: RoleRequestInput): string | null {
   ) {
     return "Semua kolom wajib diisi.";
   }
-  if (input.requestedRole !== "pengelola") return null;
-  if (!input.destination) return "Pilih destinasi yang ingin dikelola.";
-  if (!input.agreed) return "Kamu harus menyetujui Perjanjian Pengelola dulu.";
+  if (input.requestedRole === "pengelola" && !input.destination) {
+    return "Pilih destinasi yang ingin dikelola.";
+  }
+  if (!input.agreed) {
+    return `Kamu harus menyetujui ${AGREEMENT[input.requestedRole].label} dulu.`;
+  }
   return null;
 }

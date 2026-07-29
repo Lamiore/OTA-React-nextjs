@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import TopNav from '@/components/desktop/TopNav';
 import Footer from '@/components/desktop/Footer';
 import BottomNav from '@/components/mobile/BottomNav';
-import { PENGELOLA_AGREEMENT_VERSION } from '@/lib/verification';
+import { AGREEMENT } from '@/lib/verification';
 
 export const metadata: Metadata = {
   title: 'Perjanjian Pengelola — Lautara',
@@ -43,8 +43,9 @@ const PASAL: { judul: string; ayat: string[] }[] = [
   {
     judul: '4. Paket Pemantauan IoT',
     ayat: [
-      'Destinasi yang dikelola wajib dilengkapi paket sensor pemantauan yang disediakan Platform.',
-      'Paket sensor dibeli oleh Pengelola dan sepenuhnya menjadi hak miliknya setelah pembayaran lunas.',
+      'Destinasi yang dikelola wajib dilengkapi paket sensor pemantauan. Ini satu-satunya perangkat yang diwajibkan bagi Pengelola.',
+      'Paket sensor dibeli dari Platform dan dipasang oleh petugas Platform. Perangkat sejenis yang dibeli atau dipasang sendiri tidak dihubungkan ke sistem Lautara.',
+      'Setelah pembayaran lunas, paket sensor sepenuhnya menjadi hak milik Pengelola.',
       'Pembelian dan pemasangan baru dikoordinasikan setelah pengajuan menjadi Pengelola disetujui admin. Tidak ada pembayaran apa pun yang diminta sebelum pengajuan diterima.',
       'Rincian isi paket dan harganya disampaikan terpisah sebelum pembelian, mengacu pada daftar yang berlaku saat itu. Pengelola berhak membatalkan pembelian sebelum pembayaran dilakukan; dalam hal itu status Pengelola tidak dapat diaktifkan karena ayat 1 tidak terpenuhi.',
       'Platform menjamin paket bebas cacat produksi selama 3 (tiga) bulan sejak tanggal pemasangan. Dalam masa itu komponen yang rusak karena cacat produksi diganti tanpa biaya.',
@@ -55,7 +56,17 @@ const PASAL: { judul: string; ayat: string[] }[] = [
     ],
   },
   {
-    judul: '5. Pesanan dan Pembayaran',
+    judul: '5. Kamera Pemantau (Tidak Wajib)',
+    ayat: [
+      'Kamera pemantau di destinasi bersifat dianjurkan, bukan kewajiban. Status Pengelola tidak bergantung pada ada atau tidaknya kamera.',
+      'Bila Pengelola memasang kamera untuk ditayangkan di Lautara, kamera tersebut dibeli dari Platform dan dipasang oleh petugas Platform.',
+      'Setiap kamera yang didaftarkan melewati persetujuan admin sebelum tayang. Kamera yang tidak dibeli dan dipasang oleh Platform tidak akan disetujui.',
+      'Ketentuan kepemilikan, garansi, prasyarat listrik dan internet, serta pengakhiran pada Pasal 4 berlaku sama bagi kamera.',
+      'Tanpa kamera, halaman destinasi tetap tayang seperti biasa; hanya blok tayangan langsung yang tidak muncul.',
+    ],
+  },
+  {
+    judul: '6. Pesanan dan Pembayaran',
     ayat: [
       'Pembayaran atas tiket, penginapan, sewa alat, dan layanan lain di destinasi dilakukan pengunjung langsung kepada Pengelola, di luar Platform.',
       'Platform hanya mencatat pesanan dan menerbitkan tiket elektronik. Platform tidak menerima, menyimpan, maupun menyalurkan dana pengunjung.',
@@ -63,7 +74,7 @@ const PASAL: { judul: string; ayat: string[] }[] = [
     ],
   },
   {
-    judul: '6. Bagi Hasil',
+    judul: '7. Bagi Hasil',
     ayat: [
       'Saat ini Platform tidak memungut potongan, komisi, atau biaya apa pun atas pendapatan destinasi.',
       'Bila kemudian Platform memberlakukan potongan, Pengelola diberitahu paling lambat 30 (tiga puluh) hari sebelum ketentuan itu berlaku.',
@@ -71,21 +82,21 @@ const PASAL: { judul: string; ayat: string[] }[] = [
     ],
   },
   {
-    judul: '7. Tanggung Jawab',
+    judul: '8. Tanggung Jawab',
     ayat: [
       'Pengelola bertanggung jawab penuh atas layanan, fasilitas, dan keselamatan pengunjung di destinasi yang dikelolanya.',
       'Platform menyediakan layanan pencatatan dan penayangan informasi sebagaimana adanya. Platform tidak bertanggung jawab atas kerugian yang timbul dari layanan di destinasi, kekeliruan data yang diisi Pengelola, maupun gangguan jaringan atau perangkat di luar kendalinya.',
     ],
   },
   {
-    judul: '8. Data Pribadi Pengunjung',
+    judul: '9. Data Pribadi Pengunjung',
     ayat: [
       'Data pengunjung yang terlihat di Dashboard hanya boleh digunakan untuk keperluan pesanan yang bersangkutan.',
       'Pengelola dilarang menyalin, menyebarkan, atau memakai data tersebut untuk tujuan lain, termasuk pemasaran, tanpa persetujuan pengunjung.',
     ],
   },
   {
-    judul: '9. Penangguhan, Pengakhiran, dan Perubahan',
+    judul: '10. Penangguhan, Pengakhiran, dan Perubahan',
     ayat: [
       'Platform dapat menangguhkan atau mencabut status Pengelola bila terjadi pelanggaran atas perjanjian ini, disertai pemberitahuan.',
       'Pengelola dapat mengundurkan diri kapan saja dengan memberitahu admin.',
@@ -103,12 +114,13 @@ export default function SyaratPengelola() {
           Perjanjian Pengelola
         </h1>
         <p className="mt-2 text-2xs text-navy-soft">
-          Versi {PENGELOLA_AGREEMENT_VERSION} · Berlaku sejak {BERLAKU_SEJAK}
+          Versi {AGREEMENT.pengelola.version} · Berlaku sejak {BERLAKU_SEJAK}
         </p>
         <p className="mt-6 text-sm leading-relaxed text-navy-soft">
-          Baca sebelum mengajukan diri jadi pengelola. Dua hal yang paling perlu
-          kamu tahu: kamu membeli sendiri paket sensor untuk destinasimu, dan
-          pembayaran dari pengunjung kamu terima langsung, bukan lewat Lautara.
+          Baca sebelum mengajukan diri jadi pengelola. Tiga hal yang paling perlu
+          kamu tahu: paket sensor untuk destinasimu wajib dan kamu beli dari
+          Lautara, kamera pemantau dianjurkan tapi tidak wajib, dan pembayaran
+          dari pengunjung kamu terima langsung — bukan lewat Lautara.
         </p>
 
         <div className="mt-10 space-y-8">

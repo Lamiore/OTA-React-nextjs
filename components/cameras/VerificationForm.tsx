@@ -7,10 +7,7 @@ import {
   type Destination,
   type MitraVerification,
 } from '@/lib/firestore';
-import {
-  PENGELOLA_AGREEMENT_VERSION,
-  validateRoleRequest,
-} from '@/lib/verification';
+import { AGREEMENT, validateRoleRequest } from '@/lib/verification';
 
 interface Props {
   uid: string;
@@ -30,6 +27,7 @@ export default function VerificationForm({
   description = 'Untuk mendaftarkan kamera, akunmu perlu diverifikasi admin terlebih dahulu. Lengkapi data di bawah — setelah disetujui, role akunmu naik menjadi mitra.',
 }: Props) {
   const isPengelola = requestedRole === 'pengelola';
+  const agreement = AGREEMENT[requestedRole];
   const [fullName, setFullName] = useState(initial?.fullName ?? '');
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [organization, setOrganization] = useState(initial?.organization ?? '');
@@ -71,10 +69,8 @@ export default function VerificationForm({
         requestedRole,
         // agreedAt tidak dikirim dari sini — submitRoleRequest yang
         // menstempelnya dengan serverTimestamp() begitu agreementVersion ada.
-        ...(isPengelola && {
-          destination,
-          agreementVersion: PENGELOLA_AGREEMENT_VERSION,
-        }),
+        agreementVersion: agreement.version,
+        ...(isPengelola && { destination }),
       });
       // Tidak reset/pindah view di sini: CameraSection berpindah ke kartu
       // status pending begitu onSnapshot dokumen user menerima perubahan.
@@ -144,29 +140,28 @@ export default function VerificationForm({
           </div>
         )}
 
-        {isPengelola && (
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-teal-600"
-            />
-            <span className="text-xs leading-relaxed text-navy-soft">
-              Saya sudah membaca dan menyetujui{' '}
-              <a
-                href="/syarat-pengelola"
-                target="_blank"
-                rel="noopener"
-                className="font-medium text-teal-700 underline underline-offset-2"
-              >
-                Perjanjian Pengelola
-              </a>
-              , termasuk ketentuan pembelian paket sensor dan pembayaran
-              pengunjung yang diterima langsung oleh pengelola.
-            </span>
-          </label>
-        )}
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-teal-600"
+          />
+          <span className="text-xs leading-relaxed text-navy-soft">
+            Saya sudah membaca dan menyetujui{' '}
+            <a
+              href={agreement.path}
+              target="_blank"
+              rel="noopener"
+              className="font-medium text-teal-700 underline underline-offset-2"
+            >
+              {agreement.label}
+            </a>
+            {isPengelola
+              ? ', termasuk kewajiban membeli paket sensor dari Lautara dan pembayaran pengunjung yang diterima langsung oleh pengelola.'
+              : ', termasuk kewajiban membeli kamera dari Lautara dan pemasangannya oleh petugas Lautara.'}
+          </span>
+        </label>
 
         {error && <p className="text-xs text-danger">{error}</p>}
 
