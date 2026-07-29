@@ -1,5 +1,11 @@
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from "firebase/firestore";
 import { getDatabase, type Database } from "firebase/database";
 import { getAuth, type Auth } from "firebase/auth";
 
@@ -31,7 +37,25 @@ function getApp(): FirebaseApp | null {
 export const db: Firestore | null = (() => {
   const app = getApp();
   if (!app) return null;
-  if (!_db) _db = getFirestore(app);
+  if (!_db) {
+    // Cache persisten (IndexedDB) supaya tiket, booking, dan destinasi yang
+    // pernah dibuka tetap terbaca saat sinyal hilang di lokasi — pasangan dari
+    // service worker yang men-cache shell-nya. Hanya di browser: di server
+    // tidak ada IndexedDB. initializeFirestore melempar bila instance sudah
+    // terlanjur dibuat (mis. HMR), jadi jatuh kembali ke instance yang ada.
+    try {
+      _db =
+        typeof window === "undefined"
+          ? getFirestore(app)
+          : initializeFirestore(app, {
+              localCache: persistentLocalCache({
+                tabManager: persistentMultipleTabManager(),
+              }),
+            });
+    } catch {
+      _db = getFirestore(app);
+    }
+  }
   return _db;
 })();
 
