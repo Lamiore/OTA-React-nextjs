@@ -20,10 +20,30 @@ export interface SensorReading {
   gpsValid?: boolean;
 }
 
+/** Id stasiun aman dipakai sebagai segmen path RTDB (tanpa . # $ / [ ] & spasi). */
+export function sanitizeStationId(id: string): string {
+  return id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+}
+
+/**
+ * Path RTDB paket sensor sebuah destinasi, atau null kalau destinasi itu tidak
+ * punya stasiun. Tiap paket sensor menulis ke `monitoring/<stationId>/latest`.
+ * Dokumen lama tanpa stationId (cuma hasMonitoring) tetap dibaca dari
+ * `monitoring/latest` — stasiun pertama yang firmware-nya belum diberi id.
+ */
+export function stationPath(d: {
+  stationId?: string;
+  hasMonitoring?: boolean;
+}): string | null {
+  const id = sanitizeStationId(d.stationId ?? "");
+  if (id) return `monitoring/${id}/latest`;
+  return d.hasMonitoring ? "monitoring/latest" : null;
+}
+
 export function subscribeMonitoring(
+  path: string,
   callback: (data: SensorReading | null) => void
 ) {
   if (!rtdb) return () => {};
-  const sensorRef = ref(rtdb, "monitoring/latest");
-  return onValue(sensorRef, (snap) => callback(snap.val()));
+  return onValue(ref(rtdb, path), (snap) => callback(snap.val()));
 }

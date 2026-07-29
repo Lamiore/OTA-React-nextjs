@@ -11,6 +11,7 @@ import {
   type Destination,
   type Review,
 } from '@/lib/firestore';
+import { stationPath } from '@/lib/realtime';
 import TopNav from '@/components/desktop/TopNav';
 import Footer from '@/components/desktop/Footer';
 import BottomNav from '@/components/mobile/BottomNav';
@@ -289,12 +290,12 @@ export default function DestinationDetail() {
             </section>
 
             {/* Pantau langsung — kamera (kalau di-link) + sensor IoT dalam satu card */}
-            {(dest.cameraStreamId || dest.cameraStreamUrl || dest.hasMonitoring) && (
+            {(dest.cameraStreamId || dest.cameraStreamUrl || stationPath(dest)) && (
               <LiveMonitorPanel
                 cameraStreamId={dest.cameraStreamId}
                 cameraStreamUrl={dest.cameraStreamUrl}
                 cameraName={dest.cameraName}
-                hasMonitoring={!!dest.hasMonitoring}
+                sensorPath={stationPath(dest)}
               />
             )}
 

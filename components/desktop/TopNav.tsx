@@ -9,6 +9,9 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 const navLinks = [
   { label: 'Beranda', href: '/beranda' },
   { label: 'Booking', href: '/booking' },
+  // Di mobile Kamera masih diakses lewat menu profil — BottomNav tidak punya
+  // slot keempat.
+  { label: 'Kamera', href: '/kamera' },
   { label: 'Profil', href: '/profile' },
 ];
 

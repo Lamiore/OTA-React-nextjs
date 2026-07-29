@@ -5,7 +5,6 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
   subscribeDestinations,
-  destinationIdsInRegion,
   type Destination,
 } from '@/lib/firestore';
 
@@ -18,7 +17,7 @@ interface Booking {
   date: string;
 }
 
-export default function PengelolaStatistikPanel({ location }: { location: string | null }) {
+export default function PengelolaStatistikPanel({ uid }: { uid: string }) {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
 
@@ -36,19 +35,19 @@ export default function PengelolaStatistikPanel({ location }: { location: string
     return () => unsub();
   }, []);
 
-  // Batasi ke wilayah pengelola: booking tak punya field lokasi, jadi lewat
-  // id destinasi di wilayah ini. Wilayah kosong → set kosong (tak match apa pun).
-  const regionIds = destinationIdsInRegion(destinations, location);
-  const regionBookings = bookings.filter((b) => regionIds.has(b.destinationId));
+  const managed = destinations.filter((d) => d.managerUid === uid);
+  const managedIds = new Set(managed.map((d) => d.id));
+  const managedNames = managed.map((d) => d.name);
+  const managedBookings = bookings.filter((b) => managedIds.has(b.destinationId));
 
-  const totalBookings = regionBookings.length;
-  const totalGuests = regionBookings.reduce((sum, b) => sum + (b.guests || 0), 0);
-  const usedTickets = regionBookings.filter((b) => b.status === 'used').length;
+  const totalBookings = managedBookings.length;
+  const totalGuests = managedBookings.reduce((sum, b) => sum + (b.guests || 0), 0);
+  const usedTickets = managedBookings.filter((b) => b.status === 'used').length;
 
   const stats = [
     {
       label: 'Total Destinasi',
-      value: regionIds.size,
+      value: managedIds.size,
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
@@ -95,8 +94,8 @@ export default function PengelolaStatistikPanel({ location }: { location: string
     },
   ];
 
-  // Recent bookings (dibatasi ke wilayah pengelola)
-  const recentBookings = [...regionBookings]
+  // Recent bookings (dibatasi ke destinasi kelola pengelola)
+  const recentBookings = [...managedBookings]
     .sort((a, b) => (b.date > a.date ? 1 : -1))
     .slice(0, 5);
 
@@ -104,13 +103,15 @@ export default function PengelolaStatistikPanel({ location }: { location: string
     <div className="animate-fade-in">
       <h1 className="section-title">Statistik</h1>
       <p className="section-lede">
-        {location ? `Ringkasan wisata wilayah ${location}` : 'Wilayah belum ditetapkan admin'}
+        {managedNames.length > 0
+          ? `Ringkasan wisata destinasi ${managedNames.join(', ')}`
+          : 'Destinasi kelola belum ditetapkan admin'}
       </p>
 
-      {!location && (
+      {managedNames.length === 0 && (
         <div className="card p-4 mt-4 text-center">
           <p className="text-sm text-navy-soft">
-            Wilayahmu belum ditetapkan admin. Data akan muncul setelah admin menetapkan wilayah kelolamu.
+            Destinasi kelolamu belum ditetapkan admin. Data akan muncul setelah admin menetapkan destinasi kelolamu.
           </p>
         </div>
       )}

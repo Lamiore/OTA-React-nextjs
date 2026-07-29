@@ -9,7 +9,8 @@ interface Props {
   cameraStreamId?: string;
   cameraStreamUrl?: string; // legacy: kamera lama dengan URL stream langsung
   cameraName?: string;
-  hasMonitoring: boolean;
+  /** Path RTDB paket sensor destinasi ini (dari stationPath); null = tanpa sensor. */
+  sensorPath: string | null;
 }
 
 interface Metric {
@@ -35,16 +36,17 @@ function relTime(sec: number): string {
 /**
  * Panel "Pantau Langsung" gabungan: stream kamera + sensor IoT dalam satu card.
  * Kamera dirender dari data denormalisasi di dokumen destinasi (publik), jadi
- * pengunjung tidak perlu membaca koleksi cameras yang privat. Sensor memakai
- * sumber global monitoring/latest.
+ * pengunjung tidak perlu membaca koleksi cameras yang privat. Sensor dibaca dari
+ * cabang RTDB milik paket sensor destinasi ini (sensorPath).
  */
 export default function LiveMonitorPanel({
   cameraStreamId,
   cameraStreamUrl,
   cameraName,
-  hasMonitoring,
+  sensorPath,
 }: Props) {
   const hasCamera = !!(cameraStreamId || cameraStreamUrl);
+  const hasMonitoring = !!sensorPath;
 
   // ── Kamera ──
   const [serverUrl, setServerUrl] = useState<string | null>(null); // null = loading
@@ -80,13 +82,15 @@ export default function LiveMonitorPanel({
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!hasMonitoring) return;
-    const unsub = subscribeMonitoring((d) => {
+    if (!sensorPath) return;
+    setData(null);
+    setReady(false);
+    const unsub = subscribeMonitoring(sensorPath, (d) => {
       setData(d);
       setReady(true);
     });
     return () => unsub();
-  }, [hasMonitoring]);
+  }, [sensorPath]);
 
   useEffect(() => {
     if (!hasMonitoring) return;

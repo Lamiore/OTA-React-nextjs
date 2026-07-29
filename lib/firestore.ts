@@ -14,7 +14,6 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
-  type DocumentData,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -43,6 +42,14 @@ export interface Destination {
   image: string;
   /** True hanya untuk destinasi yang punya stasiun sensor IoT fisik. */
   hasMonitoring?: boolean;
+  /**
+   * Id paket sensor yang terpasang di destinasi ini — menentukan cabang RTDB
+   * `monitoring/<stationId>/latest` yang dibaca. Kosong pada destinasi lama:
+   * dibaca dari `monitoring/latest` (lihat stationPath di lib/realtime).
+   */
+  stationId?: string;
+  /** Uid pengelola yang mengelola destinasi ini (ditetapkan admin). Kosong = belum ada pengelola. */
+  managerUid?: string;
   /** Tautan ke kamera mitra/pengelola (id dokumen dari koleksi 'cameras') */
   cameraId?: string;
   /**
@@ -100,20 +107,6 @@ export function distinctLocations(destinations: Destination[]): string[] {
   ).sort();
 }
 
-/**
- * Set id destinasi pada satu wilayah. Wilayah kosong/null → set kosong: TIDAK
- * boleh match global, supaya pengelola tanpa wilayah tidak melihat data siapa pun.
- */
-export function destinationIdsInRegion(
-  destinations: Destination[],
-  region: string | null | undefined
-): Set<string> {
-  if (!region) return new Set();
-  return new Set(
-    destinations.filter((d) => d.location === region).map((d) => d.id)
-  );
-}
-
 export async function addDestination(data: DestinationInput) {
   if (!db) return;
   await addDoc(collection(db, "destinations"), {
@@ -139,8 +132,17 @@ export interface MitraVerification {
   phone: string; // no. HP/WhatsApp aktif
   organization: string; // instansi/organisasi (operator dive, resort, ...)
   status: "pending" | "approved" | "rejected";
+  /** Role yang diajukan. Dokumen lama tanpa field = pengajuan mitra. */
+  requestedRole?: "mitra" | "pengelola";
+  /** Destinasi yang ingin dikelola — hanya untuk pengajuan pengelola. */
+  destination?: string;
   submittedAt: unknown;
   reviewedAt?: unknown;
+}
+
+/** Role yang diajukan; dokumen lama tanpa field diperlakukan "mitra". */
+export function requestedRole(v: Pick<MitraVerification, "requestedRole">) {
+  return v.requestedRole ?? "mitra";
 }
 
 export interface AppUser {
@@ -153,8 +155,6 @@ export interface AppUser {
   role: "user" | "mitra" | "pengelola" | "admin";
   /** Id destinasi tersimpan (wishlist) — di-toggle dari tombol hati di kartu destinasi. */
   saved?: string[];
-  /** Wilayah yang dikelola (khusus pengelola) — membatasi kamera & statistik ke wilayah ini. */
-  location?: string;
   /** Pengajuan verifikasi mitra; tidak ada berarti belum pernah mengajukan. */
   verification?: MitraVerification;
 }
@@ -172,12 +172,6 @@ export function subscribeUsers(callback: (users: AppUser[]) => void) {
 export async function updateUserRole(uid: string, role: AppUser["role"]) {
   if (!db) return;
   await updateDoc(doc(db, "users", uid), { role });
-}
-
-/** Tetapkan wilayah kelola untuk pengelola. */
-export async function updateUserLocation(uid: string, location: string) {
-  if (!db) return;
-  await updateDoc(doc(db, "users", uid), { location });
 }
 
 /** Simpan/ubah no. HP kontak di profil pengguna. */
@@ -209,9 +203,19 @@ export async function toggleSavedDestination(
   });
 }
 
-export async function submitMitraVerification(
+/**
+ * Kirim pengajuan naik role (mitra dari halaman Kamera, pengelola dari
+ * Pengaturan). Satu pengajuan aktif per user — pengajuan baru menimpa yang lama.
+ */
+export async function submitRoleRequest(
   uid: string,
-  data: { fullName: string; phone: string; organization: string }
+  data: {
+    fullName: string;
+    phone: string;
+    organization: string;
+    requestedRole: "mitra" | "pengelola";
+    destination?: string;
+  }
 ) {
   if (!db) return;
   await updateDoc(doc(db, "users", uid), {
@@ -219,16 +223,20 @@ export async function submitMitraVerification(
   });
 }
 
-export async function approveMitra(uid: string) {
+/** Setujui pengajuan: role naik sesuai yang diajukan. */
+export async function approveRoleRequest(
+  uid: string,
+  role: "mitra" | "pengelola" = "mitra"
+) {
   if (!db) return;
   await updateDoc(doc(db, "users", uid), {
-    role: "mitra",
+    role,
     "verification.status": "approved",
     "verification.reviewedAt": serverTimestamp(),
   });
 }
 
-export async function rejectMitra(uid: string) {
+export async function rejectRoleRequest(uid: string) {
   if (!db) return;
   await updateDoc(doc(db, "users", uid), {
     "verification.status": "rejected",
@@ -324,21 +332,6 @@ export function subscribeMyCameras(
 export function subscribeAllCameras(callback: (cameras: Camera[]) => void) {
   if (!db) return () => {};
   return onSnapshot(collection(db, "cameras"), (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
-  });
-}
-
-/**
- * Kamera pada satu wilayah (untuk pengelola). Jangan panggil dengan lokasi
- * kosong — itu akan match kamera berlokasi kosong; caller wajib guard dulu.
- */
-export function subscribeCamerasByLocation(
-  location: string,
-  callback: (cameras: Camera[]) => void
-) {
-  if (!db) return () => {};
-  const q = query(collection(db, "cameras"), where("location", "==", location));
-  return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
   });
 }
@@ -566,13 +559,4 @@ export async function fetchRatingSummaries(): Promise<Record<string, RatingSumma
   );
 }
 
-// ── Monitoring ──
-
-export function subscribeSensor(
-  docId: string,
-  callback: (data: DocumentData | undefined) => void
-) {
-  if (!db) return () => {};
-  const docRef = doc(db, "monitoring_data", docId);
-  return onSnapshot(docRef, (snap) => callback(snap.data()));
-}
+// Data sensor tidak lagi lewat Firestore — sumbernya RTDB, lihat lib/realtime.ts.

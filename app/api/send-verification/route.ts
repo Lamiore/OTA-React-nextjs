@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
 import { adminAuth } from '@/lib/firebaseAdmin';
+import { mailer, MAIL_FROM } from '@/lib/mailer';
 
 export const runtime = 'nodejs';
 
@@ -37,16 +37,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'link-failed' }, { status: 500 });
   }
 
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: Number(process.env.SMTP_PORT) === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
-
   try {
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM ?? 'Lautara <no-reply@lautara.app>',
+    await mailer().sendMail({
+      from: MAIL_FROM,
       to: email,
       subject: 'Verifikasi email — Lautara',
       text: `Halo,\n\nKlik link berikut untuk memverifikasi email kamu di Lautara:\n${link}\n\nAbaikan email ini kalau kamu tidak mendaftar.`,

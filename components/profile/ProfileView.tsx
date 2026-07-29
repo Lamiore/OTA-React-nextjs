@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import type { UserRole } from '@/lib/useAuth';
 import { subscribeUserBookings, subscribeUserReviews, type Booking } from '@/lib/firestore';
 import BookingHistory from '@/components/booking/BookingHistory';
-import CameraSection from '@/components/cameras/CameraSection';
 import AccountSettings from '@/components/profile/AccountSettings';
+import PengelolaRequest from '@/components/profile/PengelolaRequest';
+import RoleBadge, { roleInfo } from '@/components/profile/RoleBadge';
 import SavedDestinations from '@/components/profile/SavedDestinations';
 import Link from 'next/link';
 import { useTheme } from '@/lib/useTheme';
@@ -109,13 +110,10 @@ const menuItems = [
 ];
 
 export default function ProfileView({ user, role }: { user: User; role: UserRole | null }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'menu' | 'riwayat' | 'tersimpan' | 'pengaturan' | 'kamera'>(
-    searchParams.get('view') === 'riwayat'
-      ? 'riwayat'
-      : searchParams.get('view') === 'kamera'
-        ? 'kamera'
-        : 'menu'
+  const [view, setView] = useState<'menu' | 'riwayat' | 'tersimpan' | 'pengaturan'>(
+    searchParams.get('view') === 'riwayat' ? 'riwayat' : 'menu'
   );
   const { theme, setTheme, mounted } = useTheme();
   const isDark = theme === 'dark';
@@ -127,6 +125,8 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
   useEffect(() => subscribeUserReviews(user.uid, (r) => setReviewCount(r.length)), [user.uid]);
   const bookingCount = bookings.length;
 
+  const roleCard = role ? roleInfo[role] : undefined;
+
   const initials = user.displayName
     ? user.displayName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
     : user.email?.[0]?.toUpperCase() ?? 'U';
@@ -135,23 +135,6 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
     if (!auth) return;
     await signOut(auth);
   };
-
-  if (view === 'kamera') {
-    return (
-      <div className="w-full max-w-lg mx-auto animate-fade-in">
-        <button
-          onClick={() => setView('menu')}
-          className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-navy-soft transition-colors hover:text-navy"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-          Kembali
-        </button>
-        <CameraSection user={user} role={role} />
-      </div>
-    );
-  }
 
   if (view === 'riwayat') {
     return (
@@ -202,6 +185,8 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
 
         <AccountSettings user={user} />
 
+        <PengelolaRequest user={user} role={role} />
+
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-shore-200/80">
             <h2 className="font-serif text-lg font-medium text-navy">Pengaturan</h2>
@@ -245,6 +230,21 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
             </div>
           </div>
         </div>
+
+        {/* Peran akun — hanya untuk mitra ke atas; pengguna biasa tidak punya
+            apa pun untuk ditampilkan di sini. */}
+        {roleCard && (
+          <div className="card overflow-hidden mt-4">
+            <div className="px-5 py-4 border-b border-shore-200/80">
+              <h2 className="font-serif text-lg font-medium text-navy">Peran Akun</h2>
+              <p className="text-2xs text-navy-soft mt-0.5">Status akunmu di Lautara</p>
+            </div>
+            <div className="flex items-start justify-between gap-4 px-5 py-4">
+              <p className="text-sm text-navy-soft leading-relaxed">{roleCard.description}</p>
+              <RoleBadge role={role} />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -278,10 +278,13 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
 
           <p className="text-sm text-navy-soft">{user.email}</p>
 
-          {/* Provider badge */}
-          <div className="mt-3 inline-flex items-center gap-1.5 rounded-xs border border-shore-200 bg-shore-50 px-3 py-1.5 text-2xs font-medium text-navy-soft">
-            <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
-            {user.providerData[0]?.providerId === 'google.com' ? 'Google Account' : 'Email & Password'}
+          {/* Peran + provider */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <RoleBadge role={role} />
+            <span className="inline-flex items-center gap-1.5 rounded-xs border border-shore-200 bg-shore-50 px-3 py-1.5 text-2xs font-medium text-navy-soft">
+              <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
+              {user.providerData[0]?.providerId === 'google.com' ? 'Google Account' : 'Email & Password'}
+            </span>
           </div>
         </div>
 
@@ -308,7 +311,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
             key={item.label}
             onClick={
               item.label === 'Kamera'
-                ? () => setView('kamera')
+                ? () => router.push('/kamera')
                 : item.label === 'Riwayat Booking'
                   ? () => setView('riwayat')
                   : item.label === 'Tersimpan'
@@ -317,7 +320,10 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
                       ? () => setView('pengaturan')
                       : undefined
             }
-            className="w-full flex items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-shore-50"
+            className={`w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-shore-50 ${
+              // Kamera sudah punya tombol sendiri di TopNav desktop.
+              item.label === 'Kamera' ? 'flex md:hidden' : 'flex'
+            }`}
           >
             <div className="h-10 w-10 rounded-md bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
               {item.icon}

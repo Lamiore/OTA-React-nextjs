@@ -8,11 +8,14 @@ import {
   deleteDestination,
   getPriceItems,
   subscribeAllCameras,
+  subscribeUsers,
   type Destination,
   type DestinationInput,
   type PriceItem,
   type Camera,
+  type AppUser,
 } from '@/lib/firestore';
+import { sanitizeStationId, stationPath } from '@/lib/realtime';
 
 const emptyForm: DestinationInput = {
   name: '',
@@ -24,7 +27,9 @@ const emptyForm: DestinationInput = {
   description: '',
   image: '',
   hasMonitoring: false,
+  stationId: '',
   cameraId: '',
+  managerUid: '',
 };
 
 function PlusIcon() {
@@ -67,6 +72,7 @@ function CloseIcon() {
 export default function DestinasiPanel() {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [cameras, setCameras] = useState<Camera[]>([]);
+  const [pengelola, setPengelola] = useState<AppUser[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<DestinationInput>(emptyForm);
@@ -80,6 +86,13 @@ export default function DestinasiPanel() {
 
   useEffect(() => {
     const unsub = subscribeAllCameras(setCameras);
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeUsers((users) =>
+      setPengelola(users.filter((u) => u.role === 'pengelola')),
+    );
     return () => unsub();
   }, []);
 
@@ -101,7 +114,9 @@ export default function DestinasiPanel() {
       description: d.description ?? '',
       image: d.image ?? '',
       hasMonitoring: d.hasMonitoring ?? false,
+      stationId: d.stationId ?? '',
       cameraId: d.cameraId ?? '',
+      managerUid: d.managerUid ?? '',
     });
     setTagInput(d.tags.join(', '));
     setEditingId(d.id);
@@ -143,6 +158,9 @@ export default function DestinasiPanel() {
       ...form,
       tags: tagInput.split(',').map((t) => t.trim()).filter(Boolean),
       priceItems: (form.priceItems ?? []).filter((it) => it.label.trim() !== ''),
+      // Stasiun dimatikan → id paket sensor ikut dibersihkan, biar destinasi ini
+      // tidak diam-diam masih menempel ke cabang RTDB paket lama.
+      stationId: form.hasMonitoring ? (form.stationId ?? '') : '',
       cameraStreamId: linkedCam?.cameraId ?? '',
       cameraName: linkedCam?.name ?? '',
       cameraStreamUrl: linkedCam?.streamUrl ?? '',
@@ -151,15 +169,6 @@ export default function DestinasiPanel() {
       await updateDestination(editingId, data);
     } else {
       await addDestination(data);
-    }
-    // Single-select: cuma ada 1 stasiun sensor fisik, jadi kalau destinasi ini
-    // ditandai sebagai lokasi stasiun, matikan penanda di destinasi lain.
-    if (data.hasMonitoring) {
-      await Promise.all(
-        destinations
-          .filter((d) => d.id !== editingId && d.hasMonitoring)
-          .map((d) => updateDestination(d.id, { hasMonitoring: false })),
-      );
     }
     setSaving(false);
     closeForm();
@@ -348,19 +357,60 @@ export default function DestinasiPanel() {
                 </select>
               </div>
 
+              {/* Pengelola — user berperan 'pengelola' yang mengelola destinasi ini. */}
+              <div>
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Pengelola</label>
+                <select aria-label="Pengelola"
+                  value={form.managerUid || ''}
+                  onChange={(e) => setForm({ ...form, managerUid: e.target.value })}
+                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+                >
+                  <option value="">-- Tanpa Pengelola --</option>
+                  {pengelola.map((p) => (
+                    <option key={p.uid} value={p.uid}>
+                      {p.name || 'Tanpa Nama'} — {p.email}
+                    </option>
+                  ))}
+                </select>
+                {pengelola.length === 0 && (
+                  <p className="mt-1.5 text-2xs text-navy-soft">
+                    Belum ada pengguna berperan pengelola. Tetapkan peran di panel Pengguna dulu.
+                  </p>
+                )}
+              </div>
+
               {/* Monitoring IoT */}
-              <label className="flex items-center justify-between gap-3 rounded-md border border-shore-200 bg-surface px-3.5 py-3 cursor-pointer">
-                <span>
-                  <span className="block text-sm font-medium text-navy">Lokasi stasiun sensor IoT</span>
-                  <span className="block text-2xs text-navy-soft mt-0.5">Tampilkan panel sensor lengkap di destinasi ini. Hanya 1 destinasi — mengaktifkan di sini otomatis mematikan yang lain.</span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.hasMonitoring ?? false}
-                  onChange={(e) => setForm({ ...form, hasMonitoring: e.target.checked })}
-                  className="h-5 w-5 shrink-0 rounded border-shore-300 text-teal-500 focus:ring-teal-400 cursor-pointer"
-                />
-              </label>
+              <div className="rounded-md border border-shore-200 bg-surface px-3.5 py-3">
+                <label className="flex items-center justify-between gap-3 cursor-pointer">
+                  <span>
+                    <span className="block text-sm font-medium text-navy">Punya stasiun sensor IoT</span>
+                    <span className="block text-2xs text-navy-soft mt-0.5">Tampilkan panel sensor lengkap di destinasi ini.</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={form.hasMonitoring ?? false}
+                    onChange={(e) => setForm({ ...form, hasMonitoring: e.target.checked })}
+                    className="h-5 w-5 shrink-0 rounded border-shore-300 text-teal-500 focus:ring-teal-400 cursor-pointer"
+                  />
+                </label>
+
+                {form.hasMonitoring && (
+                  <div className="mt-3 border-t border-shore-200/80 pt-3">
+                    <label className="block text-xs font-medium text-navy-soft mb-1.5">ID Paket Sensor</label>
+                    <input aria-label="ID Paket Sensor"
+                      value={form.stationId ?? ''}
+                      onChange={(e) => setForm({ ...form, stationId: sanitizeStationId(e.target.value) })}
+                      placeholder="cth: bahoi"
+                      className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+                    />
+                    <p className="mt-1.5 text-2xs text-navy-soft">
+                      {form.stationId
+                        ? <>Firmware paket ini harus PUT ke <code className="text-navy">monitoring/{form.stationId}/latest</code>.</>
+                        : <>Kosongkan untuk paket pertama (firmware lama, datanya di <code className="text-navy">monitoring/latest</code>). Isi id berbeda untuk tiap paket sensor tambahan.</>}
+                    </p>
+                  </div>
+                )}
+              </div>
 
               {/* Actions */}
               <div className="flex gap-3 pt-2">
@@ -414,6 +464,16 @@ export default function DestinasiPanel() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-navy truncate">{d.name}</p>
               <p className="text-xs text-navy-soft mt-0.5">{d.location} — {getPriceItems(d).length} item harga</p>
+              <p className="text-2xs text-navy-soft mt-0.5 truncate">
+                Pengelola: {d.managerUid
+                  ? pengelola.find((p) => p.uid === d.managerUid)?.name || 'Tanpa Nama'
+                  : <span className="text-warn">belum ditetapkan</span>}
+              </p>
+              {stationPath(d) && (
+                <p className="text-2xs text-navy-soft mt-0.5 truncate">
+                  Sensor: <code>{stationPath(d)}</code>
+                </p>
+              )}
             </div>
 
             {/* Actions */}

@@ -4,41 +4,49 @@ import { useEffect, useState } from 'react';
 import {
   cameraStatus,
   subscribeAllCameras,
-  subscribeCamerasByLocation,
+  subscribeDestinations,
   type Camera,
+  type Destination,
 } from '@/lib/firestore';
 import CameraLiveModal from '@/components/cameras/CameraLiveModal';
 import ServerAddressCard from '@/components/cameras/ServerAddressCard';
 
 interface Props {
   role: string | null;
-  location: string | null;
+  uid: string;
 }
 
-export default function KameraPanel({ role, location }: Props) {
+export default function KameraPanel({ role, uid }: Props) {
   const isPengelola = role === 'pengelola';
-  const noRegion = isPengelola && !location; // pengelola tanpa wilayah → jangan tampilkan kamera apa pun
 
   const [cameras, setCameras] = useState<Camera[]>([]);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
   const [liveCamera, setLiveCamera] = useState<Camera | null>(null);
 
   useEffect(() => {
-    // Guard: lokasi kosong tidak boleh dipakai query (akan match kamera berlokasi kosong).
-    if (noRegion) {
+    const unsub = subscribeDestinations(setDestinations);
+    return () => unsub();
+  }, []);
+
+  const managedDestinations = destinations.filter((d) => d.managerUid === uid);
+  const managedLocations = new Set(managedDestinations.map((d) => d.location));
+  const noAssignment = isPengelola && managedDestinations.length === 0; // pengelola tanpa destinasi → jangan tampilkan kamera apa pun
+
+  useEffect(() => {
+    if (noAssignment) {
       setCameras([]);
       setLoading(false);
       return;
     }
     const handle = (data: Camera[]) => {
-      setCameras(data);
+      setCameras(isPengelola ? data.filter((c) => managedLocations.has(c.location)) : data);
       setLoading(false);
     };
-    const unsub = isPengelola
-      ? subscribeCamerasByLocation(location as string, handle)
-      : subscribeAllCameras(handle);
+    const unsub = subscribeAllCameras(handle);
     return () => unsub();
-  }, [isPengelola, noRegion, location]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPengelola, noAssignment, uid, destinations]);
 
   return (
     <div className="animate-fade-in">
@@ -47,9 +55,9 @@ export default function KameraPanel({ role, location }: Props) {
       <h1 className="font-serif text-2xl font-medium text-navy">Kamera</h1>
       <p className="mt-1 text-sm text-navy-soft">
         {isPengelola
-          ? location
-            ? `Wilayah ${location} — ${cameras.length} kamera`
-            : 'Wilayah belum ditetapkan admin'
+          ? managedDestinations.length > 0
+            ? `Destinasi ${managedDestinations.map((d) => d.name).join(', ')} — ${cameras.length} kamera`
+            : 'Destinasi belum ditetapkan admin'
           : `${cameras.length} kamera terdaftar`}
       </p>
 
@@ -60,11 +68,11 @@ export default function KameraPanel({ role, location }: Props) {
         </div>
       )}
 
-      {noRegion ? (
+      {noAssignment ? (
         <div className="card p-8 text-center mt-6">
           <p className="text-sm text-navy-soft">
-            Wilayahmu belum ditetapkan admin. Hubungi admin untuk menetapkan wilayah
-            agar kamera di wilayahmu muncul di sini.
+            Destinasimu belum ditetapkan admin. Hubungi admin untuk menetapkan destinasi
+            agar kamera di destinasimu muncul di sini.
           </p>
         </div>
       ) : (
@@ -79,7 +87,7 @@ export default function KameraPanel({ role, location }: Props) {
           ) : cameras.length === 0 ? (
             <div className="card p-8 text-center">
               <p className="text-sm text-navy-soft">
-                Belum ada kamera terdaftar{isPengelola && location ? ` di wilayah ${location}` : ''}.
+                Belum ada kamera terdaftar{isPengelola && managedDestinations.length > 0 ? ` di destinasi ${managedDestinations.map((d) => d.name).join(', ')}` : ''}.
               </p>
             </div>
           ) : (

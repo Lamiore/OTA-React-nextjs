@@ -126,7 +126,7 @@ export default function DashboardSidebar({ active, onNavigate, mobileOpen, onMob
       <aside
         className={clsx(
           'fixed top-0 left-0 z-50 h-dvh w-64 bg-surface border-r border-shore-200/60 flex flex-col transition-transform duration-short ease-out',
-          'md:translate-x-0 md:static md:z-auto',
+          'md:translate-x-0 md:sticky md:top-0 md:z-auto',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >

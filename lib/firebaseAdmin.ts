@@ -1,5 +1,6 @@
 import { getApps, initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
 // Admin SDK singleton (server-only). Kredensial diambil dari env:
 //   FIREBASE_ADMIN_SA_B64 = base64 dari file service-account JSON.
@@ -23,4 +24,9 @@ function initAdmin() {
 export function adminAuth() {
   initAdmin();
   return getAuth();
+}
+
+export function adminDb() {
+  initAdmin();
+  return getFirestore();
 }

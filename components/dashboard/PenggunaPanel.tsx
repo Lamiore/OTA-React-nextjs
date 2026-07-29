@@ -2,16 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import {
-  approveMitra,
-  distinctLocations,
-  rejectMitra,
-  subscribeDestinations,
+  approveRoleRequest,
+  rejectRoleRequest,
+  requestedRole,
   subscribeUsers,
-  updateUserLocation,
   updateUserRole,
   type AppUser,
-  type Destination,
 } from '@/lib/firestore';
+import { notifyApproval } from '@/lib/sendVerification';
 
 const roleColors: Record<AppUser['role'], string> = {
   user: 'bg-shore-100 text-navy-soft',
@@ -22,21 +20,14 @@ const roleColors: Record<AppUser['role'], string> = {
 
 export default function PenggunaPanel() {
   const [users, setUsers] = useState<AppUser[]>([]);
-  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [updatingUid, setUpdatingUid] = useState<string | null>(null);
   const [reviewingUid, setReviewingUid] = useState<string | null>(null);
+  const [mailWarn, setMailWarn] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = subscribeUsers(setUsers);
     return () => unsub();
   }, []);
-
-  useEffect(() => {
-    const unsub = subscribeDestinations(setDestinations);
-    return () => unsub();
-  }, []);
-
-  const regions = distinctLocations(destinations);
 
   const handleRoleChange = async (uid: string, role: AppUser['role']) => {
     setUpdatingUid(uid);
@@ -44,19 +35,22 @@ export default function PenggunaPanel() {
     setUpdatingUid(null);
   };
 
-  const handleLocationChange = async (uid: string, location: string) => {
-    setUpdatingUid(uid);
-    await updateUserLocation(uid, location);
-    setUpdatingUid(null);
-  };
-
-  const handleReview = async (uid: string, approve: boolean) => {
-    setReviewingUid(uid);
+  const handleReview = async (u: AppUser, approve: boolean) => {
+    setReviewingUid(u.uid);
+    setMailWarn(null);
     try {
-      if (approve) {
-        await approveMitra(uid);
-      } else {
-        await rejectMitra(uid);
+      if (!approve) {
+        await rejectRoleRequest(u.uid);
+        return;
+      }
+      const role = requestedRole(u.verification ?? {});
+      await approveRoleRequest(u.uid, role);
+      // Persetujuan sudah tersimpan; email cuma pemberitahuan — gagal kirim
+      // tidak membatalkan apa pun, cukup diberitahukan ke admin.
+      try {
+        await notifyApproval(u.uid, role);
+      } catch {
+        setMailWarn(`Role ${role} untuk ${u.name || u.email} sudah aktif, tapi email pemberitahuan gagal terkirim.`);
       }
     } finally {
       setReviewingUid(null);
@@ -67,6 +61,10 @@ export default function PenggunaPanel() {
     <div className="animate-fade-in">
       <h1 className="font-serif text-2xl font-medium text-navy">Pengguna</h1>
       <p className="mt-1 text-sm text-navy-soft">{users.length} pengguna terdaftar</p>
+
+      {mailWarn && (
+        <p className="mt-4 rounded-md bg-warn-soft px-4 py-2.5 text-xs text-warn">{mailWarn}</p>
+      )}
 
       <div className="mt-6 space-y-3">
         {users.length === 0 && (
@@ -113,48 +111,30 @@ export default function PenggunaPanel() {
               </select>
             </div>
 
-            {/* Wilayah kelola — hanya untuk pengelola. Membatasi kamera & statistik. */}
-            {u.role === 'pengelola' && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 pl-14">
-                <span className="text-xs text-navy-soft">Wilayah kelola:</span>
-                <select
-                  value={u.location ?? ''}
-                  onChange={(e) => handleLocationChange(u.uid, e.target.value)}
-                  disabled={updatingUid === u.uid}
-                  className="rounded-sm px-3 py-1.5 text-xs font-medium border border-shore-200 bg-surface text-navy outline-none cursor-pointer transition-colors focus:border-teal-400 disabled:opacity-50"
-                >
-                  <option value="">Pilih wilayah…</option>
-                  {regions.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-                {!u.location && (
-                  <span className="text-2xs text-warn">Belum ditetapkan</span>
-                )}
-              </div>
-            )}
-
-            {/* Pengajuan verifikasi mitra */}
+            {/* Pengajuan naik role (mitra dari halaman Kamera, pengelola dari Pengaturan) */}
             {u.verification?.status === 'pending' && (
               <div className="mt-4 rounded-md border border-warn-rule bg-warn-soft/60 p-4">
                 <span className="inline-flex rounded-sm bg-warn-soft px-2.5 py-1 text-2xs font-medium text-warn">
-                  Pengajuan Mitra
+                  {requestedRole(u.verification) === 'pengelola' ? 'Pengajuan Pengelola' : 'Pengajuan Mitra'}
                 </span>
                 <div className="mt-3 space-y-1 text-sm text-navy">
                   <p><span className="text-navy-soft">Nama:</span> {u.verification.fullName}</p>
                   <p><span className="text-navy-soft">No. HP:</span> {u.verification.phone}</p>
                   <p><span className="text-navy-soft">Instansi:</span> {u.verification.organization}</p>
+                  {u.verification.destination && (
+                    <p><span className="text-navy-soft">Destinasi diminta:</span> {u.verification.destination}</p>
+                  )}
                 </div>
                 <div className="flex gap-2 mt-4">
                   <button
-                    onClick={() => handleReview(u.uid, true)}
+                    onClick={() => handleReview(u, true)}
                     disabled={reviewingUid === u.uid}
                     className="btn-primary flex-1 px-4 py-2 text-xs disabled:opacity-50"
                   >
                     Setujui
                   </button>
                   <button
-                    onClick={() => handleReview(u.uid, false)}
+                    onClick={() => handleReview(u, false)}
                     disabled={reviewingUid === u.uid}
                     className="btn-ghost flex-1 px-4 py-2 text-xs hover:border-danger-rule hover:text-danger disabled:opacity-50"
                   >
