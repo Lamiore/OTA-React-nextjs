@@ -14,6 +14,7 @@ import RoleBadge, { roleInfo } from '@/components/profile/RoleBadge';
 import SavedDestinations from '@/components/profile/SavedDestinations';
 import Link from 'next/link';
 import { useTheme } from '@/lib/useTheme';
+import { waLink } from '@/lib/format';
 
 function LogOutIcon() {
   return (
@@ -55,6 +56,116 @@ function MoonIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" />
+    </svg>
+  );
+}
+
+// Kontak dukungan Lautara. Nomor kosong = tombol WhatsApp disembunyikan
+// (waLink mengembalikan null), jadi tidak ada tautan mati di halaman bantuan.
+const SUPPORT_EMAIL = 'ilham_lam@icloud.com';
+const SUPPORT_WA = '';
+
+const faq: { group: string; items: { q: string; a: string }[] }[] = [
+  {
+    group: 'Akun',
+    items: [
+      {
+        q: 'Kenapa saya diminta verifikasi email?',
+        a: 'Setelah daftar pakai email & password, kami kirim link verifikasi ke alamat kamu. Halaman profil, booking, dan kamera baru terbuka setelah link itu diklik. Masuk lewat Google langsung terverifikasi, jadi langkah ini dilewati.',
+      },
+      {
+        q: 'Link verifikasi tidak masuk, bagaimana?',
+        a: 'Cek folder Spam atau Promosi dulu. Kalau tetap tidak ada, tekan tombol kirim ulang di halaman verifikasi — email lama akan digantikan yang baru. Pastikan alamat email yang dipakai tidak salah ketik.',
+      },
+      {
+        q: 'Cara ganti nama, nomor telepon, atau password?',
+        a: 'Buka Profil › Pengaturan. Nama dan nomor telepon bisa diubah di kartu paling atas. Ganti password hanya tersedia untuk akun email & password; akun Google diatur lewat pengaturan akun Google.',
+      },
+    ],
+  },
+  {
+    group: 'Booking & pembayaran',
+    items: [
+      {
+        q: 'Bagaimana cara memesan tiket?',
+        a: 'Buka halaman destinasi, tekan Booking, lalu pilih jenis tiket dan jumlahnya. Isi tanggal kunjungan, nama, dan nomor telepon, lalu kirim. Tiket langsung terbit dengan status Terkonfirmasi.',
+      },
+      {
+        q: 'Metode pembayaran apa saja yang tersedia?',
+        a: 'Transfer bank (BCA, Mandiri, BNI), e-wallet (GoPay, OVO, DANA), atau tunai di lokasi. Pilih metodenya lewat tombol Bayar di Riwayat Booking. Tiket tetap berlaku walau statusnya belum lunas — pembayaran tunai diselesaikan di loket.',
+      },
+      {
+        q: 'Di mana tiket dan QR-nya?',
+        a: 'Profil › Riwayat Booking, lalu buka booking yang dimaksud. Tunjukkan QR di layar kepada petugas saat check-in. Satu tiket hanya bisa dipindai sekali; setelah itu statusnya berubah jadi Terpakai.',
+      },
+      {
+        q: 'Bisa membatalkan booking?',
+        a: 'Bisa, lewat Riwayat Booking › Batalkan. Pembatalan bersifat permanen — tiket yang sudah dibatalkan tidak bisa diaktifkan lagi, jadi pastikan dulu sebelum konfirmasi. Untuk pengembalian dana, hubungi pengelola destinasi.',
+      },
+      {
+        q: 'Bagaimana kalau mau ubah tanggal atau jumlah orang?',
+        a: 'Pengubahan belum bisa dilakukan sendiri dari aplikasi. Hubungi pengelola destinasi lewat tombol WhatsApp di halaman destinasi, atau batalkan booking lalu pesan ulang dengan data yang benar.',
+      },
+    ],
+  },
+  {
+    group: 'Destinasi & pemantauan',
+    items: [
+      {
+        q: 'Angka suhu dan cuaca di halaman destinasi itu dari mana?',
+        a: 'Dari sensor IoT yang terpasang di destinasi tersebut: suhu udara, kelembapan, suhu air, kondisi cuaca, dan kecepatan angin. Nilainya diperbarui real-time. Destinasi tanpa sensor tidak menampilkan panel ini.',
+      },
+      {
+        q: 'Kenapa data sensor menampilkan tanda "--"?',
+        a: 'Artinya perangkat sedang tidak mengirim data — biasanya karena listrik atau koneksi di lokasi terputus. Angka akan muncul lagi sendiri begitu perangkat kembali online.',
+      },
+      {
+        q: 'Cara menyimpan destinasi favorit?',
+        a: 'Tekan ikon hati di kartu destinasi. Semua yang tersimpan bisa dibuka lagi lewat Profil › Tersimpan. Fitur ini butuh akun yang sudah masuk.',
+      },
+    ],
+  },
+  {
+    group: 'Pengelola & kamera',
+    items: [
+      {
+        q: 'Bagaimana cara jadi pengelola destinasi?',
+        a: 'Buka Profil › Pengaturan › Jadi Pengelola, lalu isi nama lengkap, nomor HP, instansi, dan destinasi yang dikelola. Pengajuan ditinjau admin; statusnya (menunggu, disetujui, ditolak) muncul di kartu yang sama.',
+      },
+      {
+        q: 'Kenapa kamera saya berstatus "Menunggu admin"?',
+        a: 'Setiap kamera baru harus disetujui admin sebelum bisa disiarkan. Selama masih menunggu, QR dan alamat server belum aktif. Kalau pengajuan ditolak, hapus kamera itu lalu daftarkan ulang dengan data yang benar.',
+      },
+    ],
+  },
+  {
+    group: 'Lainnya',
+    items: [
+      {
+        q: 'Ada asisten yang bisa ditanya soal destinasi?',
+        a: 'Ada. Tombol chat di pojok kanan bawah menjawab pertanyaan soal destinasi, harga, dan cara booking berdasarkan katalog terbaru. Untuk urusan yang butuh manusia, hubungi kami lewat kontak di bawah.',
+      },
+      {
+        q: 'Cara mengaktifkan mode gelap?',
+        a: 'Profil › Pengaturan › Mode Gelap. Pilihannya tersimpan di perangkat ini dan tetap berlaku saat aplikasi dibuka lagi.',
+      },
+    ],
+  },
+];
+
+function MailIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="20" height="16" x="2" y="4" rx="2" />
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+    </svg>
+  );
+}
+
+function ChatIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
     </svg>
   );
 }
@@ -109,10 +220,24 @@ const menuItems = [
   },
 ];
 
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-navy-soft transition-colors hover:text-navy"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m15 18-6-6 6-6" />
+      </svg>
+      Kembali
+    </button>
+  );
+}
+
 export default function ProfileView({ user, role }: { user: User; role: UserRole | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'menu' | 'riwayat' | 'tersimpan' | 'pengaturan'>(
+  const [view, setView] = useState<'menu' | 'riwayat' | 'tersimpan' | 'pengaturan' | 'bantuan'>(
     searchParams.get('view') === 'riwayat' ? 'riwayat' : 'menu'
   );
   const { theme, setTheme, mounted } = useTheme();
@@ -124,6 +249,14 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
   useEffect(() => subscribeUserBookings(user.uid, setBookings), [user.uid]);
   useEffect(() => subscribeUserReviews(user.uid, (r) => setReviewCount(r.length)), [user.uid]);
   const bookingCount = bookings.length;
+
+  const menuActions: Record<string, () => void> = {
+    'Kamera': () => router.push('/kamera'),
+    'Riwayat Booking': () => setView('riwayat'),
+    'Tersimpan': () => setView('tersimpan'),
+    'Pengaturan': () => setView('pengaturan'),
+    'Bantuan & Dukungan': () => setView('bantuan'),
+  };
 
   const roleCard = role ? roleInfo[role] : undefined;
 
@@ -139,15 +272,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
   if (view === 'riwayat') {
     return (
       <div className="w-full max-w-lg mx-auto animate-fade-in">
-        <button
-          onClick={() => setView('menu')}
-          className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-navy-soft transition-colors hover:text-navy"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-          Kembali
-        </button>
+        <BackButton onClick={() => setView('menu')} />
         <BookingHistory />
       </div>
     );
@@ -156,16 +281,97 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
   if (view === 'tersimpan') {
     return (
       <div className="w-full max-w-lg mx-auto animate-fade-in">
-        <button
-          onClick={() => setView('menu')}
-          className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-navy-soft transition-colors hover:text-navy"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-          Kembali
-        </button>
+        <BackButton onClick={() => setView('menu')} />
         <SavedDestinations />
+      </div>
+    );
+  }
+
+  if (view === 'bantuan') {
+    return (
+      <div className="w-full max-w-lg mx-auto animate-fade-in">
+        <BackButton onClick={() => setView('menu')} />
+
+        <div className="card overflow-hidden">
+          <div className="px-5 py-4 border-b border-shore-200/80">
+            <h2 className="font-serif text-lg font-medium text-navy">Bantuan &amp; Dukungan</h2>
+            <p className="text-2xs text-navy-soft mt-0.5">Pertanyaan yang sering ditanyakan</p>
+          </div>
+
+          {faq.map((section) => (
+            <section key={section.group}>
+              <h3 className="bg-shore-50 px-5 py-2 text-2xs font-semibold uppercase tracking-wide text-navy-soft">
+                {section.group}
+              </h3>
+              <div className="divide-y divide-shore-200/80">
+                {/* <details> = accordion tanpa state & tanpa JS; sudah bisa dibuka
+                    keyboard dan dibaca screen reader apa adanya. */}
+                {section.items.map((item) => (
+                  <details key={item.q} className="group">
+                    <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3.5 text-sm font-medium text-navy transition-colors hover:bg-shore-50 [&::-webkit-details-marker]:hidden">
+                      <span className="flex-1">{item.q}</span>
+                      <span className="shrink-0 text-shore-300 transition-transform duration-short group-open:rotate-90">
+                        <ChevronIcon />
+                      </span>
+                    </summary>
+                    <p className="px-5 pb-4 text-sm leading-relaxed text-navy-soft">{item.a}</p>
+                  </details>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        {/* Kontak — jalan keluar kalau FAQ tidak menjawab. */}
+        <div className="card mt-4 overflow-hidden">
+          <div className="px-5 py-4 border-b border-shore-200/80">
+            <h2 className="font-serif text-lg font-medium text-navy">Masih butuh bantuan?</h2>
+            <p className="text-2xs text-navy-soft mt-0.5">Balasan biasanya dalam 1×24 jam kerja</p>
+          </div>
+
+          <div className="divide-y divide-shore-200/80">
+            <a
+              href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Bantuan Lautara')}`}
+              className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-shore-50"
+            >
+              <div className="h-10 w-10 rounded-md bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
+                <MailIcon />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-navy">Email</p>
+                <p className="text-2xs text-navy-soft mt-0.5 truncate">{SUPPORT_EMAIL}</p>
+              </div>
+              <span className="text-shore-300">
+                <ChevronIcon />
+              </span>
+            </a>
+
+            {waLink(SUPPORT_WA, 'Halo, saya butuh bantuan soal Lautara.') && (
+              <a
+                href={waLink(SUPPORT_WA, 'Halo, saya butuh bantuan soal Lautara.')!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-shore-50"
+              >
+                <div className="h-10 w-10 rounded-md bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
+                  <ChatIcon />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-navy">WhatsApp</p>
+                  <p className="text-2xs text-navy-soft mt-0.5">{SUPPORT_WA}</p>
+                </div>
+                <span className="text-shore-300">
+                  <ChevronIcon />
+                </span>
+              </a>
+            )}
+          </div>
+
+          <p className="border-t border-shore-200/80 px-5 py-3.5 text-2xs leading-relaxed text-navy-soft">
+            Untuk perubahan jadwal atau komplain soal satu destinasi, hubungi langsung
+            pengelolanya lewat tombol WhatsApp di halaman destinasi — biasanya lebih cepat.
+          </p>
+        </div>
       </div>
     );
   }
@@ -173,15 +379,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
   if (view === 'pengaturan') {
     return (
       <div className="w-full max-w-lg mx-auto animate-fade-in">
-        <button
-          onClick={() => setView('menu')}
-          className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-navy-soft transition-colors hover:text-navy"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-          Kembali
-        </button>
+        <BackButton onClick={() => setView('menu')} />
 
         <AccountSettings user={user} />
 
@@ -309,17 +507,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
         {menuItems.map((item) => (
           <button
             key={item.label}
-            onClick={
-              item.label === 'Kamera'
-                ? () => router.push('/kamera')
-                : item.label === 'Riwayat Booking'
-                  ? () => setView('riwayat')
-                  : item.label === 'Tersimpan'
-                    ? () => setView('tersimpan')
-                    : item.label === 'Pengaturan'
-                      ? () => setView('pengaturan')
-                      : undefined
-            }
+            onClick={menuActions[item.label]}
             className={`w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-shore-50 ${
               // Kamera sudah punya tombol sendiri di TopNav desktop.
               item.label === 'Kamera' ? 'flex md:hidden' : 'flex'
