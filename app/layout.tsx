@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree, Cormorant } from "next/font/google";
 import "./globals.css";
+import ChatWidget from "@/components/chat/ChatWidget";
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -56,6 +57,7 @@ export default function RootLayout({
         className={`${figtree.variable} ${cormorant.variable} font-sans antialiased`}
       >
         {children}
+        <ChatWidget />
       </body>
     </html>
   );
