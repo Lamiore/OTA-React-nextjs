@@ -56,6 +56,19 @@
 }
 
 @layer components {
+  /* Brand mark. The logo is applied as a mask rather than an <img> so its
+     colour comes from a token and flips with the theme — an <img> would lock
+     the file's own teal, and `currentColor` inside an external SVG does not
+     inherit across documents. Set height + a text colour at the call site.
+     Ratio is the artwork's own 369.4 x 335.1. */
+  .brand-mark {
+    display: inline-block;
+    aspect-ratio: 369.4 / 335.1;
+    background-color: currentColor;
+    -webkit-mask: url('/logo-mono.svg') center / contain no-repeat;
+    mask: url('/logo-mono.svg') center / contain no-repeat;
+  }
+
   /* Cards are hairline-on-paper, not floating rectangles. Shadow belongs to
      things that genuinely float: sticky nav, modal, sheet, dropdown. */
   .card {

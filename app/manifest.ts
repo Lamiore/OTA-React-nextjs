@@ -23,8 +23,12 @@ export default function manifest(): MetadataRoute.Manifest {
       // ponytail: satu SVG dipakai untuk semua ukuran, bukan set PNG. Kalau
       // prompt "Install" Chrome tidak muncul di perangkat target, ganti dengan
       // PNG 192x192 dan 512x512 — sisa manifest ini tidak berubah.
-      { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-      { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+      //
+      // Namanya bukan /icon.svg: path itu sudah dipakai app/icon.svg (favicon
+      // tab, konvensi App Router), dan file public bernama sama membuat Next
+      // menolak dengan "conflicting public file and page file".
+      { src: '/icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+      { src: '/icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
     ],
   };
 }

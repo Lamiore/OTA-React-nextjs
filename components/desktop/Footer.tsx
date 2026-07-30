@@ -10,7 +10,8 @@ export default function Footer() {
       <div className="h-[3px] border-y border-shore-200" aria-hidden="true" />
       <div className="mx-auto flex max-w-7xl flex-wrap items-baseline gap-x-10 gap-y-4 px-4 py-10 sm:px-6 lg:px-10">
         <div>
-          <p className="font-serif text-lg font-semibold tracking-tight text-navy">
+          <p className="flex items-center gap-2 font-serif text-lg font-semibold tracking-tight text-navy">
+            <span aria-hidden="true" className="brand-mark h-6 shrink-0 text-teal-600" />
             Lautara
           </p>
           <p className="mt-1 text-sm text-navy-soft">

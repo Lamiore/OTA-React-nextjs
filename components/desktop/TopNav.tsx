@@ -38,7 +38,11 @@ export default function TopNav({ compact = false }: { compact?: boolean }) {
         )}
       >
         {/* Logo kiri */}
-        <Link href="/beranda" className="flex items-baseline gap-2">
+        <Link href="/beranda" className="flex items-center gap-2.5">
+          <span
+            aria-hidden="true"
+            className={clsx('brand-mark shrink-0 text-teal-600', compact ? 'h-6' : 'h-7')}
+          />
           <span
             className={clsx(
               'font-serif font-semibold tracking-tight text-navy',
@@ -47,7 +51,7 @@ export default function TopNav({ compact = false }: { compact?: boolean }) {
           >
             Lautara
           </span>
-          <span className="hidden text-2xs uppercase tracking-[0.18em] text-navy-soft lg:inline">
+          <span className="hidden self-end pb-1 text-2xs uppercase tracking-[0.18em] text-navy-soft lg:inline">
             Sulawesi Utara
           </span>
         </Link>

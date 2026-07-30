@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Lautara">
-  <rect width="512" height="512" rx="112" fill="#1B8A8F"/>
-  <g fill="none" stroke="#ffffff" stroke-width="30" stroke-linecap="round">
-    <path d="M136 188c20-24 40-24 60 0c20 24 40 24 60 0c20-24 40-24 60 0c20 24 40 24 60 0"/>
-    <path d="M136 256c20-24 40-24 60 0c20 24 40 24 60 0c20-24 40-24 60 0c20 24 40 24 60 0"/>
-    <path d="M136 324c20-24 40-24 60 0c20 24 40 24 60 0c20-24 40-24 60 0c20 24 40 24 60 0"/>
-  </g>
-</svg>
