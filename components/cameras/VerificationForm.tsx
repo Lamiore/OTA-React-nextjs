@@ -32,6 +32,10 @@ export default function VerificationForm({
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [organization, setOrganization] = useState(initial?.organization ?? '');
   const [destination, setDestination] = useState(initial?.destination ?? '');
+  const [shippingAddress, setShippingAddress] = useState(initial?.shippingAddress ?? '');
+  const [postalCode, setPostalCode] = useState(initial?.postalCode ?? '');
+  const [recipientName, setRecipientName] = useState(initial?.recipientName ?? '');
+  const [recipientPhone, setRecipientPhone] = useState(initial?.recipientPhone ?? '');
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -53,6 +57,8 @@ export default function VerificationForm({
       organization,
       requestedRole,
       destination,
+      shippingAddress,
+      postalCode,
       agreed,
     });
     if (invalid) {
@@ -70,7 +76,13 @@ export default function VerificationForm({
         // agreedAt tidak dikirim dari sini — submitRoleRequest yang
         // menstempelnya dengan serverTimestamp() begitu agreementVersion ada.
         agreementVersion: agreement.version,
-        ...(isPengelola && { destination }),
+        ...(isPengelola && {
+          destination,
+          shippingAddress: shippingAddress.trim(),
+          postalCode: postalCode.trim(),
+          recipientName: recipientName.trim(),
+          recipientPhone: recipientPhone.trim(),
+        }),
       });
       // Tidak reset/pindah view di sini: CameraSection berpindah ke kartu
       // status pending begitu onSnapshot dokumen user menerima perubahan.
@@ -140,6 +152,68 @@ export default function VerificationForm({
           </div>
         )}
 
+        {isPengelola && (
+          <div className="rounded-md border border-shore-200 bg-shore-50/60 p-4 space-y-4">
+            <div>
+              <h3 className="text-xs font-medium text-navy">Pengiriman Paket Sensor</h3>
+              <p className="text-2xs text-navy-soft mt-1 leading-relaxed">
+                Paket sensor dikirim ke alamatmu, tidak dipasang di tempat oleh
+                petugas. Panduan pemasangan dan koordinasi jadwal dilakukan lewat
+                WhatsApp ke nomor di atas.
+              </p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-navy mb-1.5">Alamat Pengiriman</label>
+              <textarea aria-label="Alamat Pengiriman"
+                value={shippingAddress}
+                onChange={(e) => setShippingAddress(e.target.value)}
+                rows={3}
+                placeholder="Jalan & no., RT/RW, kelurahan, kecamatan, kota/kabupaten, provinsi — sebutkan juga patokan terdekat"
+                className={`${inputClass} resize-y`}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-navy mb-1.5">Kode Pos</label>
+              <input aria-label="Kode Pos"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                inputMode="numeric"
+                maxLength={5}
+                placeholder="95371"
+                className={inputClass}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-navy mb-1.5">
+                  Nama Penerima <span className="font-normal text-navy-soft">(opsional)</span>
+                </label>
+                <input aria-label="Nama Penerima"
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                  placeholder={fullName.trim() || 'Sama dengan pendaftar'}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-navy mb-1.5">
+                  No. HP Penerima <span className="font-normal text-navy-soft">(opsional)</span>
+                </label>
+                <input aria-label="No. HP Penerima"
+                  value={recipientPhone}
+                  onChange={(e) => setRecipientPhone(e.target.value)}
+                  inputMode="tel"
+                  placeholder={phone.trim() || 'Sama dengan pendaftar'}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <p className="text-2xs text-navy-soft leading-relaxed">
+              Kosongkan kolom penerima kalau kamu sendiri yang menerima paketnya.
+            </p>
+          </div>
+        )}
+
         <label className="flex cursor-pointer items-start gap-3">
           <input
             type="checkbox"
@@ -158,8 +232,8 @@ export default function VerificationForm({
               {agreement.label}
             </a>
             {isPengelola
-              ? ', termasuk kewajiban membeli paket sensor dari Lautara dan pembayaran pengunjung yang diterima langsung oleh pengelola.'
-              : ', termasuk kewajiban membeli kamera dari Lautara dan pemasangannya oleh petugas Lautara.'}
+              ? ', termasuk kewajiban membeli paket sensor dari Nusa dan pembayaran pengunjung yang diterima langsung oleh pengelola.'
+              : ', termasuk kewajiban membeli kamera dari Nusa dan pemasangannya oleh petugas Nusa.'}
           </span>
         </label>
 

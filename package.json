@@ -1,5 +1,5 @@
 {
-  "name": "ota-lautara",
+  "name": "ota-nusa",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "tunnel": "lt --port 3000 --subdomain lautara-ota"
+    "tunnel": "lt --port 3000 --subdomain nusa-ota"
   },
   "dependencies": {
     "clsx": "^2.1.1",

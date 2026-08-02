@@ -7,6 +7,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthState } from '@/lib/useAuth';
 import { updateBookingStatus, type Booking as BookingType } from '@/lib/firestore';
+import { useLang } from '@/lib/useLang';
 import TicketModal from '@/components/booking/TicketModal';
 import clsx from 'clsx';
 
@@ -36,6 +37,7 @@ interface BookingHistoryProps {
 export default function BookingHistory({ variant = 'all' }: BookingHistoryProps) {
   const router = useRouter();
   const { user } = useAuthState();
+  const { t, locale } = useLang();
 
   const [bookings, setBookings] = useState<BookingType[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
@@ -98,13 +100,16 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                   <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                 </svg>
               </div>
-              <h2 className="font-serif text-lg font-medium text-navy text-center">Batalkan Booking?</h2>
+              <h2 className="font-serif text-lg font-medium text-navy text-center">{t('history.cancelTitle')}</h2>
               <p className="text-sm text-navy-soft text-center mt-2">
-                Booking untuk <span className="font-medium text-navy">{cancellingBooking.destinationName}</span> pada{' '}
-                <span className="font-medium text-navy">
-                  {new Date(cancellingBooking.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </span>{' '}
-                akan dibatalkan dan tidak bisa dikembalikan.
+                {t('history.cancelBody', {
+                  dest: cancellingBooking.destinationName,
+                  date: new Date(cancellingBooking.date).toLocaleDateString(locale, {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  }),
+                })}
               </p>
               <div className="flex gap-3 mt-6">
                 <button
@@ -112,14 +117,14 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                   disabled={cancelling}
                   className="btn-ghost flex-1 px-4 py-2.5 text-sm"
                 >
-                  Kembali
+                  {t('common.back')}
                 </button>
                 <button
                   onClick={handleCancel}
                   disabled={cancelling}
                   className="flex-1 rounded-md px-4 py-2.5 text-sm font-medium bg-danger text-white hover:bg-danger transition-colors disabled:opacity-50 inline-flex items-center justify-center"
                 >
-                  {cancelling ? 'Membatalkan...' : 'Ya, Batalkan'}
+                  {cancelling ? t('history.cancelling') : t('history.cancelConfirm')}
                 </button>
               </div>
             </div>
@@ -129,12 +134,10 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
       )}
 
       <h1 className="font-serif text-2xl font-medium text-navy sm:text-3xl">
-        {variant === 'active' ? 'Booking Berlangsung' : 'Riwayat Booking'}
+        {t(variant === 'active' ? 'history.activeTitle' : 'history.title')}
       </h1>
       <p className="mt-2 text-sm text-navy-soft">
-        {variant === 'active'
-          ? 'Tiket yang sudah dikonfirmasi dan belum dipakai'
-          : 'Daftar booking yang pernah kamu buat'}
+        {t(variant === 'active' ? 'history.activeLede' : 'history.allLede')}
       </p>
 
       <div className="mt-6 space-y-3">
@@ -143,9 +146,9 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
             <div className="h-12 w-12 rounded-md bg-shore-100 flex items-center justify-center mx-auto mb-3 text-navy-soft">
               <CalendarIcon />
             </div>
-            <p className="text-sm text-navy-soft">Masuk untuk melihat riwayat booking kamu.</p>
+            <p className="text-sm text-navy-soft">{t('history.signInPrompt')}</p>
             <button onClick={() => router.push('/profile')} className="btn-primary px-5 py-2.5 text-sm mt-4">
-              Masuk
+              {t('nav.login')}
             </button>
           </div>
         ) : loadingBookings ? (
@@ -161,10 +164,10 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
               <CalendarIcon />
             </div>
             <p className="text-sm text-navy-soft">
-              {variant === 'active' ? 'Belum ada booking yang berlangsung.' : 'Belum ada booking.'}
+              {t(variant === 'active' ? 'history.emptyActive' : 'history.empty')}
             </p>
             <button onClick={() => router.push('/beranda#destinasi')} className="btn-primary px-5 py-2.5 text-sm mt-4">
-              Buat Booking
+              {t('history.makeBooking')}
             </button>
           </div>
         ) : (
@@ -181,8 +184,8 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                     <div className="min-w-0">
                       <p className="text-base font-medium text-navy capitalize">{b.destinationName}</p>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-navy-soft">
-                        <span>{new Date(b.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                        <span>{b.guests} orang</span>
+                        <span>{new Date(b.date).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                        <span>{b.guests} {t('common.people')}</span>
                         <span>{b.phone}</span>
                       </div>
                       {b.notes && (
@@ -196,7 +199,15 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                       !used && !cancelled && past && 'bg-shore-100 text-navy-soft',
                       !used && !cancelled && !past && 'bg-teal-100 text-teal-700',
                     )}>
-                      {used ? 'Sudah Digunakan' : cancelled ? 'Dibatalkan' : past ? 'Selesai' : 'Dikonfirmasi'}
+                      {t(
+                        used
+                          ? 'history.statusUsed'
+                          : cancelled
+                            ? 'status.cancelled'
+                            : past
+                              ? 'history.statusDone'
+                              : 'status.confirmed'
+                      )}
                     </span>
                   </div>
 
@@ -212,13 +223,13 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                           <path d="M13 17v2" />
                           <path d="M13 11v2" />
                         </svg>
-                        Lihat Tiket
+                        {t('history.viewTicket')}
                       </button>
                       <button
                         onClick={() => setCancellingBooking(b)}
                         className="btn-ghost flex-1 px-4 py-2 text-xs hover:border-danger-rule hover:text-danger"
                       >
-                        Batalkan
+                        {t('history.cancelShort')}
                       </button>
                     </div>
                   )}

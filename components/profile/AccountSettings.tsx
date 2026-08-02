@@ -13,6 +13,7 @@ import {
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { updateUserPhone } from '@/lib/firestore';
+import { useLang } from '@/lib/useLang';
 
 function GoogleIcon() {
   return (
@@ -58,6 +59,7 @@ function fbMessage(code: string) {
 }
 
 export default function AccountSettings({ user }: { user: User }) {
+  const { t } = useLang();
   const providers = user.providerData.map((p) => p.providerId);
   const hasPassword = providers.includes('password');
   const [googleLinked, setGoogleLinked] = useState(providers.includes('google.com'));
@@ -166,28 +168,28 @@ export default function AccountSettings({ user }: { user: User }) {
   return (
     <div className="card overflow-hidden mb-4">
       <div className="px-5 py-4 border-b border-shore-200/80">
-        <h2 className="font-serif text-lg font-medium text-navy">Pengaturan Akun</h2>
-        <p className="text-2xs text-navy-soft mt-0.5">Kelola data akun & keamanan</p>
+        <h2 className="font-serif text-lg font-medium text-navy">{t('account.title')}</h2>
+        <p className="text-2xs text-navy-soft mt-0.5">{t('account.subtitle')}</p>
       </div>
 
       {/* Profil */}
       <form onSubmit={saveProfile} className="px-5 py-4">
-        <p className="mb-3 text-sm font-semibold text-navy">Profil</p>
+        <p className="mb-3 text-sm font-semibold text-navy">{t('account.profile')}</p>
         <div className="space-y-3">
           <div>
             <label className="block text-xs font-medium text-navy mb-1.5">Nama</label>
-            <input aria-label="Nama" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="Nama lengkap" />
+            <input aria-label={t('account.name')} value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder={t('auth.fullNamePlaceholder')} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-navy mb-1.5">Nomor Telepon</label>
-            <input aria-label="Nomor Telepon"
+            <label className="block text-xs font-medium text-navy mb-1.5">{t('account.phone')}</label>
+            <input aria-label={t('account.phone')}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className={inputClass}
-              placeholder="cth: 0812-3456-7890"
+              placeholder={t('account.phonePlaceholder')}
               inputMode="tel"
             />
-            <p className="text-2xs text-navy-soft mt-1.5">Dipakai admin untuk menghubungi kamu (mis. via WhatsApp).</p>
+            <p className="text-2xs text-navy-soft mt-1.5">{t('account.phoneHint')}</p>
           </div>
         </div>
         {banner(profileMsg)}
@@ -199,11 +201,11 @@ export default function AccountSettings({ user }: { user: User }) {
       {/* Hubungkan Google — hanya kalau belum terhubung */}
       {!googleLinked && (
         <div className="px-5 py-4 border-t border-shore-200/80">
-          <p className="mb-3 text-sm font-semibold text-navy">Akun Tertaut</p>
+          <p className="mb-3 text-sm font-semibold text-navy">{t('account.linked')}</p>
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-navy">Hubungkan Google</p>
-              <p className="text-2xs text-navy-soft mt-0.5">Biar lain kali bisa masuk tanpa password.</p>
+              <p className="text-sm font-medium text-navy">{t('account.linkGoogle')}</p>
+              <p className="text-2xs text-navy-soft mt-0.5">{t('account.linkGoogleHint')}</p>
             </div>
             <button
               onClick={linkGoogle}
@@ -220,10 +222,10 @@ export default function AccountSettings({ user }: { user: User }) {
 
       {googleLinked && (
         <div className="px-5 py-4 border-t border-shore-200/80">
-          <p className="mb-3 text-sm font-semibold text-navy">Akun Tertaut</p>
+          <p className="mb-3 text-sm font-semibold text-navy">{t('account.linked')}</p>
           <div className="flex items-center gap-3">
             <GoogleIcon />
-            <p className="text-sm font-medium text-navy">Google terhubung</p>
+            <p className="text-sm font-medium text-navy">{t('account.googleLinked')}</p>
             <span className="ml-auto text-teal-500"><CheckIcon /></span>
           </div>
         </div>
@@ -232,14 +234,14 @@ export default function AccountSettings({ user }: { user: User }) {
       {/* Ubah password — hanya untuk akun email/password */}
       {hasPassword && (
         <form onSubmit={changePassword} className="px-5 py-4 border-t border-shore-200/80">
-          <p className="mb-3 text-sm font-semibold text-navy">Ubah Password</p>
+          <p className="mb-3 text-sm font-semibold text-navy">{t('account.changePassword')}</p>
           <div className="space-y-3">
             <input
               type="password"
               value={curPw}
               onChange={(e) => setCurPw(e.target.value)}
               className={inputClass}
-              placeholder="Password sekarang"
+              placeholder={t('account.currentPassword')}
               autoComplete="current-password"
               required
             />
@@ -248,7 +250,7 @@ export default function AccountSettings({ user }: { user: User }) {
               value={newPw}
               onChange={(e) => setNewPw(e.target.value)}
               className={inputClass}
-              placeholder="Password baru (min. 6 karakter)"
+              placeholder={t('account.newPassword')}
               autoComplete="new-password"
               required
             />
@@ -257,7 +259,7 @@ export default function AccountSettings({ user }: { user: User }) {
               value={confirmPw}
               onChange={(e) => setConfirmPw(e.target.value)}
               className={inputClass}
-              placeholder="Konfirmasi password baru"
+              placeholder={t('account.confirmPassword')}
               autoComplete="new-password"
               required
             />

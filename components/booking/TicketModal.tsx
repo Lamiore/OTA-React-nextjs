@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Booking } from '@/lib/firestore';
+import { useLang } from '@/lib/useLang';
 
 /** Kode tiket yang ditampilkan ke user, diturunkan dari ID booking. */
 function ticketCode(id: string) {
@@ -40,10 +41,11 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
   // Portal ke <body> agar lepas dari ancestor ber-transform (mis. wrapper .animate-fade-in
   // yang menyisakan transform: scale(1) karena fill-mode 'both'), yang kalau tidak membuat
   // position:fixed jadi relatif ke wrapper, bukan viewport — modal melenceng & ketutup nav.
+  const { t, locale } = useLang();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const dateLabel = new Date(booking.date).toLocaleDateString('id-ID', {
+  const dateLabel = new Date(booking.date).toLocaleDateString(locale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -63,7 +65,7 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
         <div className="relative w-full max-w-sm animate-fade-up" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onClose}
-          aria-label="Tutup tiket"
+          aria-label={t('ticket.closeLabel')}
           className="absolute -top-3 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-surface text-navy-soft shadow-md ring-1 ring-shore-200 hover:text-navy transition-colors"
         >
           <CloseIcon />
@@ -74,10 +76,10 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
           <div className="p-6">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-teal-600">
-                OTA · Tiket Wisata
+                {t('ticket.brand')}
               </span>
               <span className="rounded-sm bg-teal-100 px-2.5 py-1 text-2xs font-medium text-teal-700">
-                Dikonfirmasi
+                {t('status.confirmed')}
               </span>
             </div>
 
@@ -87,10 +89,10 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
             <p className="mt-1 text-xs text-navy-soft">{dateLabel}</p>
 
             <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4">
-              <Detail label="Pemesan" value={booking.name} />
-              <Detail label="Jumlah" value={`${booking.guests} orang`} />
-              <Detail label="Telepon" value={booking.phone} />
-              <Detail label="Kode Tiket" value={ticketCode(booking.id)} />
+              <Detail label={t('ticket.holder')} value={booking.name} />
+              <Detail label={t('ticket.guests')} value={`${booking.guests} ${t('common.people')}`} />
+              <Detail label={t('ticket.phone')} value={booking.phone} />
+              <Detail label={t('ticket.code')} value={ticketCode(booking.id)} />
             </div>
           </div>
 
@@ -111,7 +113,7 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
               {ticketCode(booking.id)}
             </p>
             <p className="text-center text-xs text-navy-soft">
-              Tunjukkan QR ini kepada petugas saat check-in.
+              {t('ticket.showQr')}
             </p>
           </div>
         </div>

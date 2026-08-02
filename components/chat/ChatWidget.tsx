@@ -9,7 +9,7 @@ interface Message {
 }
 
 const SAPAAN =
-  'Halo! Aku asisten Lautara. Tanya apa saja soal destinasi selam, harga, atau cara booking.';
+  'Halo! Aku asisten Nusa. Tanya apa saja soal destinasi selam, harga, atau cara booking.';
 
 const SARAN = [
   'Rekomendasi spot buat pemula',
@@ -114,7 +114,7 @@ export default function ChatWidget() {
       {/* Mobile duduk di atas BottomNav (fixed bottom-3, tinggi ~68px). */}
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label={open ? 'Tutup asisten' : 'Buka asisten Lautara'}
+        aria-label={open ? 'Tutup asisten' : 'Buka asisten Nusa'}
         aria-expanded={open}
         className={clsx(
           'fixed right-4 bottom-28 z-[150] flex h-14 w-14 items-center justify-center',
@@ -129,7 +129,7 @@ export default function ChatWidget() {
       {open && (
         <div
           role="dialog"
-          aria-label="Asisten Lautara"
+          aria-label="Asisten Nusa"
           className={clsx(
             'fixed z-[150] flex flex-col overflow-hidden rounded-md bg-surface shadow-overlay',
             'ring-1 ring-shore-200 animate-fade-up',
@@ -143,7 +143,7 @@ export default function ChatWidget() {
               <ChatIcon />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-navy">Asisten Lautara</p>
+              <p className="text-sm font-semibold text-navy">Asisten Nusa</p>
               <p className="text-2xs text-navy-soft">Biasanya balas dalam hitungan detik</p>
             </div>
           </header>

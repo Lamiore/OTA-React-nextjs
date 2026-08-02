@@ -10,6 +10,7 @@ import {
   sendPasswordResetEmail,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
+import { useLang } from '@/lib/useLang';
 import { requestVerificationEmail } from '@/lib/sendVerification';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -81,6 +82,7 @@ function LoadingSpinner() {
 }
 
 export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
+  const { t } = useLang();
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
 
   useEffect(() => {
@@ -207,7 +209,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
         <p className="mt-2 text-sm text-navy-soft">
           {isLogin
             ? 'Masuk untuk melanjutkan petualangan'
-            : 'Mulai jelajahi destinasi indah di Sulawesi'}
+            : 'Mulai jelajahi destinasi indah di berbagai wilayah'}
         </p>
       </div>
 
@@ -238,11 +240,11 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
             </label>
             <div className="flex items-center gap-3 rounded-md border border-shore-200 bg-surface px-3.5 py-3 transition-colors duration-micro focus-within:border-teal-400 focus-within:">
               <span className="text-navy-soft"><UserIcon /></span>
-              <input aria-label="Nama Lengkap"
+              <input aria-label={t('auth.fullName')}
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Masukkan nama lengkap"
+                placeholder={t('auth.fullNamePlaceholder')}
                 className="flex-1 bg-transparent text-sm text-navy placeholder:text-navy-soft outline-none"
               />
             </div>
@@ -256,7 +258,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
           </label>
           <div className="flex items-center gap-3 rounded-md border border-shore-200 bg-surface px-3.5 py-3 transition-colors duration-micro focus-within:border-teal-400 focus-within:">
             <span className="text-navy-soft"><MailIcon /></span>
-            <input aria-label="Email"
+            <input aria-label={t('auth.email')}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -274,7 +276,7 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
           </label>
           <div className="flex items-center gap-3 rounded-md border border-shore-200 bg-surface px-3.5 py-3 transition-colors duration-micro focus-within:border-teal-400 focus-within:">
             <span className="text-navy-soft"><LockIcon /></span>
-            <input aria-label="Password"
+            <input aria-label={t('auth.password')}
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}

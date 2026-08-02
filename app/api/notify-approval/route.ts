@@ -6,14 +6,14 @@ export const runtime = 'nodejs';
 
 const COPY = {
   mitra: {
-    subject: 'Pengajuan mitra disetujui — Lautara',
+    subject: 'Pengajuan mitra disetujui — Nusa',
     title: 'Akun kamu sekarang Mitra',
     body: 'Pengajuan verifikasi mitra kamu sudah disetujui admin. Kamu bisa mendaftarkan dan memantau kamera milikmu lewat menu Kamera.',
     cta: 'Buka Halaman Kamera',
     path: '/kamera',
   },
   pengelola: {
-    subject: 'Pengajuan pengelola disetujui — Lautara',
+    subject: 'Pengajuan pengelola disetujui — Nusa',
     title: 'Akun kamu sekarang Pengelola',
     body: 'Pengajuan jadi pengelola sudah disetujui admin. Menu Dashboard sekarang terbuka untuk mengelola destinasi, booking, dan kamera di wilayahmu. Penetapan destinasi dilakukan admin.',
     cta: 'Buka Dashboard',
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
       from: MAIL_FROM,
       to: target.email,
       subject: c.subject,
-      text: `Halo${target.displayName ? ' ' + target.displayName : ''},\n\n${c.body}\n\n${link}\n\n— Lautara`,
+      text: `Halo${target.displayName ? ' ' + target.displayName : ''},\n\n${c.body}\n\n${link}\n\n— Nusa`,
       html: `
         <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#0f2f3d">
           <h2 style="font-weight:600">${c.title}</h2>

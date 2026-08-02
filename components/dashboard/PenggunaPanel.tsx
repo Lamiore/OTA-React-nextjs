@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   approveRoleRequest,
+  deleteUserAccount,
   rejectRoleRequest,
   requestedRole,
   subscribeUsers,
@@ -10,7 +11,8 @@ import {
   type AppUser,
 } from '@/lib/firestore';
 import { notifyApproval } from '@/lib/sendVerification';
-import { formatTimestamp } from '@/lib/format';
+import { formatTimestamp, waLink } from '@/lib/format';
+import { packageRecipient } from '@/lib/verification';
 
 const roleColors: Record<AppUser['role'], string> = {
   user: 'bg-shore-100 text-navy-soft',
@@ -24,6 +26,9 @@ export default function PenggunaPanel() {
   const [updatingUid, setUpdatingUid] = useState<string | null>(null);
   const [reviewingUid, setReviewingUid] = useState<string | null>(null);
   const [mailWarn, setMailWarn] = useState<string | null>(null);
+  // Hapus butuh klik dua kali: klik pertama menandai baris, klik kedua eksekusi.
+  const [confirmUid, setConfirmUid] = useState<string | null>(null);
+  const [deletingUid, setDeletingUid] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = subscribeUsers(setUsers);
@@ -34,6 +39,23 @@ export default function PenggunaPanel() {
     setUpdatingUid(uid);
     await updateUserRole(uid, role);
     setUpdatingUid(null);
+  };
+
+  const handleDelete = async (u: AppUser) => {
+    if (confirmUid !== u.uid) {
+      setConfirmUid(u.uid);
+      return;
+    }
+    setDeletingUid(u.uid);
+    setMailWarn(null);
+    try {
+      await deleteUserAccount(u.uid);
+    } catch {
+      setMailWarn(`Gagal menghapus ${u.name || u.email}. Coba lagi.`);
+    } finally {
+      setDeletingUid(null);
+      setConfirmUid(null);
+    }
   };
 
   const handleReview = async (u: AppUser, approve: boolean) => {
@@ -110,6 +132,20 @@ export default function PenggunaPanel() {
                 <option value="pengelola">Pengelola</option>
                 <option value="admin">Admin</option>
               </select>
+
+              {/* Hapus akun — Auth + dokumen Firestore sekaligus */}
+              <button
+                onClick={() => handleDelete(u)}
+                onBlur={() => confirmUid === u.uid && setConfirmUid(null)}
+                disabled={deletingUid === u.uid}
+                className={`shrink-0 rounded-sm px-3 py-1.5 text-xs font-medium border transition-colors disabled:opacity-50 ${
+                  confirmUid === u.uid
+                    ? 'border-danger-rule bg-danger-soft text-danger'
+                    : 'border-shore-200 text-navy-soft hover:border-danger-rule hover:text-danger'
+                }`}
+              >
+                {confirmUid === u.uid ? 'Yakin hapus?' : 'Hapus'}
+              </button>
             </div>
 
             {/* Pengajuan naik role (mitra dari halaman Kamera, pengelola dari Pengaturan) */}
@@ -137,6 +173,39 @@ export default function PenggunaPanel() {
                     </p>
                   )}
                 </div>
+                {u.verification.shippingAddress && (
+                  <div className="mt-3 rounded-md border border-shore-200 bg-surface p-3">
+                    <p className="text-2xs font-medium text-navy">Kirim paket sensor ke</p>
+                    <p className="text-sm text-navy mt-1 leading-relaxed">
+                      {u.verification.shippingAddress}
+                      {u.verification.postalCode && ` ${u.verification.postalCode}`}
+                    </p>
+                    {(() => {
+                      const to = packageRecipient(u.verification!);
+                      const wa = waLink(
+                        to.phone,
+                        `Halo ${to.name}, paket sensor Nusa untuk ${u.verification!.destination ?? 'destinasi'} siap dikirim.`
+                      );
+                      return (
+                        <p className="text-2xs text-navy-soft mt-2">
+                          a/n {to.name} ·{' '}
+                          {wa ? (
+                            <a
+                              href={wa}
+                              target="_blank"
+                              rel="noopener"
+                              className="font-medium text-teal-700 underline underline-offset-2"
+                            >
+                              {to.phone}
+                            </a>
+                          ) : (
+                            to.phone
+                          )}
+                        </p>
+                      );
+                    })()}
+                  </div>
+                )}
                 <div className="flex gap-2 mt-4">
                   <button
                     onClick={() => handleReview(u, true)}

@@ -6,6 +6,7 @@ import type { User } from 'firebase/auth';
 import { db } from '@/lib/firebase';
 import type { UserRole } from '@/lib/useAuth';
 import { requestedRole, type MitraVerification } from '@/lib/firestore';
+import { packageRecipient } from '@/lib/verification';
 import VerificationForm from '@/components/cameras/VerificationForm';
 
 /**
@@ -94,6 +95,23 @@ export default function PengelolaRequest({
             <p><span className="text-navy-soft">Destinasi:</span> {verification!.destination}</p>
           )}
         </div>
+        {verification!.shippingAddress && (
+          <div className="mt-4 rounded-md border border-shore-200 bg-shore-50/60 p-4">
+            <h3 className="text-xs font-medium text-navy">Paket sensor dikirim ke</h3>
+            <p className="text-sm text-navy mt-1.5 leading-relaxed">
+              {verification!.shippingAddress}
+              {verification!.postalCode && ` ${verification!.postalCode}`}
+            </p>
+            <p className="text-2xs text-navy-soft mt-2">
+              a/n {packageRecipient(verification!).name} ·{' '}
+              {packageRecipient(verification!).phone}
+            </p>
+            <p className="text-2xs text-navy-soft mt-2 leading-relaxed">
+              Alamat salah? Ajukan ulang setelah pengajuan ini selesai ditinjau,
+              atau hubungi admin lewat WhatsApp.
+            </p>
+          </div>
+        )}
       </>
     );
   }

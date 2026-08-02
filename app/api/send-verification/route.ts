@@ -41,12 +41,12 @@ export async function POST(req: Request) {
     await mailer().sendMail({
       from: MAIL_FROM,
       to: email,
-      subject: 'Verifikasi email — Lautara',
-      text: `Halo,\n\nKlik link berikut untuk memverifikasi email kamu di Lautara:\n${link}\n\nAbaikan email ini kalau kamu tidak mendaftar.`,
+      subject: 'Verifikasi email — Nusa',
+      text: `Halo,\n\nKlik link berikut untuk memverifikasi email kamu di Nusa:\n${link}\n\nAbaikan email ini kalau kamu tidak mendaftar.`,
       html: `
         <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#0f2f3d">
           <h2 style="font-weight:600">Verifikasi email kamu</h2>
-          <p style="color:#3f5a66;line-height:1.6">Klik tombol di bawah untuk mengaktifkan akun Lautara kamu.</p>
+          <p style="color:#3f5a66;line-height:1.6">Klik tombol di bawah untuk mengaktifkan akun Nusa kamu.</p>
           <p style="margin:28px 0">
             <a href="${link}" style="background:#0d9488;color:#fff;text-decoration:none;padding:12px 24px;border-radius:9999px;font-weight:600;display:inline-block">Verifikasi Email</a>
           </p>

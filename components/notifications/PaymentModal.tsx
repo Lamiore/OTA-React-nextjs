@@ -3,11 +3,12 @@ import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { payBooking, type Booking } from '@/lib/firestore';
 import { formatIDR } from '@/lib/format';
+import { useLang } from '@/lib/useLang';
 
 const METHODS = [
-  { id: 'transfer', label: 'Transfer Bank', desc: 'BCA / Mandiri / BNI' },
-  { id: 'ewallet', label: 'E-wallet', desc: 'GoPay / OVO / DANA' },
-  { id: 'cash', label: 'Tunai di lokasi', desc: 'Bayar langsung ke petugas' },
+  { id: 'transfer', labelKey: 'payment.transfer', descKey: 'payment.transferDesc' },
+  { id: 'ewallet', labelKey: 'payment.ewallet', descKey: 'payment.ewalletDesc' },
+  { id: 'cash', labelKey: 'payment.cash', descKey: 'payment.cashDesc' },
 ];
 
 function CloseIcon() {
@@ -25,6 +26,7 @@ interface PaymentModalProps {
 }
 
 export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
+  const { t } = useLang();
   const [mounted, setMounted] = useState(false);
   const [method, setMethod] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
@@ -41,7 +43,7 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
       await payBooking(booking.id, method);
       setPaid(true);
     } catch {
-      setError('Gagal memproses pembayaran. Coba lagi.');
+      setError(t('payment.failed'));
     } finally {
       setPaying(false);
     }
@@ -58,7 +60,7 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
         <div className="relative w-full max-w-sm animate-fade-up" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={onClose}
-            aria-label="Tutup"
+            aria-label={t('common.close')}
             className="absolute -top-3 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-surface text-navy-soft shadow-md ring-1 ring-shore-200 hover:text-navy transition-colors"
           >
             <CloseIcon />
@@ -72,18 +74,18 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
                     <path d="M20 6 9 17l-5-5" />
                   </svg>
                 </div>
-                <h2 className="font-serif text-xl font-medium text-navy">Pembayaran Berhasil</h2>
+                <h2 className="font-serif text-xl font-medium text-navy">{t('payment.paid')}</h2>
                 <p className="mt-2 text-sm text-navy-soft">
-                  Terima kasih. Pembayaran untuk {booking.destinationName} sudah tercatat.
+                  {t('payment.thanks', { dest: booking.destinationName })}
                 </p>
                 <button onClick={onClose} className="btn-primary mt-5 w-full px-4 py-2.5 text-sm">
-                  Selesai
+                  {t('payment.done')}
                 </button>
               </div>
             ) : (
               <>
                 <span className="text-xs font-semibold text-teal-600">
-                  Pembayaran
+                  {t('payment.title')}
                 </span>
                 <h2 className="mt-2 font-serif text-xl font-medium text-navy">{booking.destinationName}</h2>
 
@@ -99,12 +101,12 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
                 )}
 
                 <div className="mt-3 flex items-center justify-between rounded-md bg-shore-50 px-4 py-3">
-                  <span className="text-sm text-navy-soft">Total</span>
+                  <span className="text-sm text-navy-soft">{t('booking.total')}</span>
                   <span className="text-lg font-semibold text-navy">{formatIDR(booking.amount ?? 0)}</span>
                 </div>
 
                 <p className="mt-5 text-sm font-semibold text-navy">
-                  Metode Pembayaran
+                  {t('payment.method')}
                 </p>
                 <div className="mt-2 space-y-2">
                   {METHODS.map((m) => (
@@ -116,8 +118,8 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
                         method === m.id ? 'border-teal-400 bg-teal-50/60' : 'border-shore-200 hover:border-shore-300',
                       )}
                     >
-                      <p className="text-sm font-medium text-navy">{m.label}</p>
-                      <p className="text-2xs text-navy-soft">{m.desc}</p>
+                      <p className="text-sm font-medium text-navy">{t(m.labelKey)}</p>
+                      <p className="text-2xs text-navy-soft">{t(m.descKey)}</p>
                     </button>
                   ))}
                 </div>
@@ -133,7 +135,7 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
                   disabled={!method || paying}
                   className="btn-primary mt-5 w-full px-4 py-2.5 text-sm disabled:opacity-50"
                 >
-                  {paying ? 'Memproses…' : 'Konfirmasi Pembayaran'}
+                  {paying ? t('payment.paying') : t('payment.confirm')}
                 </button>
               </>
             )}

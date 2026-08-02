@@ -9,7 +9,7 @@
  *
  * Naikkan CACHE saat perilakunya berubah; versi lama dibuang saat activate.
  */
-const CACHE = 'lautara-v1';
+const CACHE = 'nusa-v1';
 
 self.addEventListener('install', () => {
   self.skipWaiting();

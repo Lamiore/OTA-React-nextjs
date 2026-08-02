@@ -262,7 +262,7 @@ export default function CameraManager({ user }: { user: User }) {
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Misal: Kamera Dermaga Bunaken"
+              placeholder="Misal: Kamera Dermaga Utama"
               className={inputClass}
             />
           </div>

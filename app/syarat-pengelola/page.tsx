@@ -5,9 +5,9 @@ import BottomNav from '@/components/mobile/BottomNav';
 import { AGREEMENT } from '@/lib/verification';
 
 export const metadata: Metadata = {
-  title: 'Perjanjian Pengelola — Lautara',
+  title: 'Perjanjian Pengelola — Nusa',
   description:
-    'Hak, kewajiban, dan ketentuan paket pemantauan bagi pengelola destinasi Lautara.',
+    'Hak, kewajiban, dan ketentuan paket pemantauan bagi pengelola destinasi Nusa.',
 };
 
 /** Tanggal berlaku v1.0. Ditulis di sini karena hanya dipakai di halaman ini. */
@@ -17,7 +17,7 @@ const PASAL: { judul: string; ayat: string[] }[] = [
   {
     judul: '1. Ruang Lingkup',
     ayat: [
-      'Perjanjian ini mengatur hubungan antara Lautara ("Platform") dan pengguna yang disetujui menjadi pengelola destinasi ("Pengelola").',
+      'Perjanjian ini mengatur hubungan antara Nusa ("Platform") dan pengguna yang disetujui menjadi pengelola destinasi ("Pengelola").',
       'Destinasi yang dikelola ditetapkan oleh admin Platform. Pilihan destinasi pada formulir pengajuan bersifat usulan, bukan penetapan.',
       'Perjanjian ini bukan perjanjian kerja. Pengelola bukan karyawan Platform, tidak menerima upah, dan tidak memperoleh hak ketenagakerjaan dari Platform.',
     ],
@@ -44,7 +44,7 @@ const PASAL: { judul: string; ayat: string[] }[] = [
     judul: '4. Paket Pemantauan IoT',
     ayat: [
       'Destinasi yang dikelola wajib dilengkapi paket sensor pemantauan. Ini satu-satunya perangkat yang diwajibkan bagi Pengelola.',
-      'Paket sensor dibeli dari Platform dan dipasang oleh petugas Platform. Perangkat sejenis yang dibeli atau dipasang sendiri tidak dihubungkan ke sistem Lautara.',
+      'Paket sensor dibeli dari Platform dan dipasang oleh petugas Platform. Perangkat sejenis yang dibeli atau dipasang sendiri tidak dihubungkan ke sistem Nusa.',
       'Setelah pembayaran lunas, paket sensor sepenuhnya menjadi hak milik Pengelola.',
       'Pembelian dan pemasangan baru dikoordinasikan setelah pengajuan menjadi Pengelola disetujui admin. Tidak ada pembayaran apa pun yang diminta sebelum pengajuan diterima.',
       'Rincian isi paket dan harganya disampaikan terpisah sebelum pembelian, mengacu pada daftar yang berlaku saat itu. Pengelola berhak membatalkan pembelian sebelum pembayaran dilakukan; dalam hal itu status Pengelola tidak dapat diaktifkan karena ayat 1 tidak terpenuhi.',
@@ -59,7 +59,7 @@ const PASAL: { judul: string; ayat: string[] }[] = [
     judul: '5. Kamera Pemantau (Tidak Wajib)',
     ayat: [
       'Kamera pemantau di destinasi bersifat dianjurkan, bukan kewajiban. Status Pengelola tidak bergantung pada ada atau tidaknya kamera.',
-      'Bila Pengelola memasang kamera untuk ditayangkan di Lautara, kamera tersebut dibeli dari Platform dan dipasang oleh petugas Platform.',
+      'Bila Pengelola memasang kamera untuk ditayangkan di Nusa, kamera tersebut dibeli dari Platform dan dipasang oleh petugas Platform.',
       'Setiap kamera yang didaftarkan melewati persetujuan admin sebelum tayang. Kamera yang tidak dibeli dan dipasang oleh Platform tidak akan disetujui.',
       'Ketentuan kepemilikan, garansi, prasyarat listrik dan internet, serta pengakhiran pada Pasal 4 berlaku sama bagi kamera.',
       'Tanpa kamera, halaman destinasi tetap tayang seperti biasa; hanya blok tayangan langsung yang tidak muncul.',
@@ -119,8 +119,8 @@ export default function SyaratPengelola() {
         <p className="mt-6 text-sm leading-relaxed text-navy-soft">
           Baca sebelum mengajukan diri jadi pengelola. Tiga hal yang paling perlu
           kamu tahu: paket sensor untuk destinasimu wajib dan kamu beli dari
-          Lautara, kamera pemantau dianjurkan tapi tidak wajib, dan pembayaran
-          dari pengunjung kamu terima langsung — bukan lewat Lautara.
+          Nusa, kamera pemantau dianjurkan tapi tidak wajib, dan pembayaran
+          dari pengunjung kamu terima langsung — bukan lewat Nusa.
         </p>
 
         <div className="mt-10 space-y-8">

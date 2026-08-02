@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { formatIDR } from '@/lib/format';
+import { useLang } from '@/lib/useLang';
 
 interface Props {
   id: string;
@@ -89,6 +90,7 @@ export default function DesktopDestinationCard({
   priceFrom,
 }: Props) {
   const router = useRouter();
+  const { t } = useLang();
 
   return (
     <div
@@ -122,7 +124,7 @@ export default function DesktopDestinationCard({
               e.stopPropagation();
               onToggleSave();
             }}
-            aria-label={saved ? 'Hapus dari tersimpan' : 'Simpan destinasi'}
+            aria-label={t(saved ? 'card.unsave' : 'card.save')}
             aria-pressed={!!saved}
             className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur-sm transition-colors duration-micro ease-out ${saved ? 'text-danger' : 'text-ink/60 hover:text-danger'}`}
           >
@@ -165,7 +167,7 @@ export default function DesktopDestinationCard({
         <div className="mt-1 flex items-center justify-between gap-3 border-t border-shore-200 pt-4">
           {priceFrom ? (
             <div className="tabular min-w-0 leading-tight">
-              <span className="block text-2xs text-navy-soft">Mulai dari</span>
+              <span className="block text-2xs text-navy-soft">{t('card.priceFrom')}</span>
               <span className="font-serif text-lg font-semibold text-navy">
                 {formatIDR(priceFrom)}
               </span>

@@ -4,15 +4,16 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import clsx from 'clsx';
 import { useAuthState } from '@/lib/useAuth';
+import { useLang } from '@/lib/useLang';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
 const navLinks = [
-  { label: 'Beranda', href: '/beranda' },
-  { label: 'Booking', href: '/booking' },
+  { labelKey: 'nav.home', href: '/beranda' },
+  { labelKey: 'nav.booking', href: '/booking' },
   // Di mobile Monitoring masih diakses lewat menu profil — BottomNav tidak
   // punya slot keempat.
-  { label: 'Monitoring', href: '/kamera' },
-  { label: 'Profil', href: '/profile' },
+  { labelKey: 'nav.monitoring', href: '/kamera' },
+  { labelKey: 'nav.profile', href: '/profile' },
 ];
 
 // Bar horizontal desktop — logo kiri, tombol nav + aksi akun kanan. Pil hover
@@ -25,6 +26,7 @@ const navLinks = [
 export default function TopNav({ compact = false }: { compact?: boolean }) {
   const pathname = usePathname();
   const { user } = useAuthState();
+  const { t } = useLang();
   const initials = user?.displayName
     ? user.displayName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
     : 'LA';
@@ -49,10 +51,7 @@ export default function TopNav({ compact = false }: { compact?: boolean }) {
               compact ? 'text-lg' : 'text-xl'
             )}
           >
-            Lautara
-          </span>
-          <span className="hidden self-end pb-1 text-2xs uppercase tracking-[0.18em] text-navy-soft lg:inline">
-            Sulawesi Utara
+            Nusa
           </span>
         </Link>
 
@@ -60,7 +59,7 @@ export default function TopNav({ compact = false }: { compact?: boolean }) {
         <div className="flex items-center gap-1">
           <nav aria-label="Utama">
             <ul className="flex items-center gap-1">
-              {navLinks.map(({ label, href }) => {
+              {navLinks.map(({ labelKey, href }) => {
                 const isActive = pathname === href;
                 return (
                   <li key={href}>
@@ -74,7 +73,7 @@ export default function TopNav({ compact = false }: { compact?: boolean }) {
                           : 'font-medium text-navy-soft hover:bg-shore-100 hover:text-navy'
                       )}
                     >
-                      {label}
+                      {t(labelKey)}
                     </Link>
                   </li>
                 );
@@ -89,7 +88,7 @@ export default function TopNav({ compact = false }: { compact?: boolean }) {
               <NotificationBell variant="light" />
               <Link
                 href="/profile"
-                aria-label="Profil"
+                aria-label={t('nav.profile')}
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-shore-200 bg-shore-100 text-2xs font-semibold text-navy transition-colors duration-micro ease-out hover:border-teal-500"
               >
                 {initials}
@@ -97,7 +96,7 @@ export default function TopNav({ compact = false }: { compact?: boolean }) {
             </>
           ) : (
             <Link href="/profile" className="btn-primary px-4 py-1.5">
-              Masuk
+              {t('nav.login')}
             </Link>
           )}
         </div>

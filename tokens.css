@@ -1,5 +1,5 @@
 /* Hallmark · genre: editorial · design-system: design.md · designed-as-app
- * Lautara design tokens — the single source of truth for colour, type, radius,
+ * Nusa design tokens — the single source of truth for colour, type, radius,
  * and motion. `app/globals.css` imports this file; `tailwind.config.ts` reads the
  * `--c-*` channel triplets so Tailwind utilities and plain CSS stay in step.
  *

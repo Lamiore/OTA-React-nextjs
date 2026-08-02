@@ -4,8 +4,8 @@ import { useState, type FormEvent, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthState } from '@/lib/useAuth';
-
-const LOCATIONS = ['Semua', 'Bunaken', 'Likupang', 'Lembeh'];
+import { useLang } from '@/lib/useLang';
+import { useLocations } from '@/lib/useLocations';
 
 // H6 · Photographic fold — satu foto full-bleed memikul argumen pertama halaman,
 // tipografi duduk di atasnya condong ke kiri. Tanpa parallax (butuh listener
@@ -16,6 +16,8 @@ const LOCATIONS = ['Semua', 'Bunaken', 'Likupang', 'Lembeh'];
 export default function HeroBanner() {
   const { user } = useAuthState();
   const router = useRouter();
+  const { t } = useLang();
+  const locations = useLocations();
   const firstName = user?.displayName?.split(' ')[0];
   const [q, setQ] = useState('');
   const [loc, setLoc] = useState('Semua');
@@ -57,7 +59,7 @@ export default function HeroBanner() {
         <div className="max-w-2xl">
           {firstName && (
             <p className="reveal text-sm text-white/70" style={step(0)}>
-              Halo, {firstName}.
+              {t('home.greeting', { name: firstName })}
             </p>
           )}
 
@@ -65,16 +67,14 @@ export default function HeroBanner() {
             className="reveal mt-2 font-serif text-display font-semibold text-white"
             style={step(1)}
           >
-            Laut dalam Sulawesi menanti.
+            {t('home.heroTitle')}
           </h1>
 
           <p
             className="reveal mt-5 max-w-[52ch] text-base leading-relaxed text-white/75"
             style={step(2)}
           >
-            Spot selam, pantai tersembunyi, dan pengalaman laut di Bunaken,
-            Likupang, dan Lembeh — lengkap dengan pantauan kondisi perairan
-            secara langsung.
+            {t('home.heroLede')}
           </p>
 
           {/* Cari destinasi + lokasi, langsung menyetir grid #destinasi. */}
@@ -88,8 +88,8 @@ export default function HeroBanner() {
                 <input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="Cari destinasi, pantai, spot selam…"
-                  aria-label="Cari destinasi"
+                  placeholder={t('home.searchHero')}
+                  aria-label={t('home.searchLabel')}
                   className="w-full min-w-0 bg-transparent text-sm text-white placeholder:text-white/55 outline-none"
                 />
               </div>
@@ -101,23 +101,23 @@ export default function HeroBanner() {
                   <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                <span className="sr-only">Lokasi</span>
+                <span className="sr-only">{t('home.location')}</span>
                 <select
                   value={loc}
                   onChange={(e) => setLoc(e.target.value)}
-                  aria-label="Lokasi"
+                  aria-label={t('home.location')}
                   className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none [&>option]:text-navy"
                 >
-                  {LOCATIONS.map((l) => (
+                  {['Semua', ...locations].map((l) => (
                     <option key={l} value={l}>
-                      {l === 'Semua' ? 'Semua lokasi' : l}
+                      {l === 'Semua' ? t('home.allLocations') : l}
                     </option>
                   ))}
                 </select>
               </label>
 
               <button type="submit" className="btn-primary px-6 py-2.5">
-                Cari
+                {t('common.search')}
               </button>
             </div>
           </form>
@@ -127,7 +127,7 @@ export default function HeroBanner() {
               href="#destinasi"
               className="whitespace-nowrap border-b border-white/40 pb-0.5 font-medium text-white transition-colors duration-micro ease-out hover:border-white"
             >
-              Lihat semua destinasi
+              {t('home.seeAll')}
             </Link>
           </p>
         </div>

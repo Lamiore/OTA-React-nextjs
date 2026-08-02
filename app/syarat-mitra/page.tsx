@@ -5,9 +5,9 @@ import BottomNav from '@/components/mobile/BottomNav';
 import { AGREEMENT } from '@/lib/verification';
 
 export const metadata: Metadata = {
-  title: 'Perjanjian Mitra — Lautara',
+  title: 'Perjanjian Mitra — Nusa',
   description:
-    'Hak, kewajiban, dan ketentuan kamera pemantau bagi mitra kamera Lautara.',
+    'Hak, kewajiban, dan ketentuan kamera pemantau bagi mitra kamera Nusa.',
 };
 
 /** Tanggal berlaku v1.0. Ditulis di sini karena hanya dipakai di halaman ini. */
@@ -17,8 +17,8 @@ const PASAL: { judul: string; ayat: string[] }[] = [
   {
     judul: '1. Ruang Lingkup',
     ayat: [
-      'Perjanjian ini mengatur hubungan antara Lautara ("Platform") dan pengguna yang disetujui menjadi mitra kamera ("Mitra").',
-      'Mitra mendaftarkan dan mengoperasikan kamera pemantau yang tayangannya dapat ditampilkan di halaman destinasi Lautara.',
+      'Perjanjian ini mengatur hubungan antara Nusa ("Platform") dan pengguna yang disetujui menjadi mitra kamera ("Mitra").',
+      'Mitra mendaftarkan dan mengoperasikan kamera pemantau yang tayangannya dapat ditampilkan di halaman destinasi Nusa.',
       'Mitra tidak mengelola data destinasi, daftar harga, maupun pesanan. Kewenangan itu ada pada pengelola destinasi dan admin.',
       'Perjanjian ini bukan perjanjian kerja. Mitra bukan karyawan Platform, tidak menerima upah, dan tidak memperoleh hak ketenagakerjaan dari Platform.',
     ],
@@ -43,7 +43,7 @@ const PASAL: { judul: string; ayat: string[] }[] = [
   {
     judul: '4. Perangkat Kamera',
     ayat: [
-      'Kamera yang tayangannya ditampilkan di Lautara dibeli dari Platform dan dipasang oleh petugas Platform.',
+      'Kamera yang tayangannya ditampilkan di Nusa dibeli dari Platform dan dipasang oleh petugas Platform.',
       'Setiap kamera yang didaftarkan melewati persetujuan admin sebelum tayangannya muncul. Kamera yang tidak dibeli dan dipasang oleh Platform tidak akan disetujui.',
       'Setelah pembayaran lunas, kamera sepenuhnya menjadi hak milik Mitra.',
       'Pembelian dan pemasangan baru dikoordinasikan setelah pengajuan menjadi Mitra disetujui admin. Tidak ada pembayaran apa pun yang diminta sebelum pengajuan diterima.',
@@ -102,8 +102,8 @@ export default function SyaratMitra() {
         </p>
         <p className="mt-6 text-sm leading-relaxed text-navy-soft">
           Baca sebelum mengajukan diri jadi mitra kamera. Dua hal yang paling
-          perlu kamu tahu: kamera yang tayang di Lautara kamu beli dari Lautara
-          dan dipasang petugas Lautara, dan setiap kamera ditinjau admin dulu
+          perlu kamu tahu: kamera yang tayang di Nusa kamu beli dari Nusa
+          dan dipasang petugas Nusa, dan setiap kamera ditinjau admin dulu
           sebelum tayangannya muncul.
         </p>
 

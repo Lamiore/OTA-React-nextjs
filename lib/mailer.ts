@@ -10,4 +10,4 @@ export function mailer() {
   });
 }
 
-export const MAIL_FROM = process.env.SMTP_FROM ?? 'Lautara <no-reply@lautara.app>';
+export const MAIL_FROM = process.env.SMTP_FROM ?? 'Nusa <no-reply@nusa.app>';

@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import { getDestinations, type Destination } from '@/lib/firestore';
 import { useSavedDestinations } from '@/lib/useSaved';
+import { useLang } from '@/lib/useLang';
 import DestinationCard from '@/components/mobile/DestinationCard';
 
 export default function SavedDestinations() {
   const { user, savedIds, toggle } = useSavedDestinations();
+  const { t } = useLang();
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,8 +24,8 @@ export default function SavedDestinations() {
   return (
     <div className="card overflow-hidden">
       <div className="px-5 py-4 border-b border-shore-200/80">
-        <h2 className="font-serif text-lg font-medium text-navy">Tersimpan</h2>
-        <p className="text-2xs text-navy-soft mt-0.5">Destinasi favorit yang kamu simpan</p>
+        <h2 className="font-serif text-lg font-medium text-navy">{t('profile.saved')}</h2>
+        <p className="text-2xs text-navy-soft mt-0.5">{t('profile.savedDesc')}</p>
       </div>
 
       <div className="p-4">

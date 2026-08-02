@@ -14,6 +14,8 @@ import RoleBadge, { roleInfo } from '@/components/profile/RoleBadge';
 import SavedDestinations from '@/components/profile/SavedDestinations';
 import Link from 'next/link';
 import { useTheme } from '@/lib/useTheme';
+import { useLang } from '@/lib/useLang';
+import { LANGS } from '@/lib/i18n';
 import { waLink } from '@/lib/format';
 
 function LogOutIcon() {
@@ -60,7 +62,16 @@ function MoonIcon() {
   );
 }
 
-// Kontak dukungan Lautara. Nomor kosong = tombol WhatsApp disembunyikan
+function GlobeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18" />
+    </svg>
+  );
+}
+
+// Kontak dukungan Nusa. Nomor kosong = tombol WhatsApp disembunyikan
 // (waLink mengembalikan null), jadi tidak ada tautan mati di halaman bantuan.
 const SUPPORT_EMAIL = 'ilham_lam@icloud.com';
 const SUPPORT_WA = '';
@@ -170,10 +181,12 @@ function ChatIcon() {
   );
 }
 
+/** `key` yang menautkan item ke aksinya; labelnya diterjemahkan saat render. */
 const menuItems = [
   {
-    label: 'Kamera',
-    description: 'Daftarkan & pantau kamera milikmu',
+    key: 'camera',
+    labelKey: 'profile.camera',
+    descKey: 'profile.cameraDesc',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
@@ -182,8 +195,9 @@ const menuItems = [
     ),
   },
   {
-    label: 'Riwayat Booking',
-    description: 'Lihat dan kelola reservasi',
+    key: 'history',
+    labelKey: 'profile.bookingHistory',
+    descKey: 'profile.historyDesc',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
@@ -194,8 +208,9 @@ const menuItems = [
     ),
   },
   {
-    label: 'Tersimpan',
-    description: 'Destinasi favorit yang kamu simpan',
+    key: 'saved',
+    labelKey: 'profile.saved',
+    descKey: 'profile.savedDesc',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
@@ -203,13 +218,15 @@ const menuItems = [
     ),
   },
   {
-    label: 'Pengaturan',
-    description: 'Tema tampilan & preferensi',
+    key: 'settings',
+    labelKey: 'profile.settings',
+    descKey: 'profile.settingsDesc',
     icon: <SettingsIcon />,
   },
   {
-    label: 'Bantuan & Dukungan',
-    description: 'FAQ dan hubungi kami',
+    key: 'help',
+    labelKey: 'profile.help',
+    descKey: 'profile.helpDesc',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
@@ -221,6 +238,7 @@ const menuItems = [
 ];
 
 function BackButton({ onClick }: { onClick: () => void }) {
+  const { t } = useLang();
   return (
     <button
       onClick={onClick}
@@ -229,7 +247,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="m15 18-6-6 6-6" />
       </svg>
-      Kembali
+      {t('common.back')}
     </button>
   );
 }
@@ -242,6 +260,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
   );
   const { theme, setTheme, mounted } = useTheme();
   const isDark = theme === 'dark';
+  const { lang, setLang, t } = useLang();
 
   // Statistik profil — real-time dari Firestore.
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -251,11 +270,11 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
   const bookingCount = bookings.length;
 
   const menuActions: Record<string, () => void> = {
-    'Kamera': () => router.push('/kamera'),
-    'Riwayat Booking': () => setView('riwayat'),
-    'Tersimpan': () => setView('tersimpan'),
-    'Pengaturan': () => setView('pengaturan'),
-    'Bantuan & Dukungan': () => setView('bantuan'),
+    camera: () => router.push('/kamera'),
+    history: () => setView('riwayat'),
+    saved: () => setView('tersimpan'),
+    settings: () => setView('pengaturan'),
+    help: () => setView('bantuan'),
   };
 
   const roleCard = role ? roleInfo[role] : undefined;
@@ -331,7 +350,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
 
           <div className="divide-y divide-shore-200/80">
             <a
-              href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Bantuan Lautara')}`}
+              href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Bantuan Nusa')}`}
               className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-shore-50"
             >
               <div className="h-10 w-10 rounded-md bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
@@ -346,9 +365,9 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
               </span>
             </a>
 
-            {waLink(SUPPORT_WA, 'Halo, saya butuh bantuan soal Lautara.') && (
+            {waLink(SUPPORT_WA, 'Halo, saya butuh bantuan soal Nusa.') && (
               <a
-                href={waLink(SUPPORT_WA, 'Halo, saya butuh bantuan soal Lautara.')!}
+                href={waLink(SUPPORT_WA, 'Halo, saya butuh bantuan soal Nusa.')!}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-shore-50"
@@ -387,13 +406,13 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
 
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-shore-200/80">
-            <h2 className="font-serif text-lg font-medium text-navy">Pengaturan</h2>
-            <p className="text-2xs text-navy-soft mt-0.5">Sesuaikan tampilan aplikasi</p>
+            <h2 className="font-serif text-lg font-medium text-navy">{t('settings.title')}</h2>
+            <p className="text-2xs text-navy-soft mt-0.5">{t('settings.subtitle')}</p>
           </div>
 
           {/* Theme section */}
           <div className="px-5 py-4">
-            <p className="mb-3 text-sm font-semibold text-navy">Tampilan</p>
+            <p className="mb-3 text-sm font-semibold text-navy">{t('settings.appearance')}</p>
 
             {/* Dark mode toggle row */}
             <div className="flex items-center justify-between gap-4">
@@ -402,9 +421,9 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
                   {isDark ? <MoonIcon /> : <SunIcon />}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-navy">Mode Gelap</p>
+                  <p className="text-sm font-medium text-navy">{t('settings.darkMode')}</p>
                   <p className="text-2xs text-navy-soft mt-0.5">
-                    {mounted ? (isDark ? 'Tema gelap aktif' : 'Tema terang aktif') : ' '}
+                    {mounted ? t(isDark ? 'settings.darkOn' : 'settings.darkOff') : ' '}
                   </p>
                 </div>
               </div>
@@ -413,7 +432,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
               <button
                 role="switch"
                 aria-checked={isDark}
-                aria-label="Aktifkan mode gelap"
+                aria-label={t('settings.darkToggleLabel')}
                 onClick={() => setTheme(isDark ? 'light' : 'dark')}
                 className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-short focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 ${
                   isDark ? 'bg-teal-500' : 'bg-shore-300'
@@ -426,6 +445,44 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
                 />
               </button>
             </div>
+
+            {/* Bahasa antarmuka */}
+            <div className="mt-5 border-t border-shore-200/80 pt-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 rounded-md bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
+                    <GlobeIcon />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-navy">{t('settings.language')}</p>
+                    <p className="text-2xs text-navy-soft mt-0.5">{t('settings.languageDesc')}</p>
+                  </div>
+                </div>
+
+                <div
+                  role="radiogroup"
+                  aria-label={t('settings.language')}
+                  className="flex shrink-0 rounded-md border border-shore-200 p-0.5"
+                >
+                  {LANGS.map((l) => (
+                    <button
+                      key={l.value}
+                      role="radio"
+                      aria-checked={lang === l.value}
+                      aria-label={l.label}
+                      onClick={() => setLang(l.value)}
+                      className={`rounded-sm px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 ${
+                        lang === l.value
+                          ? 'bg-teal-500 text-white'
+                          : 'text-navy-soft hover:text-navy'
+                      }`}
+                    >
+                      {l.short}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -434,8 +491,8 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
         {roleCard && (
           <div className="card overflow-hidden mt-4">
             <div className="px-5 py-4 border-b border-shore-200/80">
-              <h2 className="font-serif text-lg font-medium text-navy">Peran Akun</h2>
-              <p className="text-2xs text-navy-soft mt-0.5">Status akunmu di Lautara</p>
+              <h2 className="font-serif text-lg font-medium text-navy">{t('profile.accountRole')}</h2>
+              <p className="text-2xs text-navy-soft mt-0.5">{t('profile.accountRoleDesc')}</p>
             </div>
             <div className="flex items-start justify-between gap-4 px-5 py-4">
               <p className="text-sm text-navy-soft leading-relaxed">{roleCard.description}</p>
@@ -506,19 +563,19 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
       <div className="card mt-4 divide-y divide-shore-200/80 overflow-hidden">
         {menuItems.map((item) => (
           <button
-            key={item.label}
-            onClick={menuActions[item.label]}
+            key={item.key}
+            onClick={menuActions[item.key]}
             className={`w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-shore-50 ${
               // Kamera sudah punya tombol sendiri di TopNav desktop.
-              item.label === 'Kamera' ? 'flex md:hidden' : 'flex'
+              item.key === 'camera' ? 'flex md:hidden' : 'flex'
             }`}
           >
             <div className="h-10 w-10 rounded-md bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
               {item.icon}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-navy">{item.label}</p>
-              <p className="text-2xs text-navy-soft mt-0.5">{item.description}</p>
+              <p className="text-sm font-medium text-navy">{t(item.labelKey)}</p>
+              <p className="text-2xs text-navy-soft mt-0.5">{t(item.descKey)}</p>
             </div>
             <span className="text-shore-300">
               <ChevronIcon />

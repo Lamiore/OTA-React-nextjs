@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import clsx from 'clsx';
+import { useLang } from '@/lib/useLang';
 
 
 function HomeIcon({ active }: { active: boolean }) {
@@ -37,18 +38,19 @@ function ProfileIcon({ active }: { active: boolean }) {
 
 
 const navItems = [
-  { label: 'Beranda', href: '/beranda', Icon: HomeIcon },
-  { label: 'Booking', href: '/booking', Icon: CalendarIcon, center: true },
-  { label: 'Profil', href: '/profile', Icon: ProfileIcon },
+  { labelKey: 'nav.home', href: '/beranda', Icon: HomeIcon },
+  { labelKey: 'nav.booking', href: '/booking', Icon: CalendarIcon, center: true },
+  { labelKey: 'nav.profile', href: '/profile', Icon: ProfileIcon },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { t } = useLang();
 
   return (
     <nav className="fixed inset-x-3 bottom-3 z-50 mx-auto rounded-md border border-shore-200/80 bg-surface/85 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom,6px)+6px)] backdrop-blur-xl shadow-float md:hidden">
       <div className="flex items-end justify-around">
-        {navItems.map(({ label, href, Icon, center }) => {
+        {navItems.map(({ labelKey, href, Icon, center }) => {
           const isActive = pathname === href;
 
           if (center) {
@@ -62,7 +64,7 @@ export default function BottomNav() {
                   <CalendarIcon />
                 </div>
                 <span className="mt-1 text-2xs font-medium text-teal-600">
-                  {label}
+                  {t(labelKey)}
                 </span>
               </Link>
             );
@@ -81,7 +83,7 @@ export default function BottomNav() {
                   isActive ? 'text-teal-600' : 'text-navy-soft'
                 )}
               >
-                {label}
+                {t(labelKey)}
               </span>
             </Link>
           );

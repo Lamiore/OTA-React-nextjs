@@ -1,20 +1,20 @@
-# Design — Lautara
+# Design — Nusa
 
 A locked design system for this app. Every page redesign reads this file before
 emitting code. Do not regenerate per page — extend or amend this file when the
 system needs to grow.
 
-Across pages of Lautara, **consistency is the goal, not variety**. Pages that
+Across pages of Nusa, **consistency is the goal, not variety**. Pages that
 drift from this file are the slop this system exists to remove.
 
 ## Genre
 
 **editorial.**
 
-Lautara is a place-and-photography product: destinasi selam, foto laut, deskripsi
+Nusa is a place-and-photography product: destinasi selam, foto laut, deskripsi
 panjang, ulasan. That is editorial, not atmospheric. (A previous pass stamped
 `atmospheric` on `beranda` — that was wrong. Atmospheric means dark paper and a
-late-night register; Lautara is warm off-white with a classical serif.)
+late-night register; Nusa is warm off-white with a classical serif.)
 
 Consequences: hairlines over card borders, asymmetric layout, quiet motion,
 photography carries the page, accent stays under 5% of any viewport.
@@ -33,7 +33,7 @@ photography carries the page, accent stays under 5% of any viewport.
 
 ## Theme
 
-Lautara — the existing brand, preserved and tokenized. Anchor hue is teal 193°;
+Nusa — the existing brand, preserved and tokenized. Anchor hue is teal 193°;
 neutrals are tinted **warm** (73–78°) on paper and **cool** (227–240°) on ink,
 which is the existing brand's own contrast and is kept deliberately.
 
@@ -206,7 +206,7 @@ fabricated number is not.
 
 ## What pages MUST share
 
-- The Lautara wordmark and its mark.
+- The Nusa wordmark and its mark.
 - The accent colour and its budget (≤5% per viewport).
 - Cormorant display + Figtree body.
 - The type scale — no page invents a size.

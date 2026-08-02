@@ -8,9 +8,10 @@ import type { MetadataRoute } from 'next';
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Lautara — Dive Into Adventure',
-    short_name: 'Lautara',
-    description: 'Platform OTA untuk destinasi selam terbaik di Indonesia Utara',
+    name: 'Nusa — Dive Into Adventure',
+    short_name: 'Nusa',
+    description:
+      'Platform OTA untuk destinasi selam dan pesisir — cari, pesan, dan pantau kondisi perairan secara langsung.',
     // Bukan '/': halaman itu hanya mengalihkan, dan pengguna yang memasang
     // aplikasi ini mau langsung ke daftar destinasi.
     start_url: '/beranda',

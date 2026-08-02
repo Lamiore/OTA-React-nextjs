@@ -5,6 +5,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { fetchRatingSummaries, type Destination, type RatingSummary } from '@/lib/firestore';
 import { useSavedDestinations } from '@/lib/useSaved';
+import { useLang } from '@/lib/useLang';
 import DestinationCard from './DestinationCard';
 import FilterChips from './FilterChips';
 
@@ -28,6 +29,7 @@ export default function DestinationList() {
   const [search, setSearch] = useState('');
   const [ratings, setRatings] = useState<Record<string, RatingSummary>>({});
   const { user, savedIds, toggle } = useSavedDestinations();
+  const { t } = useLang();
 
   useEffect(() => {
     fetchRatingSummaries().then(setRatings);
@@ -72,9 +74,9 @@ export default function DestinationList() {
     <div className="bg-shore-50">
       {/* Section header */}
       <div className="flex items-center justify-between px-4 pt-1 pb-2.5">
-        <h2 className="text-sm font-semibold text-navy">Destinasi Populer</h2>
+        <h2 className="text-sm font-semibold text-navy">{t('home.popular')}</h2>
         <button className="text-2xs text-teal-600 font-medium">
-          Lihat Semua
+          {t('home.seeAllShort')}
         </button>
       </div>
 
@@ -85,7 +87,7 @@ export default function DestinationList() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari destinasi..."
+            placeholder={t('home.searchShort')}
             className="w-full bg-transparent text-sm text-navy placeholder:text-navy-soft/60 outline-none"
           />
         </div>
@@ -109,7 +111,7 @@ export default function DestinationList() {
               </svg>
             </div>
             <p className="text-xs text-navy-soft">
-              Tidak ada destinasi ditemukan
+              {t('home.notFound')}
             </p>
           </div>
         ) : (

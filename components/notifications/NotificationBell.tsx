@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import { useAuthState } from '@/lib/useAuth';
 import type { Booking } from '@/lib/firestore';
 import { formatIDR } from '@/lib/format';
+import { useLang } from '@/lib/useLang';
 import PaymentModal from '@/components/notifications/PaymentModal';
 
 function BellIcon() {
@@ -24,6 +25,7 @@ interface NotificationBellProps {
 
 export default function NotificationBell({ variant }: NotificationBellProps) {
   const { user } = useAuthState();
+  const { t } = useLang();
   const [unpaid, setUnpaid] = useState<Booking[]>([]);
   const [open, setOpen] = useState(false);
   const [payTarget, setPayTarget] = useState<Booking | null>(null);
@@ -61,7 +63,7 @@ export default function NotificationBell({ variant }: NotificationBellProps) {
     <div ref={wrapRef} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        aria-label="Notifikasi"
+        aria-label={t('notif.label')}
         className={clsx(
           'relative',
           variant === 'light'
@@ -88,12 +90,12 @@ export default function NotificationBell({ variant }: NotificationBellProps) {
             Notifikasi
           </p>
           {count === 0 ? (
-            <p className="px-3 py-4 text-center text-xs text-navy-soft">Tidak ada notifikasi.</p>
+            <p className="px-3 py-4 text-center text-xs text-navy-soft">{t('notif.empty')}</p>
           ) : (
             <div className="space-y-1">
               {unpaid.map((b) => (
                 <div key={b.id} className="rounded-md px-3 py-2.5 hover:bg-shore-50">
-                  <p className="text-sm font-medium text-navy">Check-in berhasil</p>
+                  <p className="text-sm font-medium text-navy">{t('notif.checkinOk')}</p>
                   <p className="mt-0.5 text-xs text-navy-soft">
                     Silakan selesaikan pembayaran untuk {b.destinationName}.
                   </p>

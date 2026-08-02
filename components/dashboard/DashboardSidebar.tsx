@@ -137,7 +137,7 @@ export default function DashboardSidebar({ active, onNavigate, mobileOpen, onMob
               <span className="font-serif text-sm font-semibold text-white tracking-tight">L</span>
             </div>
             <div>
-              <span className="font-serif text-base font-semibold tracking-tight text-navy">Lautara</span>
+              <span className="font-serif text-base font-semibold tracking-tight text-navy">Nusa</span>
               <p className="text-2xs text-navy-soft -mt-0.5">{role === 'admin' ? 'Admin Panel' : 'Panel Pengelola'}</p>
             </div>
           </Link>

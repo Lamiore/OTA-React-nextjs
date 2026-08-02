@@ -12,10 +12,10 @@ instansi, dan (untuk pengelola) pilihan destinasi. Tidak ada satu pun penjelasan
 hak, kewajiban, maupun konsekuensi finansial, padahal kedua role membawa
 kewajiban belanja yang nilainya nyata:
 
-1. **Mitra membeli kamera dari Lautara**, dan pemasangannya dilakukan petugas
-   Lautara.
-2. **Pengelola membeli paket sensor IoT dari Lautara** untuk destinasi yang
-   dikelolanya, juga dipasang petugas Lautara. Kamera bagi pengelola dianjurkan
+1. **Mitra membeli kamera dari Nusa**, dan pemasangannya dilakukan petugas
+   Nusa.
+2. **Pengelola membeli paket sensor IoT dari Nusa** untuk destinasi yang
+   dikelolanya, juga dipasang petugas Nusa. Kamera bagi pengelola dianjurkan
    tetapi tidak diwajibkan; bila dipasang, ketentuan beli-dan-pasangnya sama.
 3. Pengelola menerima pembayaran booking **langsung dari pengunjung**, di luar
    platform.
@@ -200,7 +200,7 @@ peraturan yang berlaku dan menjaga keselamatan pengunjung.
 **5. Kamera pemantau (tidak wajib).** Lima ayat:
 
 1. Kamera dianjurkan, bukan kewajiban. Status pengelola tidak bergantung padanya.
-2. Bila dipasang untuk ditayangkan di Lautara, kamera dibeli dari platform dan
+2. Bila dipasang untuk ditayangkan di Nusa, kamera dibeli dari platform dan
    dipasang petugas platform.
 3. Setiap kamera melewati persetujuan admin sebelum tayang; yang bukan pasangan
    platform tidak akan disetujui. Ini bukan klausul kosong — `addCamera` memang
@@ -266,7 +266,7 @@ lokasi; platform dapat menghentikan penayangan bila melanggar privasi,
 kesusilaan, atau peraturan.
 
 Pasal ini tidak punya padanan di dokumen pengelola dan justru yang paling
-berisiko bagi platform — kamera publik yang salah arah menyeret Lautara sebagai
+berisiko bagi platform — kamera publik yang salah arah menyeret Nusa sebagai
 penayang, bukan sekadar pencatat.
 
 **6. Biaya.** Tidak ada biaya langganan atau penayangan; satu-satunya biaya

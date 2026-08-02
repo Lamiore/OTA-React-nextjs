@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuthState } from '@/lib/useAuth';
+import { useLang } from '@/lib/useLang';
 import {
   upsertReview,
   deleteReview,
@@ -39,10 +40,10 @@ export function StarRow({ value, size = 16 }: { value: number; size?: number }) 
   );
 }
 
-function fmtDate(ts: unknown): string {
+function fmtDate(ts: unknown, locale: string): string {
   const t = ts as { toMillis?: () => number; seconds?: number } | null;
   const ms = t?.toMillis ? t.toMillis() : typeof t?.seconds === 'number' ? t.seconds * 1000 : Date.now();
-  return new Date(ms).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(ms).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function toMs(ts: unknown): number {
@@ -57,6 +58,7 @@ interface Props {
 
 export default function DestinationReviews({ destinationId, reviews }: Props) {
   const { user } = useAuthState();
+  const { t, locale } = useLang();
   const { avg, count } = reviewStats(reviews);
 
   const myReview = user ? reviews.find((r) => r.userId === user.uid) : undefined;
@@ -106,7 +108,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="section-title">Ulasan</h2>
+        <h2 className="section-title">{t('dest.reviews')}</h2>
         {count > 0 && (
           <div className="flex items-center gap-2">
             <StarRow value={avg} />
@@ -139,7 +141,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Ceritakan pengalamanmu di sini… (opsional)"
+            placeholder={t('dest.reviewPlaceholder')}
             rows={3}
             className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors resize-none"
           />
@@ -176,7 +178,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
       {/* Daftar ulasan */}
       {sorted.length === 0 ? (
         <div className="card p-6 text-center">
-          <p className="text-sm text-navy-soft">Belum ada ulasan. Jadilah yang pertama!</p>
+          <p className="text-sm text-navy-soft">{t('dest.beFirstReview')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -201,7 +203,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
                   <p className="text-sm font-medium text-navy truncate">{r.userName || 'Anonim'}</p>
                   <div className="flex items-center gap-2">
                     <StarRow value={r.rating} size={13} />
-                    <span className="text-2xs text-navy-soft">{fmtDate(r.createdAt)}</span>
+                    <span className="text-2xs text-navy-soft">{fmtDate(r.createdAt, locale)}</span>
                   </div>
                 </div>
               </div>

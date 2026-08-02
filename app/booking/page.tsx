@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import { useAuthState } from '@/lib/useAuth';
 import { createBooking, getPriceItems, type Destination } from '@/lib/firestore';
 import { formatIDR } from '@/lib/format';
+import { useLang } from '@/lib/useLang';
 import TopNav from '@/components/desktop/TopNav';
 import Footer from '@/components/desktop/Footer';
 import BottomNav from '@/components/mobile/BottomNav';
@@ -25,6 +26,7 @@ function BookingContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuthState();
+  const { t, locale } = useLang();
   const destId = searchParams.get('dest');
   const preselect = searchParams.get('items');
 
@@ -34,7 +36,11 @@ function BookingContent() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  const today = new Date().toISOString().split('T')[0];
+  // en-CA memberi YYYY-MM-DD di zona waktu lokal — sama seperti isPast() di
+  // BookingHistory. toISOString() tidak boleh dipakai di sini: itu tanggal UTC,
+  // jadi di WITA (UTC+8) sebelum jam 08:00 pagi batas minimalnya mundur ke
+  // kemarin dan booking yang baru dibuat langsung terhitung kedaluwarsa.
+  const today = new Date().toLocaleDateString('en-CA');
 
   const [form, setForm] = useState({
     date: '',
@@ -126,7 +132,7 @@ function BookingContent() {
       });
       setSuccess(true);
     } catch {
-      setError('Gagal membuat booking. Coba lagi.');
+      setError(t('booking.failed'));
     } finally {
       setSubmitting(false);
     }
@@ -146,17 +152,23 @@ function BookingContent() {
       <div className="w-full max-w-lg mx-auto animate-fade-in text-center py-16">
         <div className="card p-8 sm:p-10 flex flex-col items-center gap-4">
           <CheckCircleIcon />
-          <h2 className="font-serif text-xl font-medium text-navy">Booking Berhasil!</h2>
+          <h2 className="font-serif text-xl font-medium text-navy">{t('booking.successTitle')}</h2>
           <p className="text-sm text-navy-soft max-w-xs">
-            Tiket untuk <span className="font-medium text-navy">{destination?.name}</span> pada
-            tanggal <span className="font-medium text-navy">{new Date(form.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span> sudah siap. Buka untuk melihat QR check-in.
+            {t('booking.successBody', {
+              dest: destination?.name ?? '',
+              date: new Date(form.date).toLocaleDateString(locale, {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              }),
+            })}
           </p>
           <div className="flex gap-3 mt-4">
             <button
               onClick={() => router.push('/booking')}
               className="btn-primary px-5 py-2.5 text-sm"
             >
-              Lihat Tiket
+              {t('booking.viewTicket')}
             </button>
             <button
               onClick={() => {
@@ -166,7 +178,7 @@ function BookingContent() {
               }}
               className="btn-ghost px-5 py-2.5 text-sm"
             >
-              Booking Lagi
+              {t('booking.bookAgain')}
             </button>
           </div>
         </div>
@@ -176,15 +188,15 @@ function BookingContent() {
 
   return (
     <div className="w-full max-w-5xl mx-auto animate-fade-in">
-      <h1 className="section-title">Booking</h1>
-      <p className="section-lede">Isi detail untuk memesan perjalanan.</p>
+      <h1 className="section-title">{t('booking.title')}</h1>
+      <p className="section-lede">{t('booking.lede')}</p>
 
       <form onSubmit={handleSubmit} className="mt-6 lg:grid lg:grid-cols-[1fr_340px] lg:gap-8 lg:items-start">
         {/* KIRI: field-field */}
         <div className="space-y-5">
             {/* Destination info */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-navy-soft">Destinasi</label>
+              <label className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.destination')}</label>
               {loadingDest ? (
                 <div className="rounded-md border border-shore-200 bg-surface px-3.5 py-3 animate-pulse">
                   <div className="h-4 w-2/3 rounded-full bg-shore-100" />
@@ -203,7 +215,7 @@ function BookingContent() {
                 </div>
               ) : (
                 <div className="rounded-md border border-shore-200 bg-surface px-4 py-3">
-                  <p className="text-sm text-navy-soft">Tidak ada destinasi dipilih. <button type="button" onClick={() => router.push('/beranda#destinasi')} className="text-teal-600 hover:text-teal-700 font-medium">Pilih dari beranda</button></p>
+                  <p className="text-sm text-navy-soft">{t('booking.noDestination')} <button type="button" onClick={() => router.push('/beranda#destinasi')} className="text-teal-600 hover:text-teal-700 font-medium">{t('booking.pickFromHome')}</button></p>
                 </div>
               )}
             </div>
@@ -211,10 +223,10 @@ function BookingContent() {
             {/* Pilih item harga */}
             {destination && (
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-navy-soft">Pilih Item *</label>
+                <label className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.selectItems')}</label>
                 {priceItems.length === 0 ? (
                   <div className="rounded-md border border-shore-200 bg-surface px-4 py-3">
-                    <p className="text-sm text-navy-soft">Destinasi ini belum punya daftar harga, booking belum bisa dilakukan.</p>
+                    <p className="text-sm text-navy-soft">{t('booking.noPrices')}</p>
                   </div>
                 ) : (
                   <div className="rounded-md border border-shore-200 bg-surface divide-y divide-shore-100">
@@ -229,7 +241,7 @@ function BookingContent() {
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
-                            aria-label={`Kurangi ${it.label}`}
+                            aria-label={t('booking.decrease', { item: it.label })}
                             onClick={() => setItemQty(it.id, (qty[it.id] ?? 0) - 1)}
                             className="h-7 w-7 rounded-sm border border-shore-200 flex items-center justify-center text-navy-soft hover:text-navy hover:border-shore-300 transition-colors"
                           >
@@ -238,7 +250,7 @@ function BookingContent() {
                           <span className="w-6 text-center text-sm font-medium text-navy">{qty[it.id] ?? 0}</span>
                           <button
                             type="button"
-                            aria-label={`Tambah ${it.label}`}
+                            aria-label={t('booking.increase', { item: it.label })}
                             onClick={() => setItemQty(it.id, (qty[it.id] ?? 0) + 1)}
                             className="h-7 w-7 rounded-sm border border-shore-200 flex items-center justify-center text-navy-soft hover:text-navy hover:border-shore-300 transition-colors"
                           >
@@ -255,7 +267,7 @@ function BookingContent() {
             {/* Date + Guests */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="booking-date" className="mb-1.5 block text-xs font-medium text-navy-soft">Tanggal *</label>
+                <label htmlFor="booking-date" className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.dateLabel')}</label>
                 <input
                   id="booking-date"
                   type="date"
@@ -267,7 +279,7 @@ function BookingContent() {
                 />
               </div>
               <div>
-                <label htmlFor="booking-guests" className="mb-1.5 block text-xs font-medium text-navy-soft">Jumlah Orang *</label>
+                <label htmlFor="booking-guests" className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.guestsLabel')}</label>
                 <input
                   id="booking-guests"
                   type="number"
@@ -283,12 +295,12 @@ function BookingContent() {
 
             {/* Name */}
             <div>
-              <label htmlFor="booking-name" className="mb-1.5 block text-xs font-medium text-navy-soft">Nama Lengkap *</label>
+              <label htmlFor="booking-name" className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.nameLabel')}</label>
               <input
                   id="booking-name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Nama pemesan"
+                placeholder={t('booking.namePlaceholder')}
                 required
                 className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
               />
@@ -296,7 +308,7 @@ function BookingContent() {
 
             {/* Phone */}
             <div>
-              <label htmlFor="booking-phone" className="mb-1.5 block text-xs font-medium text-navy-soft">No. Telepon *</label>
+              <label htmlFor="booking-phone" className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.phoneLabel')}</label>
               <input
                   id="booking-phone"
                 type="tel"
@@ -310,12 +322,12 @@ function BookingContent() {
 
             {/* Notes */}
             <div>
-              <label htmlFor="booking-notes" className="mb-1.5 block text-xs font-medium text-navy-soft">Catatan (opsional)</label>
+              <label htmlFor="booking-notes" className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.notesLabel')}</label>
               <textarea
                   id="booking-notes"
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                placeholder="Permintaan khusus, alergi, dll..."
+                placeholder={t('booking.notesPlaceholder')}
                 rows={3}
                 className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors resize-none"
               />
@@ -326,7 +338,7 @@ function BookingContent() {
         {/* KANAN: ringkasan sticky */}
         <aside className="mt-6 lg:mt-0 lg:sticky lg:top-24">
           <div className="card p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-navy">Ringkasan</h2>
+            <h2 className="text-sm font-semibold text-navy">{t('booking.summary')}</h2>
 
             {selectedItems.length > 0 ? (
               <div className="space-y-2">
@@ -340,11 +352,11 @@ function BookingContent() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-navy-soft">Belum ada item dipilih.</p>
+              <p className="text-sm text-navy-soft">{t('booking.noItems')}</p>
             )}
 
             <div className="flex items-center justify-between border-t border-shore-100 pt-3">
-              <span className="text-sm text-navy-soft">Estimasi total</span>
+              <span className="text-sm text-navy-soft">{t('booking.estTotal')}</span>
               <span className="text-lg font-semibold text-navy">{formatIDR(total)}</span>
             </div>
 
@@ -359,16 +371,16 @@ function BookingContent() {
               disabled={submitting || !destination || totalQty === 0}
               className="btn-primary w-full px-4 py-3 text-sm font-medium disabled:opacity-50"
             >
-              {submitting ? 'Memproses...' : 'Konfirmasi Booking'}
+              {submitting ? t('booking.submitting') : t('booking.confirm')}
             </button>
 
             {!user ? (
               <p className="text-center text-xs text-navy-soft">
-                Kamu perlu <button type="button" onClick={() => router.push('/profile')} className="text-teal-600 font-medium hover:text-teal-700">masuk</button> terlebih dahulu untuk booking.
+                {t('booking.needLoginPre')}<button type="button" onClick={() => router.push('/profile')} className="text-teal-600 font-medium hover:text-teal-700">{t('booking.needLoginLink')}</button>{t('booking.needLoginPost')}
               </p>
             ) : !user.emailVerified ? (
               <p className="text-center text-xs text-navy-soft">
-                <button type="button" onClick={() => router.push('/profile')} className="text-teal-600 font-medium hover:text-teal-700">Verifikasi email</button> kamu dulu sebelum booking.
+                <button type="button" onClick={() => router.push('/profile')} className="text-teal-600 font-medium hover:text-teal-700">{t('booking.needVerifyLink')}</button>{t('booking.needVerifyPost')}
               </p>
             ) : null}
           </div>

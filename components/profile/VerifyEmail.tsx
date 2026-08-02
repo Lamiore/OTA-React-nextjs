@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { signOut, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { requestVerificationEmail } from '@/lib/sendVerification';
+import { useLang } from '@/lib/useLang';
 
 function MailCheckIcon() {
   return (
@@ -25,6 +26,7 @@ function LoadingSpinner() {
 }
 
 export default function VerifyEmail({ user }: { user: User }) {
+  const { t } = useLang();
   const [cooldown, setCooldown] = useState(0);
   const [checking, setChecking] = useState(false);
   const [sending, setSending] = useState(false);
@@ -98,7 +100,7 @@ export default function VerifyEmail({ user }: { user: User }) {
         <MailCheckIcon />
       </div>
 
-      <h2 className="font-serif text-2xl font-medium text-navy sm:text-3xl">Verifikasi email kamu</h2>
+      <h2 className="font-serif text-2xl font-medium text-navy sm:text-3xl">{t('auth.verifyTitle')}</h2>
       <p className="mt-3 text-sm leading-relaxed text-navy-soft">
         Kami mengirim link verifikasi ke{' '}
         <span className="font-medium text-navy">{user.email}</span>. Klik link itu untuk

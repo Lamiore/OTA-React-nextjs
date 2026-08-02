@@ -15,7 +15,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { auth, db } from "./firebase";
 
 // ── Destinations ──
 
@@ -147,6 +147,14 @@ export interface MitraVerification {
   requestedRole?: "mitra" | "pengelola";
   /** Destinasi yang ingin dikelola — hanya untuk pengajuan pengelola. */
   destination?: string;
+  /** Alamat kirim paket sensor + kode pos. Hanya pengajuan pengelola: kamera
+   *  mitra dipasang petugas Nusa, jadi tidak perlu dikirim. */
+  shippingAddress?: string;
+  postalCode?: string;
+  /** Penerima paket bila bukan pendaftar. Kosong = pendaftar sendiri; pakai
+   *  packageRecipient() dari lib/verification, jangan baca langsung. */
+  recipientName?: string;
+  recipientPhone?: string;
   /** Versi Perjanjian Pengelola yang disetujui. Kosong pada pengajuan mitra
    *  dan pengajuan pengelola sebelum v1.0 terbit. */
   agreementVersion?: string;
@@ -190,6 +198,22 @@ export async function updateUserRole(uid: string, role: AppUser["role"]) {
   await updateDoc(doc(db, "users", uid), { role });
 }
 
+/**
+ * Hapus akun sampai bersih — Auth dan dokumen users/{uid} sekaligus. Lewat
+ * server karena hapus Auth user butuh Admin SDK; klien tidak punya haknya.
+ * Pakai ini, jangan hapus dari Firebase Console: Console cuma kena Auth dan
+ * menyisakan dokumen yatim di daftar pengguna.
+ */
+export async function deleteUserAccount(uid: string) {
+  const token = await auth?.currentUser?.getIdToken();
+  if (!token) throw new Error("not-signed-in");
+  const res = await fetch(`/api/delete-user?uid=${encodeURIComponent(uid)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("delete-failed");
+}
+
 /** Simpan/ubah no. HP kontak di profil pengguna. */
 export async function updateUserPhone(uid: string, phone: string) {
   if (!db) return;
@@ -231,6 +255,10 @@ export async function submitRoleRequest(
     organization: string;
     requestedRole: "mitra" | "pengelola";
     destination?: string;
+    shippingAddress?: string;
+    postalCode?: string;
+    recipientName?: string;
+    recipientPhone?: string;
     agreementVersion?: string;
   }
 ) {
@@ -276,7 +304,7 @@ export type CameraStatus = "pending" | "approved" | "rejected";
 export interface Camera {
   id: string; // Firestore doc id
   cameraId: string; // ID stream 6-karakter, digenerate website saat daftar
-  name: string; // nama tampilan, misal "Kamera Dermaga Bunaken"
+  name: string; // nama tampilan, misal "Kamera Dermaga Utama"
   streamUrl?: string; // legacy: URL stream langsung, kamera lama sebelum server kamera
   location: string; // lokasi pemasangan, boleh string kosong
   ownerUid: string;

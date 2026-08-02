@@ -12,13 +12,14 @@ import {
   type Review,
 } from '@/lib/firestore';
 import { stationPath } from '@/lib/realtime';
-import { waLink } from '@/lib/format';
+import { formatIDR, waLink } from '@/lib/format';
 import TopNav from '@/components/desktop/TopNav';
 import Footer from '@/components/desktop/Footer';
 import BottomNav from '@/components/mobile/BottomNav';
 import LiveMonitorPanel from '@/components/destinations/LiveMonitorPanel';
 import DestinationReviews, { StarRow } from '@/components/destinations/DestinationReviews';
 import { useAuthState } from '@/lib/useAuth';
+import { useLang } from '@/lib/useLang';
 
 function ArrowLeftIcon() {
   return (
@@ -53,13 +54,12 @@ function CheckIcon() {
   );
 }
 
-const formatRp = (n: number) =>
-  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
 
 export default function DestinationDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuthState();
+  const { t } = useLang();
   const [dest, setDest] = useState<Destination | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -118,7 +118,7 @@ export default function DestinationDetail() {
       <main className="min-h-dvh bg-shore-50">
         <TopNav compact />
         <div className="flex flex-col items-center justify-center gap-4 py-32">
-          <p className="text-sm text-navy-soft">Destinasi tidak ditemukan.</p>
+          <p className="text-sm text-navy-soft">{t('dest.notFound')}</p>
           <button onClick={() => router.push('/beranda')} className="btn-primary px-5 py-2.5 text-sm">
             Kembali ke Beranda
           </button>
@@ -270,7 +270,7 @@ export default function DestinationDetail() {
                 sudah punya batas sendiri (design.md § Surface language). */}
             {dest.description && (
               <section>
-                <h2 className="section-title">Tentang</h2>
+                <h2 className="section-title">{t('dest.about')}</h2>
                 <p className="mt-4 max-w-[65ch] whitespace-pre-line text-base leading-relaxed text-navy">
                   {dest.description}
                 </p>
@@ -282,7 +282,7 @@ export default function DestinationDetail() {
                 Foto hero (dest.image) sengaja tidak diulang di sini. */}
             {dest.images && dest.images.length > 0 && (
               <section>
-                <h2 className="section-title">Galeri</h2>
+                <h2 className="section-title">{t('dest.gallery')}</h2>
                 <div className="-mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
                   {dest.images.map((src, i) => (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -301,7 +301,7 @@ export default function DestinationDetail() {
 
             {/* Daftar harga + booking — tiap item berdiri sendiri. */}
             <section className="space-y-4">
-              <h2 className="section-title">Daftar harga</h2>
+              <h2 className="section-title">{t('dest.priceList')}</h2>
               {priceItems.length > 0 ? (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {priceItems.map((item) => {
@@ -334,7 +334,7 @@ export default function DestinationDetail() {
                           </p>
                         )}
                         <p className="tabular mt-auto pt-3 text-base font-semibold text-navy">
-                          {formatRp(item.price)}
+                          {formatIDR(item.price)}
                           <span className="text-xs font-normal text-navy-soft"> {item.unit}</span>
                         </p>
                       </button>
@@ -343,7 +343,7 @@ export default function DestinationDetail() {
                 </div>
               ) : (
                 <p className="text-sm text-navy-soft">
-                  Belum ada daftar harga untuk destinasi ini.
+                  {t('dest.noPriceList')}
                 </p>
               )}
               <button

@@ -6,10 +6,18 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { fetchRatingSummaries, getPriceItems, type Destination, type RatingSummary } from '@/lib/firestore';
 import { useSavedDestinations } from '@/lib/useSaved';
+import { useLang } from '@/lib/useLang';
+import { useLocations } from '@/lib/useLocations';
 import DesktopDestinationCard from './DesktopDestinationCard';
 import clsx from 'clsx';
 
-const filters = ['Semua', 'Bunaken', 'Likupang', 'Lembeh', 'Terdekat'];
+// Nilainya tetap Indonesia — dipakai membandingkan state & query param `loc`.
+// Hanya 'Semua' dan 'Terdekat' yang punya terjemahan; sisanya nama wilayah yang
+// datang dari Firestore lewat useLocations().
+const FILTER_KEYS: Record<string, string> = {
+  Semua: 'filter.all',
+  Terdekat: 'filter.nearest',
+};
 
 const gridClass = 'grid grid-cols-1 gap-5 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 
@@ -44,6 +52,7 @@ function SkeletonCard() {
 }
 
 function EmptyState() {
+  const { t } = useLang();
   return (
     <div className="flex flex-col items-center gap-4 py-24">
       <div className="flex h-16 w-16 items-center justify-center rounded-md bg-shore-100">
@@ -52,7 +61,7 @@ function EmptyState() {
           <circle cx="12" cy="10" r="3" />
         </svg>
       </div>
-      <p className="text-sm text-navy-soft">Tidak ada destinasi ditemukan</p>
+      <p className="text-sm text-navy-soft">{t('home.notFound')}</p>
     </div>
   );
 }
@@ -69,11 +78,28 @@ export default function DesktopDestinationGrid() {
   const [search, setSearch] = useState(qParam);
   const [ratings, setRatings] = useState<Record<string, RatingSummary>>({});
   const { user, savedIds, toggle } = useSavedDestinations();
+  const { t } = useLang();
+  const locations = useLocations();
+  const filters = useMemo(
+    () => ['Semua', ...locations, 'Terdekat'],
+    [locations]
+  );
 
   useEffect(() => {
     setSearch(qParam);
     setActiveFilter(locParam);
   }, [qParam, locParam]);
+
+  // ?loc bisa menyebut wilayah yang sudah tidak ada lagi di koleksi. Dulu daftar
+  // chip-nya hardcoded jadi chipnya selalu ada; sekarang filter seperti itu aktif
+  // tanpa chip yang menyala, dan gridnya kosong tanpa cara melepasnya. Tunggu
+  // daftar wilayah termuat dulu — locations kosong di paint pertama.
+  useEffect(() => {
+    if (!locations.length) return;
+    setActiveFilter((f) =>
+      f === 'Semua' || f === 'Terdekat' || locations.includes(f) ? f : 'Semua'
+    );
+  }, [locations]);
 
   useEffect(() => {
     fetchRatingSummaries().then(setRatings);
@@ -121,7 +147,7 @@ export default function DesktopDestinationGrid() {
   const byLocation = useMemo(() => {
     const m = new Map<string, Destination[]>();
     for (const d of destinations) {
-      const k = (d.location || '').trim() || 'Lainnya';
+      const k = (d.location || '').trim() || t('filter.other');
       const arr = m.get(k);
       if (arr) arr.push(d);
       else m.set(k, [d]);
@@ -129,7 +155,7 @@ export default function DesktopDestinationGrid() {
     return Array.from(m.entries()).sort(
       (a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0])
     );
-  }, [destinations]);
+  }, [destinations, t]);
 
   const renderCard = (dest: Destination, i: number) => (
     <div key={dest.id} className="animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
@@ -149,11 +175,14 @@ export default function DesktopDestinationGrid() {
         {/* Kepala bagian tanpa eyebrow: judulnya sendiri yang jadi kepala. */}
         <div className="mb-8 flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
           <div className="max-w-xl">
-            <h2 className="section-title">Destinasi Sulawesi Utara</h2>
+            <h2 className="section-title">{t('home.sectionTitle')}</h2>
             <p className="section-lede">
               {loading
-                ? 'Memuat destinasi…'
-                : `${destinations.length} destinasi di ${byLocation.length} wilayah — dari terumbu Bunaken sampai muck-diving Lembeh. Cari, atau telusuri per wilayah di bawah.`}
+                ? t('home.loadingDest')
+                : t('home.gridLede', {
+                    count: destinations.length,
+                    regions: byLocation.length,
+                  })}
             </p>
           </div>
           <div className="flex w-full items-center gap-2.5 rounded-sm border border-shore-200 bg-surface px-4 py-2.5 transition-colors duration-micro ease-out focus-within:border-teal-600 sm:w-72">
@@ -161,24 +190,32 @@ export default function DesktopDestinationGrid() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari destinasi…"
-              aria-label="Cari destinasi"
+              placeholder={t('home.searchShort')}
+              aria-label={t('home.searchLabel')}
               className="w-full min-w-0 bg-transparent text-sm text-navy placeholder:text-navy-soft outline-none"
             />
           </div>
         </div>
 
-        {/* Filter chips */}
+        {/* Filter chips. Wilayahnya menyusul dari Firestore, jadi selama daftar
+            masih kosong tampilkan pil kosong — bukan 'Semua · Terdekat' yang
+            sekejap berubah jadi lima chip di depan mata pengguna. */}
         <div className="mb-10 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {filters.map((f) => (
-            <button
-              key={f}
-              onClick={() => setActiveFilter(f)}
-              className={clsx('chip', activeFilter === f && 'chip-active')}
-            >
-              {f}
-            </button>
-          ))}
+          {locations.length === 0
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="chip w-24 animate-pulse bg-shore-100 text-transparent">
+                  &nbsp;
+                </div>
+              ))
+            : filters.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setActiveFilter(f)}
+                  className={clsx('chip', activeFilter === f && 'chip-active')}
+                >
+                  {FILTER_KEYS[f] ? t(FILTER_KEYS[f]) : f}
+                </button>
+              ))}
         </div>
 
         {/* Body */}

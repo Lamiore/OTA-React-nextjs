@@ -1,10 +1,14 @@
+'use client';
+
 import Link from 'next/link';
+import { useLang } from '@/lib/useLang';
 
 // Ft1 · Mast-headed — wordmark + tagline menjangkar satu pita horizontal, tautan
 // kecil di sampingnya. Rule ganda di atas menutup halaman dengan tanda baca yang
 // sama seperti masthead membukanya (N6). Menggantikan Ft5 statement: kalimat
 // display raksasa + bloom teal itu kosakata atmospheric, bukan editorial.
 export default function Footer() {
+  const { t } = useLang();
   return (
     <footer className="mt-auto">
       <div className="h-[3px] border-y border-shore-200" aria-hidden="true" />
@@ -12,27 +16,27 @@ export default function Footer() {
         <div>
           <p className="flex items-center gap-2 font-serif text-lg font-semibold tracking-tight text-navy">
             <span aria-hidden="true" className="brand-mark h-6 shrink-0 text-teal-600" />
-            Lautara
+            Nusa
           </p>
           <p className="mt-1 text-sm text-navy-soft">
-            Destinasi selam dan pesisir Sulawesi Utara.
+            {t('footer.tagline')}
           </p>
         </div>
 
         <nav aria-label="Footer" className="flex items-center gap-6">
           <Link href="/beranda" className="btn-text">
-            Beranda
+            {t('nav.home')}
           </Link>
           <Link href="/booking" className="btn-text">
-            Booking
+            {t('nav.booking')}
           </Link>
           <Link href="/profile" className="btn-text">
-            Profil
+            {t('nav.profile')}
           </Link>
         </nav>
 
         <span className="ml-auto text-xs text-navy-soft">
-          © 2026 Lautara · Sulawesi Utara
+          © 2026 Nusa
         </span>
       </div>
     </footer>

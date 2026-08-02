@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useLang } from '@/lib/useLang';
 
 interface Props {
   id: string;
@@ -54,6 +55,7 @@ export default function DestinationCard({
   onToggleSave,
 }: Props) {
   const router = useRouter();
+  const { t } = useLang();
 
   return (
     <div className="flex rounded-md border border-shore-200/80 bg-surface overflow-hidden transition-colors duration-short">
@@ -88,7 +90,7 @@ export default function DestinationCard({
           {onToggleSave && (
             <button
               onClick={onToggleSave}
-              aria-label={saved ? 'Hapus dari tersimpan' : 'Simpan destinasi'}
+              aria-label={t(saved ? 'card.unsave' : 'card.save')}
               className={`shrink-0 -mt-1 -mr-1 p-1 transition-colors ${saved ? 'text-danger' : 'text-shore-300 hover:text-danger'}`}
             >
               <HeartIcon filled={!!saved} />

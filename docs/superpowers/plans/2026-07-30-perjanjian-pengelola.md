@@ -2,7 +2,7 @@
 
 > ⚠️ **SUDAH DIJALANKAN DAN SUDAH DILAMPAUI (30 Juli 2026).** Keempat task di
 > bawah sudah selesai dan ter-commit, lalu cakupannya diperluas: Perjanjian Mitra
-> ditambahkan, kamera diwajibkan dibeli & dipasang Lautara untuk mitra
+> ditambahkan, kamera diwajibkan dibeli & dipasang Nusa untuk mitra
 > (dianjurkan-tidak-wajib untuk pengelola), dan `PENGELOLA_AGREEMENT_VERSION`
 > diganti tabel `AGREEMENT` per role. **Potongan kode di dokumen ini tidak lagi
 > mencerminkan kode yang berjalan** — dibiarkan apa adanya sebagai catatan
@@ -235,9 +235,9 @@ import BottomNav from '@/components/mobile/BottomNav';
 import { PENGELOLA_AGREEMENT_VERSION } from '@/lib/verification';
 
 export const metadata: Metadata = {
-  title: 'Perjanjian Pengelola — Lautara',
+  title: 'Perjanjian Pengelola — Nusa',
   description:
-    'Hak, kewajiban, dan ketentuan paket pemantauan bagi pengelola destinasi Lautara.',
+    'Hak, kewajiban, dan ketentuan paket pemantauan bagi pengelola destinasi Nusa.',
 };
 
 /** Tanggal berlaku v1.0. Ditulis di sini karena hanya dipakai di halaman ini. */
@@ -247,7 +247,7 @@ const PASAL: { judul: string; ayat: string[] }[] = [
   {
     judul: '1. Ruang Lingkup',
     ayat: [
-      'Perjanjian ini mengatur hubungan antara Lautara ("Platform") dan pengguna yang disetujui menjadi pengelola destinasi ("Pengelola").',
+      'Perjanjian ini mengatur hubungan antara Nusa ("Platform") dan pengguna yang disetujui menjadi pengelola destinasi ("Pengelola").',
       'Destinasi yang dikelola ditetapkan oleh admin Platform. Pilihan destinasi pada formulir pengajuan bersifat usulan, bukan penetapan.',
       'Perjanjian ini bukan perjanjian kerja. Pengelola bukan karyawan Platform, tidak menerima upah, dan tidak memperoleh hak ketenagakerjaan dari Platform.',
     ],
@@ -338,7 +338,7 @@ export default function SyaratPengelola() {
         <p className="mt-6 text-sm leading-relaxed text-navy-soft">
           Baca sebelum mengajukan diri jadi pengelola. Dua hal yang paling perlu
           kamu tahu: kamu membeli sendiri paket sensor untuk destinasimu, dan
-          pembayaran dari pengunjung kamu terima langsung, bukan lewat Lautara.
+          pembayaran dari pengunjung kamu terima langsung, bukan lewat Nusa.
         </p>
 
         <div className="mt-10 space-y-8">
