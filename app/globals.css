@@ -60,10 +60,10 @@
      colour comes from a token and flips with the theme — an <img> would lock
      the file's own teal, and `currentColor` inside an external SVG does not
      inherit across documents. Set height + a text colour at the call site.
-     Ratio is the artwork's own 369.4 x 335.1. */
+     Ratio is the artwork's own 356 x 305.31. */
   .brand-mark {
     display: inline-block;
-    aspect-ratio: 369.4 / 335.1;
+    aspect-ratio: 356 / 305.31;
     background-color: currentColor;
     -webkit-mask: url('/logo-mono.svg') center / contain no-repeat;
     mask: url('/logo-mono.svg') center / contain no-repeat;
