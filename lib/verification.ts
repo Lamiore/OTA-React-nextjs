@@ -5,6 +5,11 @@
  */
 
 /**
+ * `label` sengaja tidak diterjemahkan: itu nama dokumen yang isinya memang
+ * berbahasa Indonesia (halaman /syarat-*), dan dokumen itulah yang disetujui
+ * secara hukum. Menerjemahkan namanya saja akan menyiratkan ada versi Inggris
+ * yang setara — tidak ada.
+ *
  * Perjanjian per role: versi yang berlaku, tautan halamannya, dan namanya.
  * Satu tempat supaya form, halaman perjanjian, dan catatan persetujuan tidak
  * pernah menyebut versi atau tautan yang berbeda. Naikkan `version` bila isi
@@ -17,19 +22,47 @@ export const AGREEMENT = {
     label: "Perjanjian Mitra",
   },
   pengelola: {
-    version: "1.0",
+    version: "1.1",
     path: "/syarat-pengelola",
     label: "Perjanjian Pengelola",
   },
 } as const;
+
+/**
+ * Nilai <option> penanda "destinasinya belum ada di daftar". Dipakai bersama
+ * oleh form dan validasi supaya keduanya tidak pernah memakai sentinel berbeda.
+ */
+export const NEW_DESTINATION = "__baru__";
+
+/**
+ * Dasar hak seseorang mengelola lokasi yang diusulkannya. Ini pengganti unggah
+ * berkas: yang dicatat pernyataannya, bukti fisiknya diminta admin lewat
+ * WhatsApp sebelum pengajuan disetujui.
+ */
+export const LAND_RIGHTS = [
+  "Lahan milik sendiri atau keluarga",
+  "Izin dari pemilik lahan",
+  "Izin atau penunjukan pemerintah desa/kelurahan",
+  "Izin dinas pariwisata atau pengelola kawasan",
+  "Kelompok sadar wisata (Pokdarwis) atau BUMDes",
+] as const;
 
 export interface RoleRequestInput {
   fullName: string;
   phone: string;
   organization: string;
   requestedRole: "mitra" | "pengelola";
-  /** Hanya diisi pengajuan pengelola. */
+  /** Nama destinasi. Yang sudah terdaftar dipilih dari daftar; kalau
+   *  `newDestination` true ini nama usulan yang diketik sendiri. */
   destination?: string;
+  /** Kolom di bawah ini hanya untuk usulan destinasi baru. */
+  newDestination?: boolean;
+  destinationLocation?: string;
+  destinationDescription?: string;
+  /** Salah satu LAND_RIGHTS. */
+  landRights?: string;
+  /** Centang pernyataan hak mengelola lokasi — hanya usulan destinasi baru. */
+  declaredRights?: boolean;
   /** Alamat kirim paket sensor — wajib untuk pengelola, tak dipakai mitra
    *  (kamera mitra dipasang petugas Nusa, bukan dikirim). */
   shippingAddress?: string;
@@ -59,10 +92,14 @@ export function packageRecipient(v: {
 }
 
 /**
- * Pesan kesalahan pertama yang ditemukan, atau null bila pengajuan boleh
- * dikirim. Urutannya disengaja: kolom wajib dan destinasi diperiksa duluan,
- * persetujuan paling akhir — supaya orang tidak disuruh menyetujui perjanjian
- * untuk form yang belum lengkap.
+ * Kunci kamus untuk kesalahan pertama yang ditemukan, atau null bila pengajuan
+ * boleh dikirim. Mengembalikan kunci, bukan kalimat jadi, supaya pesannya ikut
+ * berganti saat bahasa antarmuka diganti — file ini tetap tanpa import agar
+ * verification.check.ts bisa dijalankan `node` polos.
+ *
+ * Urutannya disengaja: kolom wajib dan destinasi diperiksa duluan, persetujuan
+ * paling akhir — supaya orang tidak disuruh menyetujui perjanjian untuk form
+ * yang belum lengkap.
  */
 export function validateRoleRequest(input: RoleRequestInput): string | null {
   if (
@@ -70,23 +107,45 @@ export function validateRoleRequest(input: RoleRequestInput): string | null {
     !input.phone.trim() ||
     !input.organization.trim()
   ) {
-    return "Semua kolom wajib diisi.";
+    return "verifyForm.allFieldsRequired";
   }
   if (input.requestedRole === "pengelola") {
-    if (!input.destination) {
-      return "Pilih destinasi yang ingin dikelola.";
+    if (input.newDestination) {
+      if (!input.destination?.trim()) {
+        return "verifyForm.newDestNameRequired";
+      }
+      if (!input.destinationLocation?.trim()) {
+        return "verifyForm.newDestLocationRequired";
+      }
+      if (!input.destinationDescription?.trim()) {
+        return "verifyForm.newDestDescRequired";
+      }
+      if (!input.landRights) {
+        return "verifyForm.landRightsRequired";
+      }
+    } else if (!input.destination) {
+      return "verifyForm.destRequired";
     }
     if (!input.shippingAddress?.trim()) {
-      return "Alamat pengiriman paket sensor wajib diisi.";
+      return "verifyForm.shippingRequired";
     }
     // Ekspedisi menolak kode pos yang tidak lima angka; ditahan di sini supaya
     // paketnya tidak gagal kirim setelah pengajuan disetujui.
     if (!/^\d{5}$/.test(input.postalCode?.trim() ?? "")) {
-      return "Kode pos harus 5 angka.";
+      return "verifyForm.postalCodeInvalid";
     }
   }
+  // Pernyataan hak diperiksa sebelum persetujuan perjanjian: yang satu soal
+  // fakta pengaju, yang lain soal isi dokumen — jangan digabung jadi satu.
+  if (input.newDestination && !input.declaredRights) {
+    return "verifyForm.declareRightsRequired";
+  }
   if (!input.agreed) {
-    return `Kamu harus menyetujui ${AGREEMENT[input.requestedRole].label} dulu.`;
+    // Dua kunci terpisah, bukan satu kunci dengan sisipan nama perjanjian:
+    // menyusun kalimat dari potongan tidak selalu benar di bahasa lain.
+    return input.requestedRole === "pengelola"
+      ? "verifyForm.mustAgreePengelola"
+      : "verifyForm.mustAgreeMitra";
   }
   return null;
 }

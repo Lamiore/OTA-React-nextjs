@@ -2,20 +2,19 @@
 
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { useLang } from '@/lib/useLang';
 
 interface Message {
   role: 'user' | 'assistant';
+  /** Isi pesan; bila `isKey`, ini kunci kamus yang diterjemahkan saat render. */
   text: string;
+  isKey?: boolean;
 }
 
-const SAPAAN =
-  'Halo! Aku asisten Nusa. Tanya apa saja soal destinasi selam, harga, atau cara booking.';
+// Sapaan & saran disimpan sebagai kunci kamus; diterjemahkan saat dirender.
+const SAPAAN_KEY = 'chat.greeting';
 
-const SARAN = [
-  'Rekomendasi spot buat pemula',
-  'Berapa harga tiketnya?',
-  'Cara booking gimana?',
-];
+const SARAN_KEYS = ['chat.suggest1', 'chat.suggest2', 'chat.suggest3'];
 
 function ChatIcon() {
   return (
@@ -43,16 +42,17 @@ function SendIcon() {
   );
 }
 
-const ERRORS: Record<string, string> = {
-  quota: 'Lagi ramai banget. Coba lagi sebentar lagi ya.',
-  'too-many-requests': 'Kebanyakan pesan sekaligus. Tunggu sebentar ya.',
-  'not-configured': 'Asisten belum aktif. Hubungi admin.',
+const ERROR_KEYS: Record<string, string> = {
+  quota: 'chat.errQuota',
+  'too-many-requests': 'chat.errTooMany',
+  'not-configured': 'chat.errNotConfigured',
 };
 
 export default function ChatWidget() {
+  const { t } = useLang();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', text: SAPAAN },
+    { role: 'assistant', text: SAPAAN_KEY, isKey: true },
   ]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -98,12 +98,12 @@ export default function ChatWidget() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(ERRORS[data.error] ?? 'Gagal menghubungi asisten. Coba lagi.');
+        setError(ERROR_KEYS[data.error] ?? 'chat.errGeneric');
         return;
       }
       setMessages([...next, { role: 'assistant', text: data.reply }]);
     } catch {
-      setError('Koneksi bermasalah. Cek internet kamu.');
+      setError('chat.errNetwork');
     } finally {
       setSending(false);
     }
@@ -114,7 +114,7 @@ export default function ChatWidget() {
       {/* Mobile duduk di atas BottomNav (fixed bottom-3, tinggi ~68px). */}
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label={open ? 'Tutup asisten' : 'Buka asisten Nusa'}
+        aria-label={open ? t('chat.close') : t('chat.open')}
         aria-expanded={open}
         className={clsx(
           'fixed right-4 bottom-28 z-[150] flex h-14 w-14 items-center justify-center',
@@ -129,7 +129,7 @@ export default function ChatWidget() {
       {open && (
         <div
           role="dialog"
-          aria-label="Asisten Nusa"
+          aria-label={t('chat.title')}
           className={clsx(
             'fixed z-[150] flex flex-col overflow-hidden rounded-md bg-surface shadow-overlay',
             'ring-1 ring-shore-200 animate-fade-up',
@@ -143,8 +143,8 @@ export default function ChatWidget() {
               <ChatIcon />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-navy">Asisten Nusa</p>
-              <p className="text-2xs text-navy-soft">Biasanya balas dalam hitungan detik</p>
+              <p className="text-sm font-semibold text-navy">{t('chat.title')}</p>
+              <p className="text-2xs text-navy-soft">{t('chat.replyTime')}</p>
             </div>
           </header>
 
@@ -162,7 +162,7 @@ export default function ChatWidget() {
                       : 'bg-shore-100 text-navy'
                   )}
                 >
-                  {m.text}
+                  {m.isKey ? t(m.text) : m.text}
                 </p>
               </div>
             ))}
@@ -170,20 +170,20 @@ export default function ChatWidget() {
             {sending && (
               <div className="flex justify-start">
                 <p className="rounded-md bg-shore-100 px-3 py-2 text-sm text-navy-soft">
-                  Mengetik…
+                  {t('chat.typing')}
                 </p>
               </div>
             )}
 
             {error && (
-              <p className="rounded-md bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
+              <p className="rounded-md bg-danger-soft px-3 py-2 text-xs text-danger">{t(error)}</p>
             )}
 
             {messages.length === 1 && !sending && (
               <div className="flex flex-wrap gap-2 pt-1">
-                {SARAN.map((s) => (
-                  <button key={s} onClick={() => send(s)} className="chip">
-                    {s}
+                {SARAN_KEYS.map((key) => (
+                  <button key={key} onClick={() => send(t(key))} className="chip">
+                    {t(key)}
                   </button>
                 ))}
               </div>
@@ -202,14 +202,14 @@ export default function ChatWidget() {
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               maxLength={500}
-              placeholder="Tulis pertanyaan…"
-              aria-label="Pesan"
+              placeholder={t('chat.placeholder')}
+              aria-label={t('chat.messageLabel')}
               className="min-w-0 flex-1 rounded-sm bg-shore-100 px-3 py-2 text-sm text-navy placeholder:text-navy-subtle focus:outline-none focus:ring-2 focus:ring-teal-400"
             />
             <button
               type="submit"
               disabled={sending || !draft.trim()}
-              aria-label="Kirim"
+              aria-label={t('common.send')}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-teal-500 text-white transition-colors duration-micro hover:bg-teal-600 disabled:opacity-40"
             >
               <SendIcon />

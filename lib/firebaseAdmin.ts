@@ -17,7 +17,18 @@ function initAdmin() {
     initializeApp({ credential: cert(sa) });
     return;
   }
-  // GOOGLE_APPLICATION_CREDENTIALS=<path ke json>
+
+  // GOOGLE_APPLICATION_CREDENTIALS=<path ke json>. Sengaja lewat cert(), bukan
+  // applicationDefault(): ADC bisa diam-diam jatuh ke kredensial gcloud pribadi
+  // yang tidak punya private key, dan createCustomToken() lalu menandatangani
+  // lewat IAM Credentials API — API yang mati di proyek ini, jadi login kode
+  // email langsung 500. cert() selalu menandatangani lokal.
+  const saPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (saPath) {
+    initializeApp({ credential: cert(saPath) });
+    return;
+  }
+
   initializeApp({ credential: applicationDefault() });
 }
 

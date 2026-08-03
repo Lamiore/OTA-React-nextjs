@@ -5,6 +5,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { db } from '@/lib/firebase';
 import type { UserRole } from '@/lib/useAuth';
+import { useLang } from '@/lib/useLang';
 import { canManageCameras, type MitraVerification } from '@/lib/firestore';
 import CameraManager from './CameraManager';
 import VerificationForm from './VerificationForm';
@@ -23,6 +24,7 @@ interface Props {
  *   kembali ke user) → VerificationForm.
  */
 export default function CameraSection({ user, role }: Props) {
+  const { t } = useLang();
   const [verification, setVerification] = useState<MitraVerification | null>(null);
   const [loading, setLoading] = useState(true);
   const [resubmitting, setResubmitting] = useState(false);
@@ -43,11 +45,9 @@ export default function CameraSection({ user, role }: Props) {
 
   return (
     <>
-      <h1 className="font-serif text-2xl font-medium text-navy sm:text-3xl">Kamera</h1>
+      <h1 className="font-serif text-2xl font-medium text-navy sm:text-3xl">{t('camera.title')}</h1>
       <p className="mt-2 text-sm text-navy-soft">
-        {manager
-          ? 'Daftarkan dan pantau kamera milikmu'
-          : 'Verifikasi akun untuk mendaftarkan kamera'}
+        {manager ? t('camera.lede') : t('camera.ledeUnverified')}
       </p>
 
       <div className="mt-6">
@@ -61,32 +61,30 @@ export default function CameraSection({ user, role }: Props) {
         ) : verification?.status === 'pending' ? (
           <div className="card p-6">
             <span className="inline-flex rounded-sm bg-warn-soft px-2.5 py-1 text-2xs font-medium text-warn">
-              Menunggu Persetujuan
+              {t('verify.awaitingApproval')}
             </span>
             <p className="text-sm text-navy-soft mt-3 leading-relaxed">
-              Pengajuan sedang ditinjau admin. Kamu akan bisa menambahkan kamera
-              setelah pengajuan disetujui.
+              {t('camera.pendingNote')}
             </p>
             <div className="mt-4 space-y-1.5 text-sm text-navy">
-              <p><span className="text-navy-soft">Nama:</span> {verification.fullName}</p>
-              <p><span className="text-navy-soft">No. HP:</span> {verification.phone}</p>
-              <p><span className="text-navy-soft">Instansi:</span> {verification.organization}</p>
+              <p><span className="text-navy-soft">{t('verify.nameLabel')}</span> {verification.fullName}</p>
+              <p><span className="text-navy-soft">{t('verify.phoneLabel')}</span> {verification.phone}</p>
+              <p><span className="text-navy-soft">{t('verify.orgLabel')}</span> {verification.organization}</p>
             </div>
           </div>
         ) : verification?.status === 'rejected' && !resubmitting ? (
           <div className="card p-6">
             <span className="inline-flex rounded-sm bg-danger-soft px-2.5 py-1 text-2xs font-medium text-danger">
-              Pengajuan Ditolak
+              {t('verify.rejected')}
             </span>
             <p className="text-sm text-navy-soft mt-3 leading-relaxed">
-              Pengajuan verifikasimu ditolak admin. Periksa kembali datamu lalu
-              ajukan ulang.
+              {t('camera.rejectedNote')}
             </p>
             <button
               onClick={() => setResubmitting(true)}
               className="btn-primary w-full px-6 py-3 text-sm mt-5"
             >
-              Ajukan Ulang
+              {t('verify.resubmit')}
             </button>
           </div>
         ) : (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { resolveDetectionUrl, resolveStreamUrl, subscribeCameraServerUrl, type Camera } from '@/lib/firestore';
+import { useLang } from '@/lib/useLang';
 import CameraStats from './CameraStats';
 import CameraHistory from './CameraHistory';
 
@@ -20,6 +21,7 @@ interface Props {
  * kamera lama yang masih punya streamUrl langsung tetap didukung.
  */
 export default function CameraLiveModal({ camera, onClose }: Props) {
+  const { t } = useLang();
   const [mounted, setMounted] = useState(false);
   const [error, setError] = useState(false);
   const [serverUrl, setServerUrl] = useState<string | null>(null); // null = memuat
@@ -53,20 +55,13 @@ export default function CameraLiveModal({ camera, onClose }: Props) {
           <div className="relative w-full aspect-video rounded-md overflow-hidden bg-ink">
             {src === null ? null : src === '' ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
-                <p className="text-sm">Alamat server kamera belum diatur.</p>
-                <p className="text-xs text-white/50">
-                  Isi kolom &quot;Alamat Server Kamera&quot; dengan alamat dari
-                  website kamera, lalu buka lagi live view ini.
-                </p>
+                <p className="text-sm">{t('camera.noServerUrl')}</p>
+                <p className="text-xs text-white/50">{t('camera.noServerUrlHint')}</p>
               </div>
             ) : error ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
-                <p className="text-sm">Tidak bisa terhubung ke kamera.</p>
-                <p className="text-xs text-white/50">
-                  Pastikan server kamera jalan, ID benar, dan semua perangkat satu
-                  jaringan. Bila aplikasi dibuka lewat HTTPS, stream http:// jaringan
-                  lokal akan diblokir browser.
-                </p>
+                <p className="text-sm">{t('camera.noConnection')}</p>
+                <p className="text-xs text-white/50">{t('camera.noConnectionHintFull')}</p>
               </div>
             ) : (
               <img

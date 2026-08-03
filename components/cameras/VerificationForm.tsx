@@ -7,7 +7,13 @@ import {
   type Destination,
   type MitraVerification,
 } from '@/lib/firestore';
-import { AGREEMENT, validateRoleRequest } from '@/lib/verification';
+import {
+  AGREEMENT,
+  LAND_RIGHTS,
+  NEW_DESTINATION,
+  validateRoleRequest,
+} from '@/lib/verification';
+import { useLang } from '@/lib/useLang';
 
 interface Props {
   uid: string;
@@ -23,15 +29,33 @@ export default function VerificationForm({
   uid,
   initial,
   requestedRole = 'mitra',
-  title = 'Verifikasi Akun Mitra',
-  description = 'Untuk mendaftarkan kamera, akunmu perlu diverifikasi admin terlebih dahulu. Lengkapi data di bawah — setelah disetujui, role akunmu naik menjadi mitra.',
+  title,
+  description,
 }: Props) {
+  const { t } = useLang();
   const isPengelola = requestedRole === 'pengelola';
   const agreement = AGREEMENT[requestedRole];
   const [fullName, setFullName] = useState(initial?.fullName ?? '');
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [organization, setOrganization] = useState(initial?.organization ?? '');
-  const [destination, setDestination] = useState(initial?.destination ?? '');
+  // Pilihan dropdown: id destinasi terdaftar atau sentinel "usulkan baru".
+  const [destChoice, setDestChoice] = useState(
+    initial?.newDestination ? NEW_DESTINATION : initial?.destination ?? ''
+  );
+  const isNewDest = destChoice === NEW_DESTINATION;
+  const [newDestName, setNewDestName] = useState(
+    initial?.newDestination ? initial.destination ?? '' : ''
+  );
+  const [destinationLocation, setDestinationLocation] = useState(
+    initial?.destinationLocation ?? ''
+  );
+  const [destinationDescription, setDestinationDescription] = useState(
+    initial?.destinationDescription ?? ''
+  );
+  const [landRights, setLandRights] = useState(initial?.landRights ?? '');
+  const [declaredRights, setDeclaredRights] = useState(false);
+  // Nama yang benar-benar dikirim: usulan yang diketik, atau pilihan dari daftar.
+  const destination = isNewDest ? newDestName : destChoice;
   const [shippingAddress, setShippingAddress] = useState(initial?.shippingAddress ?? '');
   const [postalCode, setPostalCode] = useState(initial?.postalCode ?? '');
   const [recipientName, setRecipientName] = useState(initial?.recipientName ?? '');
@@ -57,6 +81,11 @@ export default function VerificationForm({
       organization,
       requestedRole,
       destination,
+      newDestination: isNewDest,
+      destinationLocation,
+      destinationDescription,
+      landRights,
+      declaredRights,
       shippingAddress,
       postalCode,
       agreed,
@@ -77,7 +106,16 @@ export default function VerificationForm({
         // menstempelnya dengan serverTimestamp() begitu agreementVersion ada.
         agreementVersion: agreement.version,
         ...(isPengelola && {
-          destination,
+          destination: destination.trim(),
+          ...(isNewDest && {
+            newDestination: true,
+            destinationLocation: destinationLocation.trim(),
+            destinationDescription: destinationDescription.trim(),
+            landRights,
+            // Disimpan, bukan cuma divalidasi: Pasal 2 ayat 4 memakai pernyataan
+            // ini sebagai dasar pencabutan, jadi harus ada jejaknya.
+            declaredRights: true,
+          }),
           shippingAddress: shippingAddress.trim(),
           postalCode: postalCode.trim(),
           recipientName: recipientName.trim(),
@@ -87,7 +125,7 @@ export default function VerificationForm({
       // Tidak reset/pindah view di sini: CameraSection berpindah ke kartu
       // status pending begitu onSnapshot dokumen user menerima perubahan.
     } catch {
-      setError('Gagal mengirim pengajuan. Coba lagi.');
+      setError('verifyForm.submitFailed');
     } finally {
       setSubmitting(false);
     }
@@ -98,22 +136,26 @@ export default function VerificationForm({
 
   return (
     <div className="card p-6">
-      <h2 className="font-serif text-lg font-medium text-navy">{title}</h2>
-      <p className="text-sm text-navy-soft mt-2 leading-relaxed">{description}</p>
+      {/* Default judul/keterangan diambil dari kamus di sini, bukan di daftar
+          parameter — nilai bawaan parameter tidak bisa memanggil hook. */}
+      <h2 className="font-serif text-lg font-medium text-navy">{title ?? t('verifyForm.title')}</h2>
+      <p className="text-sm text-navy-soft mt-2 leading-relaxed">
+        {description ?? t('verifyForm.desc')}
+      </p>
 
       <form onSubmit={handleSubmit} className="mt-5 space-y-4">
         <div>
-          <label className="block text-xs font-medium text-navy mb-1.5">Nama Lengkap</label>
-          <input aria-label="Nama Lengkap"
+          <label className="block text-xs font-medium text-navy mb-1.5">{t('auth.fullName')}</label>
+          <input aria-label={t('auth.fullName')}
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            placeholder="Nama penanggung jawab"
+            placeholder={t('verifyForm.namePlaceholder')}
             className={inputClass}
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-navy mb-1.5">No. HP</label>
-          <input aria-label="No. HP"
+          <label className="block text-xs font-medium text-navy mb-1.5">{t('verifyForm.phone')}</label>
+          <input aria-label={t('verifyForm.phone')}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             inputMode="tel"
@@ -122,59 +164,119 @@ export default function VerificationForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-navy mb-1.5">Instansi/Organisasi</label>
-          <input aria-label="Instansi/Organisasi"
+          <label className="block text-xs font-medium text-navy mb-1.5">{t('verifyForm.org')}</label>
+          <input aria-label={t('verifyForm.org')}
             value={organization}
             onChange={(e) => setOrganization(e.target.value)}
-            placeholder="Operator dive, resort, komunitas, ..."
+            placeholder={t('verifyForm.orgPlaceholder')}
             className={inputClass}
           />
         </div>
 
         {isPengelola && (
           <div>
-            <label className="block text-xs font-medium text-navy mb-1.5">Destinasi yang Dikelola</label>
-            <select aria-label="Destinasi yang Dikelola"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
+            <label className="block text-xs font-medium text-navy mb-1.5">{t('verifyForm.managedDest')}</label>
+            <select aria-label={t('verifyForm.managedDest')}
+              value={destChoice}
+              onChange={(e) => setDestChoice(e.target.value)}
               className={`${inputClass} cursor-pointer`}
             >
-              <option value="">-- Pilih destinasi --</option>
+              <option value="">{t('verifyForm.pickDest')}</option>
               {destinations.map((d) => (
                 <option key={d.id} value={d.name}>
                   {d.name} — {d.location}
                 </option>
               ))}
+              <option value={NEW_DESTINATION}>
+                {t('verifyForm.proposeNew')}
+              </option>
             </select>
             <p className="text-2xs text-navy-soft mt-1.5">
-              Penetapan akhir destinasi tetap oleh admin setelah pengajuan disetujui.
+              {t('verifyForm.destFinalNote')}
             </p>
+          </div>
+        )}
+
+        {isPengelola && isNewDest && (
+          <div className="rounded-md border border-shore-200 bg-shore-50/60 p-4 space-y-4">
+            <div>
+              <h3 className="text-xs font-medium text-navy">{t('verifyForm.proposedDest')}</h3>
+              <p className="text-2xs text-navy-soft mt-1 leading-relaxed">
+                {t('verifyForm.proposedDestHint')}
+              </p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-navy mb-1.5">{t('verifyForm.destName')}</label>
+              <input aria-label={t('verifyForm.destName')}
+                value={newDestName}
+                onChange={(e) => setNewDestName(e.target.value)}
+                placeholder={t('verifyForm.destNamePlaceholder')}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-navy mb-1.5">{t('verifyForm.destLocation')}</label>
+              <input aria-label={t('verifyForm.destLocation')}
+                value={destinationLocation}
+                onChange={(e) => setDestinationLocation(e.target.value)}
+                placeholder={t('verifyForm.destLocationPlaceholder')}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-navy mb-1.5">{t('verifyForm.destDesc')}</label>
+              <textarea aria-label={t('verifyForm.destDesc')}
+                value={destinationDescription}
+                onChange={(e) => setDestinationDescription(e.target.value)}
+                rows={3}
+                placeholder={t('verifyForm.destDescPlaceholder')}
+                className={`${inputClass} resize-y`}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-navy mb-1.5">
+                {t('verifyForm.landRights')}
+              </label>
+              <select aria-label={t('verifyForm.landRights')}
+                value={landRights}
+                onChange={(e) => setLandRights(e.target.value)}
+                className={`${inputClass} cursor-pointer`}
+              >
+                <option value="">{t('verifyForm.pickLandRights')}</option>
+                {LAND_RIGHTS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+              <p className="text-2xs text-navy-soft mt-1.5 leading-relaxed">
+                {t('verifyForm.landRightsHint')}
+              </p>
+            </div>
           </div>
         )}
 
         {isPengelola && (
           <div className="rounded-md border border-shore-200 bg-shore-50/60 p-4 space-y-4">
             <div>
-              <h3 className="text-xs font-medium text-navy">Pengiriman Paket Sensor</h3>
+              <h3 className="text-xs font-medium text-navy">{t('verifyForm.shipping')}</h3>
               <p className="text-2xs text-navy-soft mt-1 leading-relaxed">
-                Paket sensor dikirim ke alamatmu, tidak dipasang di tempat oleh
-                petugas. Panduan pemasangan dan koordinasi jadwal dilakukan lewat
-                WhatsApp ke nomor di atas.
+                {t('verifyForm.shippingHint')}
               </p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy mb-1.5">Alamat Pengiriman</label>
-              <textarea aria-label="Alamat Pengiriman"
+              <label className="block text-xs font-medium text-navy mb-1.5">{t('verifyForm.shipAddress')}</label>
+              <textarea aria-label={t('verifyForm.shipAddress')}
                 value={shippingAddress}
                 onChange={(e) => setShippingAddress(e.target.value)}
                 rows={3}
-                placeholder="Jalan & no., RT/RW, kelurahan, kecamatan, kota/kabupaten, provinsi — sebutkan juga patokan terdekat"
+                placeholder={t('verifyForm.shipAddressPlaceholder')}
                 className={`${inputClass} resize-y`}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy mb-1.5">Kode Pos</label>
-              <input aria-label="Kode Pos"
+              <label className="block text-xs font-medium text-navy mb-1.5">{t('verifyForm.postalCode')}</label>
+              <input aria-label={t('verifyForm.postalCode')}
                 value={postalCode}
                 onChange={(e) => setPostalCode(e.target.value)}
                 inputMode="numeric"
@@ -186,32 +288,46 @@ export default function VerificationForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-xs font-medium text-navy mb-1.5">
-                  Nama Penerima <span className="font-normal text-navy-soft">(opsional)</span>
+                  {t('verifyForm.recipientName')} <span className="font-normal text-navy-soft">{t('verifyForm.optional')}</span>
                 </label>
-                <input aria-label="Nama Penerima"
+                <input aria-label={t('verifyForm.recipientName')}
                   value={recipientName}
                   onChange={(e) => setRecipientName(e.target.value)}
-                  placeholder={fullName.trim() || 'Sama dengan pendaftar'}
+                  placeholder={fullName.trim() || t('verifyForm.sameAsApplicant')}
                   className={inputClass}
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium text-navy mb-1.5">
-                  No. HP Penerima <span className="font-normal text-navy-soft">(opsional)</span>
+                  {t('verifyForm.recipientPhone')} <span className="font-normal text-navy-soft">{t('verifyForm.optional')}</span>
                 </label>
-                <input aria-label="No. HP Penerima"
+                <input aria-label={t('verifyForm.recipientPhone')}
                   value={recipientPhone}
                   onChange={(e) => setRecipientPhone(e.target.value)}
                   inputMode="tel"
-                  placeholder={phone.trim() || 'Sama dengan pendaftar'}
+                  placeholder={phone.trim() || t('verifyForm.sameAsApplicant')}
                   className={inputClass}
                 />
               </div>
             </div>
             <p className="text-2xs text-navy-soft leading-relaxed">
-              Kosongkan kolom penerima kalau kamu sendiri yang menerima paketnya.
+              {t('verifyForm.recipientNote')}
             </p>
           </div>
+        )}
+
+        {isNewDest && (
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={declaredRights}
+              onChange={(e) => setDeclaredRights(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-teal-600"
+            />
+            <span className="text-xs leading-relaxed text-navy-soft">
+              {t('verifyForm.declareRights')}
+            </span>
+          </label>
         )}
 
         <label className="flex cursor-pointer items-start gap-3">
@@ -222,7 +338,7 @@ export default function VerificationForm({
             className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-teal-600"
           />
           <span className="text-xs leading-relaxed text-navy-soft">
-            Saya sudah membaca dan menyetujui{' '}
+            {t('verifyForm.readAgreed')}{' '}
             <a
               href={agreement.path}
               target="_blank"
@@ -231,20 +347,23 @@ export default function VerificationForm({
             >
               {agreement.label}
             </a>
-            {isPengelola
-              ? ', termasuk kewajiban membeli paket sensor dari Nusa dan pembayaran pengunjung yang diterima langsung oleh pengelola.'
-              : ', termasuk kewajiban membeli kamera dari Nusa dan pemasangannya oleh petugas Nusa.'}
+            {isPengelola ? t('verifyForm.agreeTailPengelola') : t('verifyForm.agreeTailMitra')}
           </span>
         </label>
 
-        {error && <p className="text-xs text-danger">{error}</p>}
+        {/* `error` menyimpan kunci kamus, bukan kalimat jadi. */}
+        {error && <p className="text-xs text-danger">{t(error)}</p>}
 
         <button
           type="submit"
           disabled={submitting}
           className="btn-primary w-full px-6 py-3 text-sm disabled:opacity-50"
         >
-          {submitting ? 'Mengirim...' : isPengelola ? 'Ajukan Jadi Pengelola' : 'Ajukan Verifikasi'}
+          {submitting
+            ? t('verifyForm.submitting')
+            : isPengelola
+              ? t('verifyForm.submitPengelola')
+              : t('verifyForm.submitMitra')}
         </button>
       </form>
     </div>

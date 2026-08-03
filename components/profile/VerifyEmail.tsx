@@ -65,9 +65,9 @@ export default function VerifyEmail({ user }: { user: User }) {
         window.location.reload();
         return;
       }
-      setError('Belum terverifikasi. Klik dulu link di email kamu, lalu coba lagi.');
+      setError('auth.verifyNotYet');
     } catch {
-      setError('Gagal memeriksa. Coba lagi.');
+      setError('auth.verifyCheckFailed');
     } finally {
       setChecking(false);
     }
@@ -81,10 +81,10 @@ export default function VerifyEmail({ user }: { user: User }) {
     try {
       if (!auth.currentUser.email) throw new Error('no-email');
       await requestVerificationEmail(auth.currentUser.email);
-      setNotice('Email verifikasi terkirim. Cek inbox (atau folder spam).');
+      setNotice('auth.verifySent');
       setCooldown(60);
     } catch {
-      setError('Gagal mengirim ulang. Coba lagi.');
+      setError('auth.verifyResendFailed');
     } finally {
       setSending(false);
     }
@@ -102,25 +102,24 @@ export default function VerifyEmail({ user }: { user: User }) {
 
       <h2 className="font-serif text-2xl font-medium text-navy sm:text-3xl">{t('auth.verifyTitle')}</h2>
       <p className="mt-3 text-sm leading-relaxed text-navy-soft">
-        Kami mengirim link verifikasi ke{' '}
-        <span className="font-medium text-navy">{user.email}</span>. Klik link itu untuk
-        mengaktifkan akun — langkah ini memastikan akunmu asli, bukan palsu.
+        {t('auth.verifyLede', { email: user.email ?? '' })}
       </p>
 
       {/* Status menunggu */}
       <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3.5 py-1.5 text-xs font-medium text-teal-700">
         <span className="text-teal-500"><LoadingSpinner /></span>
-        Menunggu verifikasi…
+        {t('auth.verifyWaiting')}
       </div>
 
+      {/* notice/error menyimpan kunci kamus, bukan kalimat jadi. */}
       {notice && (
         <div className="mt-4 rounded-md bg-teal-50 border border-teal-100 px-4 py-3 text-sm text-teal-700 animate-fade-up">
-          {notice}
+          {t(notice)}
         </div>
       )}
       {error && (
         <div className="mt-4 rounded-md bg-danger-soft border border-danger-rule px-4 py-3 text-sm text-danger animate-fade-up">
-          {error}
+          {t(error)}
         </div>
       )}
 
@@ -130,7 +129,7 @@ export default function VerifyEmail({ user }: { user: User }) {
           disabled={checking}
           className="btn-primary w-full px-4 py-3 text-sm font-medium disabled:opacity-50"
         >
-          {checking ? <LoadingSpinner /> : 'Saya sudah verifikasi'}
+          {checking ? <LoadingSpinner /> : t('auth.verifyDone')}
         </button>
         <button
           onClick={resend}
@@ -138,17 +137,17 @@ export default function VerifyEmail({ user }: { user: User }) {
           className="w-full rounded-md border border-shore-200 bg-surface px-4 py-3 text-sm font-medium text-navy transition-colors duration-micro hover:border-shore-300 hover: disabled:opacity-50"
         >
           {sending
-            ? 'Mengirim…'
+            ? t('auth.sending')
             : cooldown > 0
-              ? `Kirim ulang (${cooldown})`
-              : 'Belum dapat email? Kirim ulang'}
+              ? t('auth.resendIn', { seconds: cooldown })
+              : t('auth.resend')}
         </button>
       </div>
 
       <p className="mt-6 text-sm text-navy-soft">
-        Salah email?{' '}
+        {t('auth.wrongEmail')}{' '}
         <button onClick={logout} className="font-medium text-teal-600 hover:text-teal-700 transition-colors">
-          Keluar & daftar ulang
+          {t('auth.logoutRegister')}
         </button>
       </p>
     </div>

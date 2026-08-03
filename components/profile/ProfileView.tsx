@@ -76,90 +76,50 @@ function GlobeIcon() {
 const SUPPORT_EMAIL = 'ilham_lam@icloud.com';
 const SUPPORT_WA = '';
 
-const faq: { group: string; items: { q: string; a: string }[] }[] = [
+/**
+ * FAQ hidup di level modul, jadi tidak bisa memanggil t() langsung — t() datang
+ * dari hook useLang. Dibungkus fungsi supaya komponen memanggilnya dengan t
+ * miliknya sendiri, tanpa perlu memindahkan 15 tanya-jawab ini ke dalam JSX.
+ */
+const buildFaq = (t: (key: string) => string) => [
   {
-    group: 'Akun',
+    group: t('faq.group.account'),
     items: [
-      {
-        q: 'Kenapa saya diminta verifikasi email?',
-        a: 'Setelah daftar pakai email & password, kami kirim link verifikasi ke alamat kamu. Halaman profil, booking, dan kamera baru terbuka setelah link itu diklik. Masuk lewat Google langsung terverifikasi, jadi langkah ini dilewati.',
-      },
-      {
-        q: 'Link verifikasi tidak masuk, bagaimana?',
-        a: 'Cek folder Spam atau Promosi dulu. Kalau tetap tidak ada, tekan tombol kirim ulang di halaman verifikasi — email lama akan digantikan yang baru. Pastikan alamat email yang dipakai tidak salah ketik.',
-      },
-      {
-        q: 'Cara ganti nama, nomor telepon, atau password?',
-        a: 'Buka Profil › Pengaturan. Nama dan nomor telepon bisa diubah di kartu paling atas. Ganti password hanya tersedia untuk akun email & password; akun Google diatur lewat pengaturan akun Google.',
-      },
+      { q: t('faq.noPassword.q'), a: t('faq.noPassword.a') },
+      { q: t('faq.codeMissing.q'), a: t('faq.codeMissing.a') },
+      { q: t('faq.changeName.q'), a: t('faq.changeName.a') },
     ],
   },
   {
-    group: 'Booking & pembayaran',
+    group: t('faq.group.booking'),
     items: [
-      {
-        q: 'Bagaimana cara memesan tiket?',
-        a: 'Buka halaman destinasi, tekan Booking, lalu pilih jenis tiket dan jumlahnya. Isi tanggal kunjungan, nama, dan nomor telepon, lalu kirim. Tiket langsung terbit dengan status Terkonfirmasi.',
-      },
-      {
-        q: 'Metode pembayaran apa saja yang tersedia?',
-        a: 'Transfer bank (BCA, Mandiri, BNI), e-wallet (GoPay, OVO, DANA), atau tunai di lokasi. Pilih metodenya lewat tombol Bayar di Riwayat Booking. Tiket tetap berlaku walau statusnya belum lunas — pembayaran tunai diselesaikan di loket.',
-      },
-      {
-        q: 'Di mana tiket dan QR-nya?',
-        a: 'Profil › Riwayat Booking, lalu buka booking yang dimaksud. Tunjukkan QR di layar kepada petugas saat check-in. Satu tiket hanya bisa dipindai sekali; setelah itu statusnya berubah jadi Terpakai.',
-      },
-      {
-        q: 'Bisa membatalkan booking?',
-        a: 'Bisa, lewat Riwayat Booking › Batalkan. Pembatalan bersifat permanen — tiket yang sudah dibatalkan tidak bisa diaktifkan lagi, jadi pastikan dulu sebelum konfirmasi. Untuk pengembalian dana, hubungi pengelola destinasi.',
-      },
-      {
-        q: 'Bagaimana kalau mau ubah tanggal atau jumlah orang?',
-        a: 'Pengubahan belum bisa dilakukan sendiri dari aplikasi. Hubungi pengelola destinasi lewat tombol WhatsApp di halaman destinasi, atau batalkan booking lalu pesan ulang dengan data yang benar.',
-      },
+      { q: t('faq.howBook.q'), a: t('faq.howBook.a') },
+      { q: t('faq.payMethods.q'), a: t('faq.payMethods.a') },
+      { q: t('faq.whereTicket.q'), a: t('faq.whereTicket.a') },
+      { q: t('faq.cancel.q'), a: t('faq.cancel.a') },
+      { q: t('faq.changeDate.q'), a: t('faq.changeDate.a') },
     ],
   },
   {
-    group: 'Destinasi & pemantauan',
+    group: t('faq.group.dest'),
     items: [
-      {
-        q: 'Angka suhu dan cuaca di halaman destinasi itu dari mana?',
-        a: 'Dari sensor IoT yang terpasang di destinasi tersebut: suhu udara, kelembapan, suhu air, kondisi cuaca, dan kecepatan angin. Nilainya diperbarui real-time. Destinasi tanpa sensor tidak menampilkan panel ini.',
-      },
-      {
-        q: 'Kenapa data sensor menampilkan tanda "--"?',
-        a: 'Artinya perangkat sedang tidak mengirim data — biasanya karena listrik atau koneksi di lokasi terputus. Angka akan muncul lagi sendiri begitu perangkat kembali online.',
-      },
-      {
-        q: 'Cara menyimpan destinasi favorit?',
-        a: 'Tekan ikon hati di kartu destinasi. Semua yang tersimpan bisa dibuka lagi lewat Profil › Tersimpan. Fitur ini butuh akun yang sudah masuk.',
-      },
+      { q: t('faq.sensorData.q'), a: t('faq.sensorData.a') },
+      { q: t('faq.sensorDash.q'), a: t('faq.sensorDash.a') },
+      { q: t('faq.saveFav.q'), a: t('faq.saveFav.a') },
     ],
   },
   {
-    group: 'Pengelola & kamera',
+    group: t('faq.group.manager'),
     items: [
-      {
-        q: 'Bagaimana cara jadi pengelola destinasi?',
-        a: 'Buka Profil › Pengaturan › Jadi Pengelola, lalu isi nama lengkap, nomor HP, instansi, dan destinasi yang dikelola. Pengajuan ditinjau admin; statusnya (menunggu, disetujui, ditolak) muncul di kartu yang sama.',
-      },
-      {
-        q: 'Kenapa kamera saya berstatus "Menunggu admin"?',
-        a: 'Setiap kamera baru harus disetujui admin sebelum bisa disiarkan. Selama masih menunggu, QR dan alamat server belum aktif. Kalau pengajuan ditolak, hapus kamera itu lalu daftarkan ulang dengan data yang benar.',
-      },
+      { q: t('faq.becomeManager.q'), a: t('faq.becomeManager.a') },
+      { q: t('faq.cameraPending.q'), a: t('faq.cameraPending.a') },
     ],
   },
   {
-    group: 'Lainnya',
+    group: t('faq.group.other'),
     items: [
-      {
-        q: 'Ada asisten yang bisa ditanya soal destinasi?',
-        a: 'Ada. Tombol chat di pojok kanan bawah menjawab pertanyaan soal destinasi, harga, dan cara booking berdasarkan katalog terbaru. Untuk urusan yang butuh manusia, hubungi kami lewat kontak di bawah.',
-      },
-      {
-        q: 'Cara mengaktifkan mode gelap?',
-        a: 'Profil › Pengaturan › Mode Gelap. Pilihannya tersimpan di perangkat ini dan tetap berlaku saat aplikasi dibuka lagi.',
-      },
+      { q: t('faq.assistant.q'), a: t('faq.assistant.a') },
+      { q: t('faq.darkMode.q'), a: t('faq.darkMode.a') },
     ],
   },
 ];
@@ -313,11 +273,11 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
 
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-shore-200/80">
-            <h2 className="font-serif text-lg font-medium text-navy">Bantuan &amp; Dukungan</h2>
-            <p className="text-2xs text-navy-soft mt-0.5">Pertanyaan yang sering ditanyakan</p>
+            <h2 className="font-serif text-lg font-medium text-navy">{t('profile.help')}</h2>
+            <p className="text-2xs text-navy-soft mt-0.5">{t('profile.faqTitle')}</p>
           </div>
 
-          {faq.map((section) => (
+          {buildFaq(t).map((section) => (
             <section key={section.group}>
               <h3 className="bg-shore-50 px-5 py-2 text-2xs font-semibold uppercase tracking-wide text-navy-soft">
                 {section.group}
@@ -344,13 +304,13 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
         {/* Kontak — jalan keluar kalau FAQ tidak menjawab. */}
         <div className="card mt-4 overflow-hidden">
           <div className="px-5 py-4 border-b border-shore-200/80">
-            <h2 className="font-serif text-lg font-medium text-navy">Masih butuh bantuan?</h2>
-            <p className="text-2xs text-navy-soft mt-0.5">Balasan biasanya dalam 1×24 jam kerja</p>
+            <h2 className="font-serif text-lg font-medium text-navy">{t('support.title')}</h2>
+            <p className="text-2xs text-navy-soft mt-0.5">{t('support.replyTime')}</p>
           </div>
 
           <div className="divide-y divide-shore-200/80">
             <a
-              href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Bantuan Nusa')}`}
+              href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t('support.mailSubject'))}`}
               className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-shore-50"
             >
               <div className="h-10 w-10 rounded-md bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
@@ -365,9 +325,9 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
               </span>
             </a>
 
-            {waLink(SUPPORT_WA, 'Halo, saya butuh bantuan soal Nusa.') && (
+            {waLink(SUPPORT_WA, t('support.waMessage')) && (
               <a
-                href={waLink(SUPPORT_WA, 'Halo, saya butuh bantuan soal Nusa.')!}
+                href={waLink(SUPPORT_WA, t('support.waMessage'))!}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-shore-50"
@@ -387,8 +347,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
           </div>
 
           <p className="border-t border-shore-200/80 px-5 py-3.5 text-2xs leading-relaxed text-navy-soft">
-            Untuk perubahan jadwal atau komplain soal satu destinasi, hubungi langsung
-            pengelolanya lewat tombol WhatsApp di halaman destinasi — biasanya lebih cepat.
+            {t('support.destNote')}
           </p>
         </div>
       </div>
@@ -495,7 +454,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
               <p className="text-2xs text-navy-soft mt-0.5">{t('profile.accountRoleDesc')}</p>
             </div>
             <div className="flex items-start justify-between gap-4 px-5 py-4">
-              <p className="text-sm text-navy-soft leading-relaxed">{roleCard.description}</p>
+              <p className="text-sm text-navy-soft leading-relaxed">{t(roleCard.descriptionKey)}</p>
               <RoleBadge role={role} />
             </div>
           </div>
@@ -528,7 +487,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
 
           {/* Name */}
           <h2 className="font-serif text-xl font-medium text-navy mb-1">
-            {user.displayName || 'Pengguna'}
+            {user.displayName || t('profile.anonUser')}
           </h2>
 
           <p className="text-sm text-navy-soft">{user.email}</p>
@@ -538,7 +497,9 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
             <RoleBadge role={role} />
             <span className="inline-flex items-center gap-1.5 rounded-xs border border-shore-200 bg-shore-50 px-3 py-1.5 text-2xs font-medium text-navy-soft">
               <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
-              {user.providerData[0]?.providerId === 'google.com' ? 'Google Account' : 'Email & Password'}
+              {user.providerData[0]?.providerId === 'google.com'
+                ? t('profile.providerGoogle')
+                : t('profile.providerEmailCode')}
             </span>
           </div>
         </div>
@@ -550,11 +511,11 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
         <div className="grid grid-cols-2 gap-4 text-center">
           <div>
             <span className="text-lg font-semibold text-navy">{bookingCount}</span>
-            <p className="text-2xs text-navy-soft mt-0.5">Booking</p>
+            <p className="text-2xs text-navy-soft mt-0.5">{t('profile.statBookings')}</p>
           </div>
           <div className="border-l border-shore-200">
             <span className="text-lg font-semibold text-navy">{reviewCount}</span>
-            <p className="text-2xs text-navy-soft mt-0.5">Ulasan</p>
+            <p className="text-2xs text-navy-soft mt-0.5">{t('profile.statReviews')}</p>
           </div>
         </div>
       </div>
@@ -600,7 +561,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-navy">Dashboard</p>
-            <p className="text-2xs text-navy-soft mt-0.5">Kelola destinasi dan pengguna</p>
+            <p className="text-2xs text-navy-soft mt-0.5">{t('profile.dashboardDesc')}</p>
           </div>
           <span className="text-shore-300">
             <ChevronIcon />
@@ -614,7 +575,7 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
         className="w-full mt-4 flex items-center justify-center gap-2.5 rounded-md border border-danger-rule bg-danger-soft/60 px-4 py-3.5 text-sm font-medium text-danger transition-colors duration-micro hover:bg-danger-soft hover:border-danger-rule"
       >
         <LogOutIcon />
-        Keluar
+        {t('profile.logout')}
       </button>
     </div>
   );

@@ -6,7 +6,13 @@
  * Jalankan: node lib/verification.check.ts
  */
 import assert from 'node:assert/strict';
-import { AGREEMENT, packageRecipient, validateRoleRequest } from './verification.ts';
+import {
+  AGREEMENT,
+  LAND_RIGHTS,
+  NEW_DESTINATION,
+  packageRecipient,
+  validateRoleRequest,
+} from './verification.ts';
 
 const lengkap = {
   fullName: 'Budi Santoso',
@@ -24,7 +30,7 @@ const alamat = {
 // cuma spasi.
 assert.equal(
   validateRoleRequest({ ...lengkap, fullName: '   ', requestedRole: 'mitra', agreed: true }),
-  'Semua kolom wajib diisi.'
+  'verifyForm.allFieldsRequired'
 );
 assert.equal(
   validateRoleRequest({
@@ -34,7 +40,7 @@ assert.equal(
     destination: 'Bahoi',
     agreed: true,
   }),
-  'Semua kolom wajib diisi.'
+  'verifyForm.allFieldsRequired'
 );
 
 // Pengelola tanpa memilih destinasi.
@@ -45,13 +51,13 @@ assert.equal(
     destination: '',
     agreed: true,
   }),
-  'Pilih destinasi yang ingin dikelola.'
+  'verifyForm.destRequired'
 );
 
 // Belum menyetujui — pesannya menyebut dokumen yang sesuai rolenya.
 assert.equal(
   validateRoleRequest({ ...lengkap, requestedRole: 'mitra', agreed: false }),
-  'Kamu harus menyetujui Perjanjian Mitra dulu.'
+  'verifyForm.mustAgreeMitra'
 );
 assert.equal(
   validateRoleRequest({
@@ -61,7 +67,7 @@ assert.equal(
     destination: 'Bahoi',
     agreed: false,
   }),
-  'Kamu harus menyetujui Perjanjian Pengelola dulu.'
+  'verifyForm.mustAgreePengelola'
 );
 
 // Pengelola tanpa alamat kirim — paket sensor tidak bisa dikirim ke mana pun.
@@ -74,7 +80,7 @@ assert.equal(
     destination: 'Bahoi',
     agreed: true,
   }),
-  'Alamat pengiriman paket sensor wajib diisi.'
+  'verifyForm.shippingRequired'
 );
 
 // Kode pos harus tepat lima angka: kosong, kependekan, kepanjangan, bukan angka.
@@ -88,7 +94,7 @@ for (const postalCode of ['', '9537', '953712', '9537a', ' 95371 x']) {
       destination: 'Bahoi',
       agreed: true,
     }),
-    'Kode pos harus 5 angka.',
+    'verifyForm.postalCodeInvalid',
     `kode pos ${JSON.stringify(postalCode)} seharusnya ditolak`
   );
 }
@@ -102,7 +108,7 @@ assert.equal(
 // agreed yang tidak diisi sama sekali diperlakukan sama dengan belum dicentang.
 assert.equal(
   validateRoleRequest({ ...lengkap, requestedRole: 'mitra' }),
-  'Kamu harus menyetujui Perjanjian Mitra dulu.'
+  'verifyForm.mustAgreeMitra'
 );
 
 // Kolom kosong dan destinasi diperiksa sebelum persetujuan: jangan suruh orang
@@ -115,7 +121,7 @@ assert.equal(
     destination: 'Bahoi',
     agreed: false,
   }),
-  'Semua kolom wajib diisi.'
+  'verifyForm.allFieldsRequired'
 );
 assert.equal(
   validateRoleRequest({
@@ -124,7 +130,7 @@ assert.equal(
     destination: '',
     agreed: false,
   }),
-  'Pilih destinasi yang ingin dikelola.'
+  'verifyForm.destRequired'
 );
 
 // Lengkap dan sudah menyetujui.
@@ -162,6 +168,89 @@ assert.deepEqual(packageRecipient({ ...lengkap, recipientName: 'Sari' }), {
   name: 'Sari',
   phone: '081234567890',
 });
+
+// --- Usulan destinasi baru -------------------------------------------------
+
+/** Usulan lengkap: yang membedakannya dari pengajuan biasa cuma empat kolom. */
+const usulan = {
+  newDestination: true,
+  destination: 'Pantai Tanjung Merah',
+  destinationLocation: 'Desa Tanjung Merah, Kec. Matuari, Kota Bitung, Sulawesi Utara',
+  destinationDescription: 'Pantai berpasir hitam, ada gazebo dan warung, ramai akhir pekan.',
+  landRights: LAND_RIGHTS[2],
+} as const;
+
+const pengaju = { ...lengkap, ...alamat, requestedRole: 'pengelola' } as const;
+
+// Tiap kolom usulan diperiksa satu per satu — kosong dan spasi sama-sama ditolak.
+for (const [kolom, isi, pesan] of [
+  ['destination', '   ', 'verifyForm.newDestNameRequired'],
+  [
+    'destinationLocation',
+    '',
+    'verifyForm.newDestLocationRequired',
+  ],
+  ['destinationDescription', '  ', 'verifyForm.newDestDescRequired'],
+  ['landRights', '', 'verifyForm.landRightsRequired'],
+] as const) {
+  assert.equal(
+    validateRoleRequest({
+      ...pengaju,
+      ...usulan,
+      [kolom]: isi,
+      declaredRights: true,
+      agreed: true,
+    }),
+    pesan,
+    `${kolom} kosong seharusnya ditolak`
+  );
+}
+
+// "Pilih destinasi" tidak boleh muncul di jalur usulan — pesannya harus yang
+// menyuruh menulis nama, bukan memilih dari daftar yang memang belum ada isinya.
+assert.equal(
+  validateRoleRequest({ ...pengaju, ...usulan, destination: '', agreed: true }),
+  'verifyForm.newDestNameRequired'
+);
+
+// Pernyataan hak wajib dicentang, dan diperiksa sebelum perjanjian.
+assert.equal(
+  validateRoleRequest({ ...pengaju, ...usulan, agreed: true }),
+  'verifyForm.declareRightsRequired'
+);
+assert.equal(
+  validateRoleRequest({ ...pengaju, ...usulan, agreed: false }),
+  'verifyForm.declareRightsRequired'
+);
+
+// Alamat kirim tetap wajib walau destinasinya usulan — paketnya tetap dikirim.
+assert.equal(
+  validateRoleRequest({
+    ...pengaju,
+    ...usulan,
+    shippingAddress: '',
+    declaredRights: true,
+    agreed: true,
+  }),
+  'verifyForm.shippingRequired'
+);
+
+// Usulan lengkap + dua centang.
+assert.equal(
+  validateRoleRequest({ ...pengaju, ...usulan, declaredRights: true, agreed: true }),
+  null
+);
+
+// Pengajuan ke destinasi terdaftar tidak pernah diminta pernyataan hak.
+assert.equal(
+  validateRoleRequest({ ...pengaju, destination: 'Bahoi', agreed: true }),
+  null
+);
+
+// Sentinel dropdown tidak boleh bocor jadi nama destinasi yang tersimpan: form
+// menukarnya dengan nama yang diketik, jadi nilainya wajib beda dari nama mana pun.
+assert.notEqual(NEW_DESTINATION, '');
+assert.ok(!LAND_RIGHTS.includes(NEW_DESTINATION as never));
 
 // Tiap role punya dokumen sendiri: versi terisi, tautan berbeda, label berbeda.
 for (const role of ['mitra', 'pengelola'] as const) {

@@ -42,9 +42,9 @@ export default function SavedDestinations() {
               </svg>
             </div>
             <p className="text-xs text-navy-soft">
-              Belum ada destinasi tersimpan.
+              {t('saved.empty')}
               <br />
-              Ketuk ikon hati di kartu destinasi untuk menyimpan.
+              {t('saved.emptyHint')}
             </p>
           </div>
         ) : (

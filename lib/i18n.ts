@@ -36,6 +36,13 @@ const DICT: Record<string, Record<Lang, string>> = {
   "common.search": { id: "Cari", en: "Search" },
   "common.all": { id: "Semua", en: "All" },
   "common.retry": { id: "Coba lagi", en: "Try again" },
+  "common.error": { id: "Terjadi kesalahan. Coba lagi.", en: "Something went wrong. Please try again." },
+  "common.saveFailed": { id: "Gagal menyimpan. Coba lagi.", en: "Couldn't save. Please try again." },
+  "common.noData": { id: "Belum ada data", en: "No data yet" },
+  "common.unknown": { id: "Tidak Diketahui", en: "Unknown" },
+  "common.delete": { id: "Hapus", en: "Delete" },
+  "common.saved": { id: "Tersimpan", en: "Saved" },
+  "common.send": { id: "Kirim", en: "Send" },
   "common.people": { id: "orang", en: "guests" },
 
   // ── Navigasi ──
@@ -230,7 +237,6 @@ const DICT: Record<string, Record<Lang, string>> = {
   "auth.fullName": { id: "Nama Lengkap", en: "Full Name" },
   "auth.fullNamePlaceholder": { id: "Masukkan nama lengkap", en: "Enter your full name" },
   "auth.email": { id: "Email", en: "Email" },
-  "auth.password": { id: "Password", en: "Password" },
   "auth.verifyTitle": { id: "Verifikasi email kamu", en: "Verify your email" },
   "account.title": { id: "Pengaturan Akun", en: "Account Settings" },
   "account.subtitle": { id: "Kelola data akun & keamanan", en: "Manage your account details & security" },
@@ -245,14 +251,30 @@ const DICT: Record<string, Record<Lang, string>> = {
   "account.linked": { id: "Akun Tertaut", en: "Linked Accounts" },
   "account.linkGoogle": { id: "Hubungkan Google", en: "Link Google" },
   "account.linkGoogleHint": {
-    id: "Biar lain kali bisa masuk tanpa password.",
-    en: "So you can sign in next time without a password.",
+    id: "Biar lain kali bisa masuk sekali klik, tanpa menunggu kode.",
+    en: "So you can sign in with one click next time, without waiting for a code.",
   },
   "account.googleLinked": { id: "Google terhubung", en: "Google linked" },
-  "account.changePassword": { id: "Ubah Password", en: "Change Password" },
-  "account.currentPassword": { id: "Password sekarang", en: "Current password" },
-  "account.newPassword": { id: "Password baru (min. 6 karakter)", en: "New password (min. 6 characters)" },
-  "account.confirmPassword": { id: "Konfirmasi password baru", en: "Confirm new password" },
+  "account.saveProfile": { id: "Simpan Profil", en: "Save Profile" },
+  "account.profileSaved": { id: "Profil tersimpan.", en: "Profile saved." },
+  "account.nameRequired": { id: "Nama wajib diisi.", en: "Name is required." },
+  "account.cancelled": { id: "Dibatalkan.", en: "Cancelled." },
+  "account.tooManyAttempts": {
+    id: "Terlalu banyak percobaan. Coba lagi nanti.",
+    en: "Too many attempts. Please try again later.",
+  },
+  "account.sessionExpired": {
+    id: "Sesi kedaluwarsa. Keluar lalu masuk lagi, kemudian coba ulang.",
+    en: "Your session expired. Sign out, sign back in, then try again.",
+  },
+  "account.googleInUse": {
+    id: "Akun Google itu sudah terpakai di akun lain.",
+    en: "That Google account is already linked to someone else.",
+  },
+  "account.googleLinkedOk": {
+    id: "Google terhubung. Lain kali bisa masuk pakai Google.",
+    en: "Google linked. Next time you can sign in with Google.",
+  },
 
   // ── Notifikasi ──
   "notif.label": { id: "Notifikasi", en: "Notifications" },
@@ -299,6 +321,565 @@ const DICT: Record<string, Record<Lang, string>> = {
   "card.save": { id: "Simpan destinasi", en: "Save destination" },
   "card.unsave": { id: "Hapus dari tersimpan", en: "Remove from saved" },
   "card.priceFrom": { id: "Mulai dari", en: "From" },
+
+  // ── Asisten chat ──
+  "chat.title": { id: "Asisten Nusa", en: "Nusa Assistant" },
+  "chat.open": { id: "Buka asisten Nusa", en: "Open Nusa assistant" },
+  "chat.close": { id: "Tutup asisten", en: "Close assistant" },
+  "chat.replyTime": {
+    id: "Biasanya balas dalam hitungan detik",
+    en: "Usually replies within seconds",
+  },
+  "chat.greeting": {
+    id: "Halo! Aku asisten Nusa. Tanya apa saja soal destinasi selam, harga, atau cara booking.",
+    en: "Hi! I'm the Nusa assistant. Ask me anything about dive destinations, prices, or how to book.",
+  },
+  "chat.suggest1": { id: "Rekomendasi spot buat pemula", en: "Recommend a spot for beginners" },
+  "chat.suggest2": { id: "Berapa harga tiketnya?", en: "How much are the tickets?" },
+  "chat.suggest3": { id: "Cara booking gimana?", en: "How do I book?" },
+  "chat.typing": { id: "Mengetik…", en: "Typing…" },
+  "chat.placeholder": { id: "Tulis pertanyaan…", en: "Ask a question…" },
+  "chat.messageLabel": { id: "Pesan", en: "Message" },
+  "chat.errQuota": {
+    id: "Lagi ramai banget. Coba lagi sebentar lagi ya.",
+    en: "It's very busy right now. Please try again shortly.",
+  },
+  "chat.errTooMany": {
+    id: "Kebanyakan pesan sekaligus. Tunggu sebentar ya.",
+    en: "Too many messages at once. Hang on a moment.",
+  },
+  "chat.errNotConfigured": { id: "Asisten belum aktif. Hubungi admin.", en: "The assistant isn't active yet. Contact an admin." },
+  "chat.errNetwork": {
+    id: "Koneksi bermasalah. Cek internet kamu.",
+    en: "Connection problem. Check your internet.",
+  },
+  "chat.errGeneric": {
+    id: "Gagal menghubungi asisten. Coba lagi.",
+    en: "Couldn't reach the assistant. Please try again.",
+  },
+
+  // ── Pantau langsung (kamera + sensor) ──
+  "monitor.subtitleBoth": {
+    id: "Kamera live & sensor lingkungan real-time",
+    en: "Live camera & real-time environmental sensors",
+  },
+  "monitor.subtitleCamera": { id: "Kamera live destinasi", en: "Live destination camera" },
+  "monitor.subtitleSensor": { id: "Sensor lingkungan real-time", en: "Real-time environmental sensors" },
+  "monitor.airTemp": { id: "Suhu Udara", en: "Air Temperature" },
+  "monitor.humidity": { id: "Kelembapan Udara", en: "Humidity" },
+  "monitor.waterTemp": { id: "Suhu Air", en: "Water Temperature" },
+  "monitor.weather": { id: "Kondisi Cuaca", en: "Weather" },
+  "monitor.windSpeed": { id: "Kecepatan Angin", en: "Wind Speed" },
+  "monitor.flowRate": { id: "Debit Air", en: "Water Flow" },
+  "monitor.updated": { id: "Diperbarui {when}", en: "Updated {when}" },
+  "monitor.justNow": { id: "baru saja", en: "just now" },
+  "monitor.secsAgo": { id: "{n} detik lalu", en: "{n}s ago" },
+  "monitor.minsAgo": { id: "{n} menit lalu", en: "{n}m ago" },
+  "monitor.hoursAgo": { id: "{n} jam lalu", en: "{n}h ago" },
+  "monitor.daysAgo": { id: "{n} hari lalu", en: "{n}d ago" },
+
+  // ── Ulasan & tersimpan ──
+  "review.write": { id: "Tulis ulasan", en: "Write a review" },
+  "review.edit": { id: "Ubah ulasanmu", en: "Edit your review" },
+  "review.update": { id: "Perbarui", en: "Update" },
+  "review.submit": { id: "Kirim Ulasan", en: "Submit Review" },
+  "review.signInPrompt": { id: "untuk menulis ulasan.", en: "to write a review." },
+  "saved.empty": { id: "Belum ada destinasi tersimpan.", en: "No saved destinations yet." },
+  "saved.emptyHint": {
+    id: "Ketuk ikon hati di kartu destinasi untuk menyimpan.",
+    en: "Tap the heart on a destination card to save it.",
+  },
+
+  // ── Form pengajuan mitra / pengelola ──
+  "verifyForm.title": { id: "Verifikasi Akun Mitra", en: "Partner Account Verification" },
+  "verifyForm.desc": {
+    id: "Untuk mendaftarkan kamera, akunmu perlu diverifikasi admin terlebih dahulu. Lengkapi data di bawah — setelah disetujui, role akunmu naik menjadi mitra.",
+    en: "To register a camera, an admin needs to verify your account first. Fill in the details below — once approved, your account becomes a partner.",
+  },
+  "verifyForm.namePlaceholder": { id: "Nama penanggung jawab", en: "Person in charge" },
+  "verifyForm.phone": { id: "No. HP", en: "Phone" },
+  "verifyForm.org": { id: "Instansi/Organisasi", en: "Institution/Organisation" },
+  "verifyForm.orgPlaceholder": {
+    id: "Operator dive, resort, komunitas, ...",
+    en: "Dive operator, resort, community, ...",
+  },
+  "verifyForm.managedDest": { id: "Destinasi yang Dikelola", en: "Destination You Manage" },
+  "verifyForm.pickDest": { id: "-- Pilih destinasi --", en: "-- Choose a destination --" },
+  "verifyForm.proposeNew": {
+    id: "Destinasinya belum ada — saya usulkan baru",
+    en: "It isn't listed — I'd like to propose it",
+  },
+  "verifyForm.destFinalNote": {
+    id: "Penetapan akhir destinasi tetap oleh admin setelah pengajuan disetujui.",
+    en: "An admin makes the final destination assignment after approval.",
+  },
+  "verifyForm.proposedDest": { id: "Destinasi yang Diusulkan", en: "Proposed Destination" },
+  "verifyForm.proposedDestHint": {
+    id: "Nusa terbuka untuk destinasi di seluruh Indonesia. Isi sebisamu — foto, titik peta, dan daftar harga diurus bareng admin setelah pengajuan disetujui.",
+    en: "Nusa is open to destinations across Indonesia. Fill in what you can — photos, map pin, and pricing are sorted out with an admin after approval.",
+  },
+  "verifyForm.destName": { id: "Nama Destinasi", en: "Destination Name" },
+  "verifyForm.destNamePlaceholder": {
+    id: "Pantai Bahoi, Air Terjun Tumimperas, ...",
+    en: "Bahoi Beach, Tumimperas Waterfall, ...",
+  },
+  "verifyForm.destLocation": { id: "Lokasi", en: "Location" },
+  "verifyForm.destLocationPlaceholder": {
+    id: "Desa, kecamatan, kabupaten/kota, provinsi",
+    en: "Village, district, regency/city, province",
+  },
+  "verifyForm.destDesc": { id: "Ceritakan Singkat", en: "Short Description" },
+  "verifyForm.destDescPlaceholder": {
+    id: "Apa yang bisa dilakukan di sana, fasilitas yang sudah ada, dan perkiraan jumlah pengunjung",
+    en: "What visitors can do there, existing facilities, and roughly how many visitors",
+  },
+  "verifyForm.landRights": { id: "Dasar Hak Mengelola Lokasi", en: "Basis for Managing the Site" },
+  "verifyForm.pickLandRights": { id: "-- Pilih dasar hak --", en: "-- Choose a basis --" },
+  "verifyForm.landRightsHint": {
+    id: "Tidak ada berkas yang perlu diunggah di sini. Admin menghubungimu lewat WhatsApp untuk memastikannya sebelum pengajuan disetujui.",
+    en: "No documents to upload here. An admin contacts you on WhatsApp to confirm before approving.",
+  },
+  "verifyForm.shipping": { id: "Pengiriman Paket Sensor", en: "Sensor Package Delivery" },
+  "verifyForm.shippingHint": {
+    id: "Paket sensor dikirim ke alamatmu, tidak dipasang di tempat oleh petugas. Panduan pemasangan dan koordinasi jadwal dilakukan lewat WhatsApp ke nomor di atas.",
+    en: "The sensor package ships to your address; no technician installs it on site. Setup guidance and scheduling happen over WhatsApp on the number above.",
+  },
+  "verifyForm.shipAddress": { id: "Alamat Pengiriman", en: "Shipping Address" },
+  "verifyForm.shipAddressPlaceholder": {
+    id: "Jalan & no., RT/RW, kelurahan, kecamatan, kota/kabupaten, provinsi — sebutkan juga patokan terdekat",
+    en: "Street & number, neighbourhood, district, city/regency, province — include a nearby landmark",
+  },
+  "verifyForm.postalCode": { id: "Kode Pos", en: "Postal Code" },
+  "verifyForm.recipientName": { id: "Nama Penerima", en: "Recipient Name" },
+  "verifyForm.recipientPhone": { id: "No. HP Penerima", en: "Recipient Phone" },
+  "verifyForm.optional": { id: "(opsional)", en: "(optional)" },
+  "verifyForm.sameAsApplicant": { id: "Sama dengan pendaftar", en: "Same as applicant" },
+  "verifyForm.recipientNote": {
+    id: "Kosongkan kolom penerima kalau kamu sendiri yang menerima paketnya.",
+    en: "Leave the recipient fields empty if you're receiving the package yourself.",
+  },
+  "verifyForm.declareRights": {
+    id: "Saya menyatakan berhak mengelola lokasi ini atas dasar yang saya pilih di atas, data yang saya isi benar, dan saya sanggup mengurus perizinan serta keselamatan pengunjung di sana. Saya paham pengajuan bisa ditolak atau dicabut bila pernyataan ini keliru.",
+    en: "I declare that I am entitled to manage this site on the basis selected above, that the details I entered are true, and that I can handle permits and visitor safety there. I understand the request may be rejected or revoked if this declaration is wrong.",
+  },
+  "verifyForm.readAgreed": { id: "Saya sudah membaca dan menyetujui", en: "I have read and accept the" },
+  "verifyForm.agreeTailPengelola": {
+    id: ", termasuk kewajiban membeli paket sensor dari Nusa dan pembayaran pengunjung yang diterima langsung oleh pengelola.",
+    en: ", including the obligation to buy the sensor package from Nusa and to receive visitor payments directly as the manager.",
+  },
+  "verifyForm.agreeTailMitra": {
+    id: ", termasuk kewajiban membeli kamera dari Nusa dan pemasangannya oleh petugas Nusa.",
+    en: ", including the obligation to buy the camera from Nusa and have it installed by Nusa staff.",
+  },
+  "verifyForm.submitting": { id: "Mengirim...", en: "Submitting..." },
+  "verifyForm.submitMitra": { id: "Ajukan Verifikasi", en: "Request Verification" },
+  "verifyForm.submitPengelola": { id: "Ajukan Jadi Pengelola", en: "Apply to Be a Manager" },
+  "verifyForm.submitFailed": {
+    id: "Gagal mengirim pengajuan. Coba lagi.",
+    en: "Couldn't submit the request. Please try again.",
+  },
+
+  // Pesan validasi form — dikembalikan sebagai kunci oleh validateRoleRequest().
+  "verifyForm.allFieldsRequired": { id: "Semua kolom wajib diisi.", en: "All fields are required." },
+  "verifyForm.newDestNameRequired": {
+    id: "Tulis nama destinasi yang kamu usulkan.",
+    en: "Enter the name of the destination you're proposing.",
+  },
+  "verifyForm.newDestLocationRequired": {
+    id: "Tulis lokasi destinasi: desa, kecamatan, dan kabupaten/kota.",
+    en: "Enter the location: village, district, and regency/city.",
+  },
+  "verifyForm.newDestDescRequired": {
+    id: "Ceritakan singkat destinasi yang kamu usulkan.",
+    en: "Briefly describe the destination you're proposing.",
+  },
+  "verifyForm.landRightsRequired": {
+    id: "Pilih dasar hakmu mengelola lokasi itu.",
+    en: "Choose the basis for your right to manage that site.",
+  },
+  "verifyForm.destRequired": {
+    id: "Pilih destinasi yang ingin dikelola.",
+    en: "Choose the destination you want to manage.",
+  },
+  "verifyForm.shippingRequired": {
+    id: "Alamat pengiriman paket sensor wajib diisi.",
+    en: "A shipping address for the sensor package is required.",
+  },
+  "verifyForm.postalCodeInvalid": { id: "Kode pos harus 5 angka.", en: "Postal code must be 5 digits." },
+  "verifyForm.declareRightsRequired": {
+    id: "Kamu harus menyatakan berhak mengelola lokasi yang diusulkan.",
+    en: "You must declare you're entitled to manage the proposed site.",
+  },
+  "verifyForm.mustAgreeMitra": {
+    id: "Kamu harus menyetujui Perjanjian Mitra dulu.",
+    en: "You must accept the Partner Agreement first.",
+  },
+  "verifyForm.mustAgreePengelola": {
+    id: "Kamu harus menyetujui Perjanjian Pengelola dulu.",
+    en: "You must accept the Manager Agreement first.",
+  },
+
+  // ── Monitoring / kamera ──
+  "camera.title": { id: "Kamera", en: "Cameras" },
+  "camera.lede": { id: "Daftarkan dan pantau kamera milikmu", en: "Register and monitor your own cameras" },
+  "camera.ledeUnverified": {
+    id: "Verifikasi akun untuk mendaftarkan kamera",
+    en: "Verify your account to register a camera",
+  },
+  "camera.pendingNote": {
+    id: "Pengajuan sedang ditinjau admin. Kamu akan bisa menambahkan kamera setelah pengajuan disetujui.",
+    en: "An admin is reviewing your request. You'll be able to add cameras once it's approved.",
+  },
+  "camera.rejectedNote": {
+    id: "Pengajuan verifikasimu ditolak admin. Periksa kembali datamu lalu ajukan ulang.",
+    en: "An admin rejected your verification. Check your details and submit again.",
+  },
+  "camera.empty": {
+    id: "Belum ada kamera. Tambahkan kamera pertamamu.",
+    en: "No cameras yet. Add your first one.",
+  },
+  "camera.addTitle": { id: "Tambah Kamera", en: "Add Camera" },
+  "camera.addHint": {
+    id: "Daftarkan kamera dari sini. Admin akan memvalidasi di server, lalu QR untuk siaran dari HP muncul otomatis di daftar di atas.",
+    en: "Register a camera here. An admin validates it on the server, then the QR for phone broadcasting appears automatically in the list above.",
+  },
+  "camera.nameLabel": { id: "Nama Kamera", en: "Camera Name" },
+  "camera.namePlaceholder": { id: "Misal: Kamera Dermaga Utama", en: "e.g. Main Jetty Camera" },
+  "camera.nameRequired": { id: "Nama kamera wajib diisi.", en: "Camera name is required." },
+  "camera.regionLabel": { id: "Wilayah", en: "Region" },
+  "camera.regionPlaceholder": { id: "Pilih wilayah…", en: "Choose a region…" },
+  "camera.regionRequired": { id: "Pilih wilayah kamera.", en: "Choose a region for the camera." },
+  "camera.regionHint": {
+    id: "Wilayah menentukan pengelola mana yang bisa memantau kamera ini. Detail titik pasang taruh di nama kamera.",
+    en: "The region decides which manager can monitor this camera. Put the exact spot in the camera name.",
+  },
+  "camera.saveFailed": { id: "Gagal menyimpan kamera. Coba lagi.", en: "Couldn't save the camera. Please try again." },
+  "camera.deleteTitle": { id: "Hapus Kamera?", en: "Delete Camera?" },
+  "camera.deleteBody": {
+    id: "Kamera {name} akan dihapus dan tidak bisa dikembalikan.",
+    en: "Camera {name} will be deleted and can't be restored.",
+  },
+  "camera.deleteConfirm": { id: "Ya, Hapus", en: "Yes, Delete" },
+  "camera.deleting": { id: "Menghapus...", en: "Deleting..." },
+  "camera.statusPending": { id: "Menunggu admin", en: "Awaiting admin" },
+  "camera.statusRejected": { id: "Ditolak", en: "Rejected" },
+  "camera.statusApproved": { id: "Disetujui", en: "Approved" },
+  "camera.pendingHint": {
+    id: "Kamera menunggu persetujuan admin di server. Setelah disetujui, QR untuk mulai siaran dari HP akan muncul di sini.",
+    en: "This camera is waiting for admin approval on the server. Once approved, the QR to start broadcasting from a phone appears here.",
+  },
+  "camera.rejectedHint": {
+    id: "Pengajuan kamera ditolak admin. Hapus kamera ini lalu daftarkan ulang bila perlu.",
+    en: "An admin rejected this camera. Delete it and register again if needed.",
+  },
+  "camera.broadcastTitle": { id: "Mulai siaran dari HP", en: "Start broadcasting from a phone" },
+  "camera.broadcastHint": {
+    id: "Scan QR ini pakai kamera HP, atau buka link siaran di HP lalu izinkan akses kamera. Biarkan halaman siaran tetap terbuka.",
+    en: "Scan this QR with a phone camera, or open the broadcast link on the phone and allow camera access. Leave the broadcast page open.",
+  },
+  "camera.openBroadcast": { id: "Buka halaman siaran ↗", en: "Open broadcast page ↗" },
+  "camera.viewLive": { id: "Lihat Live", en: "View Live" },
+  "camera.serverAddress": { id: "Alamat Server Kamera", en: "Camera Server Address" },
+  "camera.serverAddressHint": {
+    id: "Salin dari halaman utama website kamera. Bila WiFi/IP berubah, cukup ganti di sini — semua kamera langsung mengikuti.",
+    en: "Copy it from the camera site's home page. If the WiFi/IP changes, update it here once — every camera follows.",
+  },
+  "camera.urlScheme": {
+    id: "Alamat harus diawali http:// atau https://.",
+    en: "The address must start with http:// or https://.",
+  },
+  "camera.urlSaveFailed": { id: "Gagal menyimpan alamat. Coba lagi.", en: "Couldn't save the address. Please try again." },
+  "camera.noServerUrl": { id: "Alamat server kamera belum diatur.", en: "The camera server address isn't set yet." },
+  "camera.noServerUrlHint": {
+    id: 'Isi kolom "Alamat Server Kamera" dengan alamat dari website kamera, lalu buka lagi live view ini.',
+    en: 'Fill in "Camera Server Address" with the address from the camera site, then reopen this live view.',
+  },
+  "camera.noServerUrlHintAdmin": {
+    id: 'Isi "Alamat Server Kamera" di dashboard admin, lalu buka kembali halaman ini.',
+    en: 'Set "Camera Server Address" in the admin dashboard, then reload this page.',
+  },
+  "camera.noConnection": { id: "Tidak bisa terhubung ke kamera.", en: "Can't reach the camera." },
+  "camera.noConnectionHint": {
+    id: "Pastikan server kamera berjalan dan ID kamera benar.",
+    en: "Make sure the camera server is running and the camera ID is correct.",
+  },
+  "camera.noConnectionHintFull": {
+    id: "Pastikan server kamera jalan, ID benar, dan semua perangkat satu jaringan. Bila aplikasi dibuka lewat HTTPS, stream http:// jaringan lokal akan diblokir browser.",
+    en: "Make sure the camera server is running, the ID is right, and every device is on the same network. If the app is opened over HTTPS, browsers block local http:// streams.",
+  },
+  "camera.historyTitle": { id: "Riwayat Deteksi", en: "Detection History" },
+  "camera.historyEmpty": { id: "Belum ada deteksi tercatat", en: "No detections recorded yet" },
+  "camera.historyEmptyOffline": {
+    id: "Belum ada deteksi. Riwayat terisi selama kamera ditonton.",
+    en: "No detections yet. History fills up while the camera is being watched.",
+  },
+  "camera.statsTitle": { id: "Statistik Deteksi", en: "Detection Statistics" },
+  "camera.statsEmptyOffline": {
+    id: "Belum ada data deteksi. Statistik terkumpul selama kamera ditonton.",
+    en: "No detection data yet. Statistics build up while the camera is being watched.",
+  },
+  "camera.totalDetected": { id: "Total karang terdeteksi", en: "Total coral detected" },
+  "camera.totalRecorded": { id: "total deteksi tercatat", en: "detections recorded" },
+  "camera.healthStatus": { id: "Status Kesehatan", en: "Health Status" },
+  "camera.coralTypes": { id: "Jenis Karang", en: "Coral Types" },
+  "camera.healthCaveat": {
+    id: "Catatan: status kesehatan masih estimasi kasar berdasarkan kecerahan gambar — belum tervalidasi sebagai data kesehatan karang yang akurat.",
+    en: "Note: health status is still a rough estimate based on image brightness — not yet validated as accurate coral health data.",
+  },
+
+  // Status kesehatan karang. Nilai mentahnya datang dari server deteksi dalam
+  // bahasa Indonesia; ini hanya label tampilannya.
+  "health.healthy": { id: "Sehat", en: "Healthy" },
+  "health.poor": { id: "Kurang Sehat", en: "Unhealthy" },
+  "health.bleaching": { id: "Pemutihan", en: "Bleaching" },
+  "health.unknown": { id: "Tidak Diketahui", en: "Unknown" },
+
+  // ── Jadi pengelola & verifikasi mitra ──
+  "manager.title": { id: "Jadi Pengelola", en: "Become a Manager" },
+  "manager.subtitle": {
+    id: "Kelola destinasi, booking & kamera wilayahmu",
+    en: "Manage destinations, bookings & cameras in your area",
+  },
+  "manager.formDesc": {
+    id: "Pengelola mengurus destinasi yang ditetapkan admin — data destinasi, booking, dan kamera di wilayahnya. Isi data di bawah; pengajuan ditinjau admin dulu.",
+    en: "A manager looks after the destinations an admin assigns — destination data, bookings, and cameras in their area. Fill in the details below; an admin reviews the request first.",
+  },
+  "manager.requestOngoing": { id: "Ada Pengajuan Berjalan", en: "Request In Progress" },
+  "manager.mitraPendingNote": {
+    id: "Pengajuan verifikasi mitra kamu masih ditinjau admin. Tunggu hasilnya dulu sebelum mengajukan diri jadi pengelola.",
+    en: "Your partner verification is still under admin review. Wait for the outcome before applying to become a manager.",
+  },
+  "manager.pendingNote": {
+    id: "Pengajuanmu sedang ditinjau admin. Kalau disetujui, role akunmu naik jadi pengelola dan menu Dashboard muncul di profil.",
+    en: "An admin is reviewing your request. Once approved, your account becomes a manager and the Dashboard menu appears in your profile.",
+  },
+  "manager.rejectedNote": {
+    id: "Pengajuanmu jadi pengelola ditolak admin. Periksa kembali datamu lalu ajukan ulang.",
+    en: "An admin rejected your manager request. Check your details and submit again.",
+  },
+
+  "verify.awaitingApproval": { id: "Menunggu Persetujuan", en: "Awaiting Approval" },
+  "verify.rejected": { id: "Pengajuan Ditolak", en: "Request Rejected" },
+  "verify.resubmit": { id: "Ajukan Ulang", en: "Submit Again" },
+  "verify.nameLabel": { id: "Nama:", en: "Name:" },
+  "verify.phoneLabel": { id: "No. HP:", en: "Phone:" },
+  "verify.orgLabel": { id: "Instansi:", en: "Organisation:" },
+  "verify.destLabel": { id: "Destinasi:", en: "Destination:" },
+  "verify.newProposal": { id: "(usulan baru)", en: "(new proposal)" },
+  "verify.shipTo": { id: "Paket sensor dikirim ke", en: "Sensor package ships to" },
+  "verify.recipient": { id: "a/n", en: "Attn:" },
+  "verify.wrongAddress": {
+    id: "Alamat salah? Ajukan ulang setelah pengajuan ini selesai ditinjau, atau hubungi admin lewat WhatsApp.",
+    en: "Wrong address? Submit again once this request has been reviewed, or reach an admin on WhatsApp.",
+  },
+
+  // ── Kontak dukungan ──
+  "profile.anonUser": { id: "Pengguna", en: "User" },
+  "profile.providerGoogle": { id: "Akun Google", en: "Google Account" },
+  "profile.providerEmailCode": { id: "Kode Email", en: "Email Code" },
+  "profile.dashboardDesc": { id: "Kelola destinasi dan pengguna", en: "Manage destinations and users" },
+  "support.title": { id: "Masih butuh bantuan?", en: "Still need help?" },
+  "support.replyTime": {
+    id: "Balasan biasanya dalam 1×24 jam kerja",
+    en: "We usually reply within one working day",
+  },
+  "support.mailSubject": { id: "Bantuan Nusa", en: "Nusa support" },
+  "support.waMessage": {
+    id: "Halo, saya butuh bantuan soal Nusa.",
+    en: "Hi, I need help with Nusa.",
+  },
+  "support.destNote": {
+    id: "Untuk perubahan jadwal atau komplain soal satu destinasi, hubungi langsung pengelolanya lewat tombol WhatsApp di halaman destinasi — biasanya lebih cepat.",
+    en: "For schedule changes or complaints about a specific destination, contact its manager directly via the WhatsApp button on the destination page — usually faster.",
+  },
+
+  // ── Bantuan & FAQ ──
+  "profile.faqTitle": { id: "Pertanyaan yang sering ditanyakan", en: "Frequently asked questions" },
+  "faq.group.account": { id: "Akun", en: "Account" },
+  "faq.group.booking": { id: "Booking & pembayaran", en: "Booking & payment" },
+  "faq.group.dest": { id: "Destinasi & pemantauan", en: "Destinations & monitoring" },
+  "faq.group.manager": { id: "Pengelola & kamera", en: "Managers & cameras" },
+  "faq.group.other": { id: "Lainnya", en: "Other" },
+
+  "faq.noPassword.q": { id: "Kenapa tidak ada password?", en: "Why is there no password?" },
+  "faq.noPassword.a": {
+    id: "Nusa tidak memakai password sama sekali. Isi alamat email, kami kirim kode 6 digit ke sana, lalu ketik kodenya untuk masuk. Kode itu sekaligus membuktikan email kamu asli — tidak ada password yang bisa bocor atau lupa. Kalau emailnya belum punya akun, akunnya dibuat otomatis setelah kode benar.",
+    en: "Nusa uses no passwords at all. Enter your email, we send a 6-digit code there, and you type it in to sign in. That code also proves the address is really yours — there's no password to leak or forget. If the email has no account yet, one is created once the code checks out.",
+  },
+  "faq.codeMissing.q": { id: "Kode tidak masuk, bagaimana?", en: "The code never arrived — what now?" },
+  "faq.codeMissing.a": {
+    id: "Cek folder Spam atau Promosi dulu. Kalau tetap tidak ada, tekan Kirim ulang di halaman kode — bisa sekali per menit. Kode berlaku 10 menit dan hanya sekali pakai; salah 5 kali, kodenya hangus dan kamu perlu minta yang baru.",
+    en: "Check your Spam or Promotions folder first. If it's still missing, hit Resend on the code screen — once per minute. A code lasts 10 minutes and works only once; after 5 wrong tries it's discarded and you'll need a new one.",
+  },
+  "faq.changeName.q": { id: "Cara ganti nama atau nomor telepon?", en: "How do I change my name or phone number?" },
+  "faq.changeName.a": {
+    id: "Buka Profil › Pengaturan. Nama dan nomor telepon bisa diubah di kartu paling atas. Alamat email tidak bisa diganti sendiri karena dia yang jadi kunci masuk akun — hubungi kami kalau perlu pindah alamat.",
+    en: "Go to Profile › Settings. Name and phone live in the top card. Your email can't be changed yourself because it's the key to your account — contact us if you need to move to a new address.",
+  },
+
+  "faq.howBook.q": { id: "Bagaimana cara memesan tiket?", en: "How do I book a ticket?" },
+  "faq.howBook.a": {
+    id: "Buka halaman destinasi, tekan Booking, lalu pilih jenis tiket dan jumlahnya. Isi tanggal kunjungan, nama, dan nomor telepon, lalu kirim. Tiket langsung terbit dengan status Terkonfirmasi.",
+    en: "Open a destination page, tap Booking, then pick the ticket types and quantities. Fill in your visit date, name, and phone, then submit. The ticket is issued immediately with Confirmed status.",
+  },
+  "faq.payMethods.q": { id: "Metode pembayaran apa saja yang tersedia?", en: "Which payment methods are available?" },
+  "faq.payMethods.a": {
+    id: "Transfer bank (BCA, Mandiri, BNI), e-wallet (GoPay, OVO, DANA), atau tunai di lokasi. Pilih metodenya lewat tombol Bayar di Riwayat Booking. Tiket tetap berlaku walau statusnya belum lunas — pembayaran tunai diselesaikan di loket.",
+    en: "Bank transfer (BCA, Mandiri, BNI), e-wallet (GoPay, OVO, DANA), or cash on site. Choose via the Pay button in Booking History. The ticket stays valid even while unpaid — cash is settled at the counter.",
+  },
+  "faq.whereTicket.q": { id: "Di mana tiket dan QR-nya?", en: "Where do I find my ticket and QR code?" },
+  "faq.whereTicket.a": {
+    id: "Profil › Riwayat Booking, lalu buka booking yang dimaksud. Tunjukkan QR di layar kepada petugas saat check-in. Satu tiket hanya bisa dipindai sekali; setelah itu statusnya berubah jadi Terpakai.",
+    en: "Profile › Booking History, then open the booking. Show the on-screen QR to the officer at check-in. Each ticket scans only once; after that its status becomes Used.",
+  },
+  "faq.cancel.q": { id: "Bisa membatalkan booking?", en: "Can I cancel a booking?" },
+  "faq.cancel.a": {
+    id: "Bisa, lewat Riwayat Booking › Batalkan. Pembatalan bersifat permanen — tiket yang sudah dibatalkan tidak bisa diaktifkan lagi, jadi pastikan dulu sebelum konfirmasi. Untuk pengembalian dana, hubungi pengelola destinasi.",
+    en: "Yes, via Booking History › Cancel. Cancelling is permanent — a cancelled ticket can't be reactivated, so be sure before confirming. For refunds, contact the destination manager.",
+  },
+  "faq.changeDate.q": {
+    id: "Bagaimana kalau mau ubah tanggal atau jumlah orang?",
+    en: "What if I need to change the date or number of guests?",
+  },
+  "faq.changeDate.a": {
+    id: "Pengubahan belum bisa dilakukan sendiri dari aplikasi. Hubungi pengelola destinasi lewat tombol WhatsApp di halaman destinasi, atau batalkan booking lalu pesan ulang dengan data yang benar.",
+    en: "Edits aren't self-service yet. Contact the destination manager via the WhatsApp button on the destination page, or cancel and rebook with the right details.",
+  },
+
+  "faq.sensorData.q": {
+    id: "Angka suhu dan cuaca di halaman destinasi itu dari mana?",
+    en: "Where do the temperature and weather figures come from?",
+  },
+  "faq.sensorData.a": {
+    id: "Dari sensor IoT yang terpasang di destinasi tersebut: suhu udara, kelembapan, suhu air, kondisi cuaca, dan kecepatan angin. Nilainya diperbarui real-time. Destinasi tanpa sensor tidak menampilkan panel ini.",
+    en: "From IoT sensors installed at that destination: air temperature, humidity, water temperature, weather, and wind speed. Values update in real time. Destinations without sensors don't show this panel.",
+  },
+  "faq.sensorDash.q": {
+    id: 'Kenapa data sensor menampilkan tanda "--"?',
+    en: 'Why does the sensor data show "--"?',
+  },
+  "faq.sensorDash.a": {
+    id: "Artinya perangkat sedang tidak mengirim data — biasanya karena listrik atau koneksi di lokasi terputus. Angka akan muncul lagi sendiri begitu perangkat kembali online.",
+    en: "It means the device isn't sending data — usually the power or connection on site has dropped. The numbers come back on their own once the device is online again.",
+  },
+  "faq.saveFav.q": { id: "Cara menyimpan destinasi favorit?", en: "How do I save a favourite destination?" },
+  "faq.saveFav.a": {
+    id: "Tekan ikon hati di kartu destinasi. Semua yang tersimpan bisa dibuka lagi lewat Profil › Tersimpan. Fitur ini butuh akun yang sudah masuk.",
+    en: "Tap the heart icon on a destination card. Everything saved is available under Profile › Saved. You need to be signed in.",
+  },
+
+  "faq.becomeManager.q": {
+    id: "Bagaimana cara jadi pengelola destinasi?",
+    en: "How do I become a destination manager?",
+  },
+  "faq.becomeManager.a": {
+    id: "Buka Profil › Pengaturan › Jadi Pengelola, lalu isi nama lengkap, nomor HP, instansi, dan destinasi yang dikelola. Pengajuan ditinjau admin; statusnya (menunggu, disetujui, ditolak) muncul di kartu yang sama.",
+    en: "Go to Profile › Settings › Become a Manager, then fill in your full name, phone, organisation, and the destination you manage. An admin reviews the request; its status (pending, approved, rejected) appears on the same card.",
+  },
+  "faq.cameraPending.q": {
+    id: 'Kenapa kamera saya berstatus "Menunggu admin"?',
+    en: 'Why is my camera stuck on "Awaiting admin"?',
+  },
+  "faq.cameraPending.a": {
+    id: "Setiap kamera baru harus disetujui admin sebelum bisa disiarkan. Selama masih menunggu, QR dan alamat server belum aktif. Kalau pengajuan ditolak, hapus kamera itu lalu daftarkan ulang dengan data yang benar.",
+    en: "Every new camera needs admin approval before it can stream. While pending, its QR and server address stay inactive. If the request is rejected, delete that camera and register it again with correct details.",
+  },
+
+  "faq.assistant.q": {
+    id: "Ada asisten yang bisa ditanya soal destinasi?",
+    en: "Is there an assistant I can ask about destinations?",
+  },
+  "faq.assistant.a": {
+    id: "Ada. Tombol chat di pojok kanan bawah menjawab pertanyaan soal destinasi, harga, dan cara booking berdasarkan katalog terbaru. Untuk urusan yang butuh manusia, hubungi kami lewat kontak di bawah.",
+    en: "Yes. The chat button in the bottom-right answers questions about destinations, prices, and booking using the latest catalogue. For anything needing a human, use the contacts below.",
+  },
+  "faq.darkMode.q": { id: "Cara mengaktifkan mode gelap?", en: "How do I turn on dark mode?" },
+  "faq.darkMode.a": {
+    id: "Profil › Pengaturan › Mode Gelap. Pilihannya tersimpan di perangkat ini dan tetap berlaku saat aplikasi dibuka lagi.",
+    en: "Profile › Settings › Dark Mode. The choice is stored on this device and sticks the next time you open the app.",
+  },
+
+  // ── Peran akun ──
+  "role.adminDesc": {
+    id: "Akses penuh dashboard: destinasi, pengguna, dan kamera.",
+    en: "Full dashboard access: destinations, users, and cameras.",
+  },
+  "role.pengelolaDesc": {
+    id: "Kelola destinasi yang ditetapkan admin beserta booking & kameranya.",
+    en: "Manage the destinations assigned by an admin, plus their bookings & cameras.",
+  },
+  "role.mitraDesc": {
+    id: "Boleh mendaftarkan dan memantau kamera milikmu.",
+    en: "You can register and monitor your own cameras.",
+  },
+
+  // ── Masuk tanpa password (kode 6 digit) ──
+  "auth.signInTitle": { id: "Masuk ke Nusa", en: "Sign in to Nusa" },
+  "auth.signInLede": {
+    id: "Tanpa password — kami kirim kode 6 digit ke email kamu.",
+    en: "No password — we'll email you a 6-digit code.",
+  },
+  "auth.continueGoogle": { id: "Lanjut dengan Google", en: "Continue with Google" },
+  "auth.or": { id: "atau", en: "or" },
+  "auth.emailPlaceholder": { id: "nama@email.com", en: "name@email.com" },
+  "auth.sendCode": { id: "Kirim kode", en: "Send code" },
+  "auth.newAccountHint": {
+    id: "Belum punya akun? Isi email yang sama — akunmu dibuat otomatis setelah kode diverifikasi.",
+    en: "No account yet? Use the same email — yours is created automatically once the code checks out.",
+  },
+  "auth.checkEmailTitle": { id: "Cek email kamu", en: "Check your email" },
+  "auth.codeSentTo": {
+    id: "Kami kirim kode {digits} digit ke {email}. Ketik kodenya di bawah untuk masuk.",
+    en: "We sent a {digits}-digit code to {email}. Enter it below to sign in.",
+  },
+  "auth.codeLabel": { id: "Kode masuk", en: "Sign-in code" },
+  "auth.checkingCode": { id: "Memeriksa kode…", en: "Checking code…" },
+  "auth.resend": { id: "Belum dapat email? Kirim ulang", en: "Didn't get the email? Resend" },
+  "auth.resendIn": { id: "Kirim ulang ({seconds})", en: "Resend ({seconds})" },
+  "auth.wrongEmail": { id: "Salah email?", en: "Wrong email?" },
+  "auth.changeEmail": { id: "Ganti alamat", en: "Change address" },
+  "auth.codeStillValid": {
+    id: "Kode sebelumnya masih berlaku. Cek email kamu.",
+    en: "Your previous code is still valid. Check your email.",
+  },
+  "auth.invalidEmail": { id: "Format email tidak valid.", en: "That email address isn't valid." },
+  "auth.sendFailed": { id: "Gagal mengirim kode. Coba lagi.", en: "Couldn't send the code. Please try again." },
+  "auth.sendFailedNetwork": {
+    id: "Gagal mengirim kode. Periksa koneksi kamu.",
+    en: "Couldn't send the code. Check your connection.",
+  },
+  "auth.codeResent": {
+    id: "Kode baru terkirim. Cek inbox (atau folder spam).",
+    en: "A new code is on its way. Check your inbox (or spam folder).",
+  },
+  "auth.codeWrong": { id: "Kode salah. Periksa lagi email kamu.", en: "Wrong code. Check your email again." },
+  "auth.codeExpired": { id: "Kode sudah kedaluwarsa. Minta kode baru.", en: "That code has expired. Request a new one." },
+  "auth.codeLocked": {
+    id: "Terlalu banyak percobaan. Minta kode baru.",
+    en: "Too many attempts. Request a new code.",
+  },
+  "auth.verifyFailed": { id: "Gagal memverifikasi. Coba lagi.", en: "Couldn't verify. Please try again." },
+  "auth.cancelled": { id: "Login dibatalkan.", en: "Sign-in cancelled." },
+
+  // ── Layar verifikasi email (sisa akun era password) ──
+  "auth.verifyLede": {
+    id: "Kami mengirim link verifikasi ke {email}. Klik link itu untuk mengaktifkan akun — langkah ini memastikan akunmu asli, bukan palsu.",
+    en: "We sent a verification link to {email}. Click it to activate your account — this step confirms the account is really yours.",
+  },
+  "auth.verifyWaiting": { id: "Menunggu verifikasi…", en: "Waiting for verification…" },
+  "auth.verifyDone": { id: "Saya sudah verifikasi", en: "I've verified" },
+  "auth.verifyNotYet": {
+    id: "Belum terverifikasi. Klik dulu link di email kamu, lalu coba lagi.",
+    en: "Not verified yet. Click the link in your email first, then try again.",
+  },
+  "auth.verifyCheckFailed": { id: "Gagal memeriksa. Coba lagi.", en: "Couldn't check. Please try again." },
+  "auth.verifySent": {
+    id: "Email verifikasi terkirim. Cek inbox (atau folder spam).",
+    en: "Verification email sent. Check your inbox (or spam folder).",
+  },
+  "auth.verifyResendFailed": { id: "Gagal mengirim ulang. Coba lagi.", en: "Couldn't resend. Please try again." },
+  "auth.sending": { id: "Mengirim…", en: "Sending…" },
+  "auth.logoutRegister": { id: "Keluar & daftar ulang", en: "Sign out & start over" },
 };
 
 /**

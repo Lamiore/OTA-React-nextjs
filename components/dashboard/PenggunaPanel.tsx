@@ -159,7 +159,15 @@ export default function PenggunaPanel() {
                   <p><span className="text-navy-soft">No. HP:</span> {u.verification.phone}</p>
                   <p><span className="text-navy-soft">Instansi:</span> {u.verification.organization}</p>
                   {u.verification.destination && (
-                    <p><span className="text-navy-soft">Destinasi diminta:</span> {u.verification.destination}</p>
+                    <p>
+                      <span className="text-navy-soft">Destinasi diminta:</span>{' '}
+                      {u.verification.destination}
+                      {u.verification.newDestination && (
+                        <span className="ml-1.5 inline-flex rounded-sm bg-warn-soft px-1.5 py-0.5 text-2xs font-medium text-warn">
+                          usulan baru
+                        </span>
+                      )}
+                    </p>
                   )}
                   {u.verification.agreementVersion && (
                     <p>
@@ -173,6 +181,26 @@ export default function PenggunaPanel() {
                     </p>
                   )}
                 </div>
+                {u.verification.newDestination && (
+                  <div className="mt-3 rounded-md border border-shore-200 bg-surface p-3">
+                    <p className="text-2xs font-medium text-navy">Usulan destinasi baru</p>
+                    <div className="mt-1.5 space-y-1 text-sm text-navy">
+                      <p><span className="text-navy-soft">Lokasi:</span> {u.verification.destinationLocation}</p>
+                      <p>
+                        <span className="text-navy-soft">Dasar hak:</span>{' '}
+                        {u.verification.landRights}
+                        {u.verification.declaredRights && (
+                          <span className="text-navy-soft"> · dinyatakan pengaju</span>
+                        )}
+                      </p>
+                      <p className="leading-relaxed">{u.verification.destinationDescription}</p>
+                    </div>
+                    <p className="text-2xs text-navy-soft mt-2 leading-relaxed">
+                      Pastikan dasar haknya lewat WhatsApp, lalu buat destinasinya
+                      di panel Destinasi sebelum menyetujui pengajuan ini.
+                    </p>
+                  </div>
+                )}
                 {u.verification.shippingAddress && (
                   <div className="mt-3 rounded-md border border-shore-200 bg-surface p-3">
                     <p className="text-2xs font-medium text-navy">Kirim paket sensor ke</p>

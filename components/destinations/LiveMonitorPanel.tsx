@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { subscribeCameraServerUrl } from '@/lib/firestore';
 import { subscribeMonitoring, type SensorReading } from '@/lib/realtime';
+import { useLang } from '@/lib/useLang';
 
 interface Props {
   /** Denormalisasi dari kamera yang di-link ke destinasi (halaman ini tidak membaca koleksi cameras). */
@@ -25,12 +26,12 @@ function fmt(n: number | undefined, digits = 1) {
 }
 
 /** Umur data → teks relatif ringkas (detik/menit/jam/hari). */
-function relTime(sec: number): string {
-  if (sec < 5) return 'baru saja';
-  if (sec < 60) return `${sec} detik lalu`;
-  if (sec < 3600) return `${Math.floor(sec / 60)} menit lalu`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)} jam lalu`;
-  return `${Math.floor(sec / 86400)} hari lalu`;
+function relTime(sec: number, t: (k: string, v?: Record<string, string | number>) => string): string {
+  if (sec < 5) return t('monitor.justNow');
+  if (sec < 60) return t('monitor.secsAgo', { n: sec });
+  if (sec < 3600) return t('monitor.minsAgo', { n: Math.floor(sec / 60) });
+  if (sec < 86400) return t('monitor.hoursAgo', { n: Math.floor(sec / 3600) });
+  return t('monitor.daysAgo', { n: Math.floor(sec / 86400) });
 }
 
 /**
@@ -45,6 +46,7 @@ export default function LiveMonitorPanel({
   cameraName,
   sensorPath,
 }: Props) {
+  const { t } = useLang();
   const hasCamera = !!(cameraStreamId || cameraStreamUrl);
   const hasMonitoring = !!sensorPath;
 
@@ -114,14 +116,14 @@ export default function LiveMonitorPanel({
 
   const subtitle =
     hasCamera && hasMonitoring
-      ? 'Kamera live & sensor lingkungan real-time'
+      ? t('monitor.subtitleBoth')
       : hasCamera
-        ? 'Kamera live destinasi'
-        : 'Sensor lingkungan real-time';
+        ? t('monitor.subtitleCamera')
+        : t('monitor.subtitleSensor');
 
   const metrics: Metric[] = [
     {
-      label: 'Suhu Udara',
+      label: t('monitor.airTemp'),
       value: fmt(data?.tempDHT),
       unit: '°C',
       icon: (
@@ -131,7 +133,7 @@ export default function LiveMonitorPanel({
       ),
     },
     {
-      label: 'Kelembapan Udara',
+      label: t('monitor.humidity'),
       value: fmt(data?.humidity),
       unit: '%',
       icon: (
@@ -141,7 +143,7 @@ export default function LiveMonitorPanel({
       ),
     },
     {
-      label: 'Suhu Air',
+      label: t('monitor.waterTemp'),
       value: fmt(data?.tempDS18),
       unit: '°C',
       icon: (
@@ -153,7 +155,7 @@ export default function LiveMonitorPanel({
       ),
     },
     {
-      label: 'Kondisi Cuaca',
+      label: t('monitor.weather'),
       // Status utama besar, nilai mentah sensor ditaruh di slot unit (kecil & redup).
       value: data?.rainStatus ?? '--',
       unit: data?.rainStatus && typeof data.rainValue === 'number' ? `(${data.rainValue})` : '',
@@ -167,7 +169,7 @@ export default function LiveMonitorPanel({
       ),
     },
     {
-      label: 'Kecepatan Angin',
+      label: t('monitor.windSpeed'),
       value: fmt(data?.windSpeed, 2),
       unit: 'km/h',
       icon: (
@@ -179,7 +181,7 @@ export default function LiveMonitorPanel({
       ),
     },
     {
-      label: 'Debit Air',
+      label: t('monitor.flowRate'),
       value: fmt(data?.flowRate, 2),
       unit: 'L/min',
       icon: (
@@ -200,17 +202,13 @@ export default function LiveMonitorPanel({
         <div className="absolute inset-0 animate-pulse bg-white/5" />
       ) : src === '' ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
-          <p className="text-sm">Alamat server kamera belum diatur.</p>
-          <p className="text-xs text-white/50">
-            Isi &quot;Alamat Server Kamera&quot; di dashboard admin, lalu buka kembali halaman ini.
-          </p>
+          <p className="text-sm">{t('camera.noServerUrl')}</p>
+          <p className="text-xs text-white/50">{t('camera.noServerUrlHintAdmin')}</p>
         </div>
       ) : error ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
-          <p className="text-sm">Tidak bisa terhubung ke kamera.</p>
-          <p className="text-xs text-white/50">
-            Pastikan server kamera berjalan dan ID kamera benar.
-          </p>
+          <p className="text-sm">{t('camera.noConnection')}</p>
+          <p className="text-xs text-white/50">{t('camera.noConnectionHint')}</p>
         </div>
       ) : (
         <>
@@ -322,7 +320,7 @@ export default function LiveMonitorPanel({
     // (design.md § Surface language). Kepala bagiannya kini sejajar dengan
     // "Tentang", "Daftar harga", dan "Ulasan" di halaman yang sama.
     <section className="animate-fade-in">
-      <h2 className="section-title">Pantau langsung</h2>
+      <h2 className="section-title">{t('dest.liveMonitor')}</h2>
       <p className="section-lede">{subtitle}</p>
 
       {/* Body: desktop dua kolom (kamera + GPS di kiri, sensor di kanan) bila
@@ -344,7 +342,9 @@ export default function LiveMonitorPanel({
       )}
 
       {ageSec !== null && (
-        <p className="mt-4 text-xs text-navy-soft">Diperbarui {relTime(ageSec)}</p>
+        <p className="mt-4 text-xs text-navy-soft">
+          {t('monitor.updated', { when: relTime(ageSec, t) })}
+        </p>
       )}
     </section>
   );

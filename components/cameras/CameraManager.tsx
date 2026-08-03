@@ -15,6 +15,7 @@ import {
   type Camera,
   type Destination,
 } from '@/lib/firestore';
+import { useLang } from '@/lib/useLang';
 import CameraLiveModal from './CameraLiveModal';
 import ServerAddressCard from './ServerAddressCard';
 
@@ -29,6 +30,7 @@ function TrashIcon() {
 }
 
 export default function CameraManager({ user }: { user: User }) {
+  const { t } = useLang();
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
   const [regions, setRegions] = useState<string[]>([]);
@@ -69,11 +71,11 @@ export default function CameraManager({ user }: { user: User }) {
     e.preventDefault();
     const nm = name.trim();
     if (!nm) {
-      setError('Nama kamera wajib diisi.');
+      setError('camera.nameRequired');
       return;
     }
     if (!location) {
-      setError('Pilih wilayah kamera.');
+      setError('camera.regionRequired');
       return;
     }
     setError('');
@@ -89,7 +91,7 @@ export default function CameraManager({ user }: { user: User }) {
       setName('');
       setLocation('');
     } catch {
-      setError('Gagal menyimpan kamera. Coba lagi.');
+      setError('camera.saveFailed');
     } finally {
       setSaving(false);
     }
@@ -119,10 +121,9 @@ export default function CameraManager({ user }: { user: User }) {
           <div className="absolute inset-0 bg-shore-50/60 backdrop-blur-lg" onClick={() => !deleting && setDeletingCamera(null)} />
           <div className="relative flex min-h-full items-center justify-center p-4">
             <div className="w-full max-w-sm card p-6 animate-fade-up" onClick={(e) => e.stopPropagation()}>
-              <h2 className="font-serif text-lg font-medium text-navy text-center">Hapus Kamera?</h2>
+              <h2 className="font-serif text-lg font-medium text-navy text-center">{t('camera.deleteTitle')}</h2>
               <p className="text-sm text-navy-soft text-center mt-2">
-                Kamera <span className="font-medium text-navy">{deletingCamera.name}</span> akan
-                dihapus dan tidak bisa dikembalikan.
+                {t('camera.deleteBody', { name: deletingCamera.name })}
               </p>
               <div className="flex gap-3 mt-6">
                 <button
@@ -130,14 +131,14 @@ export default function CameraManager({ user }: { user: User }) {
                   disabled={deleting}
                   className="btn-ghost flex-1 px-4 py-2.5 text-sm"
                 >
-                  Kembali
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
                   className="flex-1 rounded-md px-4 py-2.5 text-sm font-medium bg-danger text-white hover:bg-danger transition-colors disabled:opacity-50 inline-flex items-center justify-center"
                 >
-                  {deleting ? 'Menghapus...' : 'Ya, Hapus'}
+                  {deleting ? t('camera.deleting') : t('camera.deleteConfirm')}
                 </button>
               </div>
             </div>
@@ -161,7 +162,7 @@ export default function CameraManager({ user }: { user: User }) {
           ))
         ) : cameras.length === 0 ? (
           <div className="card p-8 text-center">
-            <p className="text-sm text-navy-soft">Belum ada kamera. Tambahkan kamera pertamamu.</p>
+            <p className="text-sm text-navy-soft">{t('camera.empty')}</p>
           </div>
         ) : (
           cameras.map((c) => {
@@ -180,18 +181,18 @@ export default function CameraManager({ user }: { user: User }) {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {status === 'pending' && (
-                      <span className="rounded-sm bg-warn-soft px-2.5 py-1 text-2xs font-medium text-warn">Menunggu admin</span>
+                      <span className="rounded-sm bg-warn-soft px-2.5 py-1 text-2xs font-medium text-warn">{t('camera.statusPending')}</span>
                     )}
                     {status === 'rejected' && (
-                      <span className="rounded-sm bg-danger-soft px-2.5 py-1 text-2xs font-medium text-danger">Ditolak</span>
+                      <span className="rounded-sm bg-danger-soft px-2.5 py-1 text-2xs font-medium text-danger">{t('camera.statusRejected')}</span>
                     )}
                     {status === 'approved' && (
-                      <span className="rounded-sm bg-teal-50 px-2.5 py-1 text-2xs font-medium text-teal-600">Disetujui</span>
+                      <span className="rounded-sm bg-teal-50 px-2.5 py-1 text-2xs font-medium text-teal-600">{t('camera.statusApproved')}</span>
                     )}
                     <button
                       onClick={() => setDeletingCamera(c)}
                       className="h-8 w-8 rounded-sm border border-shore-200 flex items-center justify-center text-navy-soft hover:border-danger-rule hover:text-danger transition-colors"
-                      aria-label={`Hapus ${c.name}`}
+                      aria-label={`${t('common.delete')} ${c.name}`}
                     >
                       <TrashIcon />
                     </button>
@@ -200,15 +201,13 @@ export default function CameraManager({ user }: { user: User }) {
 
                 {status === 'pending' && (
                   <p className="mt-4 text-xs text-navy-soft leading-relaxed rounded-md bg-shore-50 px-4 py-3">
-                    Kamera menunggu persetujuan admin di server. Setelah disetujui, QR
-                    untuk mulai siaran dari HP akan muncul di sini.
+                    {t('camera.pendingHint')}
                   </p>
                 )}
 
                 {status === 'rejected' && (
                   <p className="mt-4 text-xs text-navy-soft leading-relaxed rounded-md bg-danger-soft/60 px-4 py-3">
-                    Pengajuan kamera ditolak admin. Hapus kamera ini lalu daftarkan ulang
-                    bila perlu.
+                    {t('camera.rejectedHint')}
                   </p>
                 )}
 
@@ -218,10 +217,9 @@ export default function CameraManager({ user }: { user: User }) {
                       <QRCodeSVG value={broadcastUrl} size={116} />
                     </div>
                     <div className="min-w-0 text-center sm:text-left">
-                      <p className="text-sm font-medium text-navy">Mulai siaran dari HP</p>
+                      <p className="text-sm font-medium text-navy">{t('camera.broadcastTitle')}</p>
                       <p className="text-xs text-navy-soft mt-1 leading-relaxed">
-                        Scan QR ini pakai kamera HP, atau buka link siaran di HP lalu izinkan
-                        akses kamera. Biarkan halaman siaran tetap terbuka.
+                        {t('camera.broadcastHint')}
                       </p>
                       <a
                         href={broadcastUrl}
@@ -229,7 +227,7 @@ export default function CameraManager({ user }: { user: User }) {
                         rel="noopener noreferrer"
                         className="inline-block mt-2 text-xs font-medium text-teal-600 hover:text-teal-700 break-all"
                       >
-                        Buka halaman siaran ↗
+                        {t('camera.openBroadcast')}
                       </a>
                     </div>
                   </div>
@@ -240,7 +238,7 @@ export default function CameraManager({ user }: { user: User }) {
                     onClick={() => setLiveCamera(c)}
                     className="btn-primary w-full px-4 py-2 text-xs mt-4"
                   >
-                    Lihat Live
+                    {t('camera.viewLive')}
                   </button>
                 )}
               </div>
@@ -251,47 +249,42 @@ export default function CameraManager({ user }: { user: User }) {
 
       {/* Form tambah kamera */}
       <div className="card p-6 mt-4">
-        <h2 className="font-serif text-lg font-medium text-navy">Tambah Kamera</h2>
-        <p className="text-xs text-navy-soft mt-1 leading-relaxed">
-          Daftarkan kamera dari sini. Admin akan memvalidasi di server, lalu QR untuk
-          siaran dari HP muncul otomatis di daftar di atas.
-        </p>
+        <h2 className="font-serif text-lg font-medium text-navy">{t('camera.addTitle')}</h2>
+        <p className="text-xs text-navy-soft mt-1 leading-relaxed">{t('camera.addHint')}</p>
         <form onSubmit={handleAdd} className="mt-4 space-y-4">
           <div>
-            <label className="block text-xs font-medium text-navy mb-1.5">Nama Kamera</label>
+            <label className="block text-xs font-medium text-navy mb-1.5">{t('camera.nameLabel')}</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Misal: Kamera Dermaga Utama"
+              placeholder={t('camera.namePlaceholder')}
               className={inputClass}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-navy mb-1.5">Wilayah</label>
+            <label className="block text-xs font-medium text-navy mb-1.5">{t('camera.regionLabel')}</label>
             <select
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               className={inputClass}
             >
-              <option value="">Pilih wilayah…</option>
+              <option value="">{t('camera.regionPlaceholder')}</option>
               {regions.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
-            <p className="text-2xs text-navy-soft mt-1.5">
-              Wilayah menentukan pengelola mana yang bisa memantau kamera ini.
-              Detail titik pasang taruh di nama kamera.
-            </p>
+            <p className="text-2xs text-navy-soft mt-1.5">{t('camera.regionHint')}</p>
           </div>
 
-          {error && <p className="text-xs text-danger">{error}</p>}
+          {/* `error` menyimpan kunci kamus, bukan kalimat jadi. */}
+          {error && <p className="text-xs text-danger">{t(error)}</p>}
 
           <button
             type="submit"
             disabled={saving}
             className="btn-primary w-full px-6 py-3 text-sm disabled:opacity-50"
           >
-            {saving ? 'Menyimpan...' : 'Tambah Kamera'}
+            {saving ? t('common.saving') : t('camera.addTitle')}
           </button>
         </form>
       </div>

@@ -2,6 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Kode login 6 digit. Ditulis dan dibaca hanya oleh Admin SDK di
+    // /api/auth/* (Admin SDK melewati rules). Ditutup rapat dari klien:
+    // isinya hash kode yang sedang berlaku — satu-satunya kunci masuk akun
+    // sekarang password sudah tidak ada.
+    match /loginCodes/{codeId} {
+      allow read, write: if false;
+    }
+
     match /users/{userId} {
       // Baca: pemilik dokumen sendiri, atau admin.
       allow read: if request.auth != null

@@ -145,8 +145,19 @@ export interface MitraVerification {
   status: "pending" | "approved" | "rejected";
   /** Role yang diajukan. Dokumen lama tanpa field = pengajuan mitra. */
   requestedRole?: "mitra" | "pengelola";
-  /** Destinasi yang ingin dikelola — hanya untuk pengajuan pengelola. */
+  /** Destinasi yang ingin dikelola — hanya untuk pengajuan pengelola. Berisi
+   *  nama usulan (belum ada dokumennya) bila `newDestination` true. */
   destination?: string;
+  /** Destinasi yang diusulkan belum terdaftar. Admin membuat dokumennya dulu di
+   *  panel Destinasi, baru menyetujui pengajuan ini. */
+  newDestination?: boolean;
+  destinationLocation?: string;
+  destinationDescription?: string;
+  /** Dasar hak mengelola lokasi yang dinyatakan pengaju (lihat LAND_RIGHTS). */
+  landRights?: string;
+  /** Pengaju mencentang pernyataan berhak mengelola lokasi. Waktunya mengikuti
+   *  agreedAt — keduanya dicentang di form yang sama. */
+  declaredRights?: boolean;
   /** Alamat kirim paket sensor + kode pos. Hanya pengajuan pengelola: kamera
    *  mitra dipasang petugas Nusa, jadi tidak perlu dikirim. */
   shippingAddress?: string;
@@ -255,6 +266,11 @@ export async function submitRoleRequest(
     organization: string;
     requestedRole: "mitra" | "pengelola";
     destination?: string;
+    newDestination?: boolean;
+    destinationLocation?: string;
+    destinationDescription?: string;
+    landRights?: string;
+    declaredRights?: boolean;
     shippingAddress?: string;
     postalCode?: string;
     recipientName?: string;

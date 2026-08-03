@@ -27,9 +27,11 @@ export default function TopNav({ compact = false }: { compact?: boolean }) {
   const pathname = usePathname();
   const { user } = useAuthState();
   const { t } = useLang();
+  // Akun yang masuk lewat kode email lahir tanpa nama sampai diisi di
+  // Pengaturan, jadi huruf awal email yang jadi cadangan — bukan inisial merek.
   const initials = user?.displayName
     ? user.displayName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
-    : 'LA';
+    : user?.email?.[0]?.toUpperCase() ?? 'U';
 
   return (
     <header className="sticky top-0 z-50 hidden border-b border-shore-200 bg-surface/90 backdrop-blur-md md:block">

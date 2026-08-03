@@ -57,14 +57,21 @@ export default function HeroBanner() {
 
       <div className="mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 sm:pb-20 sm:pt-28 lg:px-10 lg:pb-24 lg:pt-36">
         <div className="max-w-2xl">
+          {/* Sapaan duduk di bagian scrim yang paling terang (from-ink/45), jadi
+              putih 70% di ukuran sm praktis hilang di atas foto. Putih penuh +
+              drop-shadow — pola yang sama dipakai label kamera di LiveMonitorPanel.
+              Tetap sans supaya tidak bertabrakan peran dengan judul serif di bawahnya. */}
           {firstName && (
-            <p className="reveal text-sm text-white/70" style={step(0)}>
+            <p
+              className="reveal text-base font-medium text-white drop-shadow-sm sm:text-lg"
+              style={step(0)}
+            >
               {t('home.greeting', { name: firstName })}
             </p>
           )}
 
           <h1
-            className="reveal mt-2 font-serif text-display font-semibold text-white"
+            className="reveal mt-3 font-serif text-display font-semibold text-white"
             style={step(1)}
           >
             {t('home.heroTitle')}

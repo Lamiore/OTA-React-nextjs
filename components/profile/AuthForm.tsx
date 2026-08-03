@@ -1,38 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile,
   GoogleAuthProvider,
   signInWithPopup,
-  sendPasswordResetEmail,
+  signInWithCustomToken,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { useLang } from '@/lib/useLang';
-import { requestVerificationEmail } from '@/lib/sendVerification';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-
-function EyeIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function EyeOffIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-      <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-      <line x1="2" x2="22" y1="2" y2="22" />
-    </svg>
-  );
-}
 
 function GoogleIcon() {
   return (
@@ -54,24 +30,6 @@ function MailIcon() {
   );
 }
 
-function LockIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
 function LoadingSpinner() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="animate-spin">
@@ -81,21 +39,36 @@ function LoadingSpinner() {
   );
 }
 
-export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
+const CODE_LENGTH = 6;
+
+/**
+ * Masuk tanpa password: isi email, terima kode 6 digit, ketik kodenya. Tidak
+ * ada lagi pisah daftar/masuk — kalau emailnya belum punya akun, akunnya
+ * dibuat di /api/auth/verify-code saat kodenya benar.
+ */
+export default function AuthForm() {
   const { t } = useLang();
-  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
-
-  useEffect(() => {
-    setMode(initialMode);
-  }, [initialMode]);
-
+  const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  // Nama tidak ditanya di sini — akun baru lahir tanpa nama dan diisi belakangan
+  // di Profil › Pengaturan. Satu kolom saja di layar masuk.
+  const [code, setCode] = useState('');
+  const [cooldown, setCooldown] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const codeRef = useRef<HTMLInputElement>(null);
+
+  // Hitung mundur tombol kirim ulang — cerminan jeda 60 detik di server.
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [cooldown]);
+
+  useEffect(() => {
+    if (step === 'code') codeRef.current?.focus();
+  }, [step]);
 
   const ensureUserDoc = async (user: { uid: string; displayName: string | null; email: string | null; photoURL: string | null }) => {
     if (!db) return;
@@ -112,72 +85,84 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
     }
   };
 
-  const getErrorMessage = (code: string) => {
-    switch (code) {
-      case 'auth/invalid-email': return 'Format email tidak valid.';
-      case 'auth/user-not-found': return 'Akun tidak ditemukan.';
-      case 'auth/wrong-password': return 'Password salah.';
-      case 'auth/invalid-credential': return 'Email atau password salah.';
-      case 'auth/email-already-in-use': return 'Email sudah terdaftar.';
-      case 'auth/weak-password': return 'Password minimal 6 karakter.';
-      case 'auth/too-many-requests': return 'Terlalu banyak percobaan. Coba lagi nanti.';
-      case 'auth/popup-closed-by-user': return 'Login dibatalkan.';
-      default: return 'Terjadi kesalahan. Coba lagi.';
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!auth) return;
+  const sendCode = async (resend = false) => {
     setError('');
+    setNotice('');
     setLoading(true);
-
     try {
-      if (mode === 'register') {
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
-        if (name.trim()) {
-          await updateProfile(cred.user, { displayName: name.trim() });
+      const res = await fetch('/api/auth/request-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (!res.ok) {
+        const { error: code } = await res.json().catch(() => ({ error: '' }));
+        if (code === 'cooldown') {
+          // Kode sebelumnya masih hidup — lanjut ke layar kode, bukan mentok.
+          setStep('code');
+          setCooldown(60);
+          setNotice('auth.codeStillValid');
+          return;
         }
-        await ensureUserDoc(cred.user);
-        // Kirim link verifikasi via SMTP sendiri; gate ProfileContent menahan
-        // akun sampai diklik. Gagal kirim email tidak menggagalkan registrasi —
-        // user bisa "kirim ulang" di layar verifikasi.
-        if (cred.user.email) {
-          try {
-            await requestVerificationEmail(cred.user.email);
-          } catch {
-            /* diabaikan: tampil layar verifikasi dengan tombol kirim ulang */
-          }
-        }
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        setError(code === 'email-invalid' ? 'auth.invalidEmail' : 'auth.sendFailed');
+        return;
       }
-    } catch (err: unknown) {
-      const firebaseErr = err as { code?: string };
-      setError(getErrorMessage(firebaseErr.code ?? ''));
+      setStep('code');
+      setCode('');
+      setCooldown(60);
+      if (resend) setNotice('auth.codeResent');
+    } catch {
+      setError('auth.sendFailedNetwork');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleForgot = async () => {
+  const verifyCode = async (value: string) => {
     if (!auth) return;
     setError('');
     setNotice('');
-    if (!email.trim()) {
-      setError('Isi email dulu untuk kirim link reset password.');
-      return;
-    }
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email.trim());
-      setNotice('Link reset password terkirim. Cek inbox email kamu.');
-    } catch (err: unknown) {
-      const firebaseErr = err as { code?: string };
-      setError(getErrorMessage(firebaseErr.code ?? ''));
+      const res = await fetch('/api/auth/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), code: value }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.token) {
+        setCode('');
+        codeRef.current?.focus();
+        switch (data.error) {
+          case 'wrong':
+            setError('auth.codeWrong');
+            break;
+          case 'expired':
+          case 'none':
+            setError('auth.codeExpired');
+            break;
+          case 'locked':
+            setError('auth.codeLocked');
+            break;
+          default:
+            setError('auth.verifyFailed');
+        }
+        return;
+      }
+      const cred = await signInWithCustomToken(auth, data.token);
+      await ensureUserDoc(cred.user);
+    } catch {
+      setError('auth.verifyFailed');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCodeChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, CODE_LENGTH);
+    setCode(digits);
+    // Kirim otomatis begitu digit ke-6 masuk — tidak ada tombol untuk ditekan.
+    if (digits.length === CODE_LENGTH && !loading) verifyCode(digits);
   };
 
   const handleGoogle = async () => {
@@ -188,170 +173,146 @@ export default function AuthForm({ initialMode = 'login' }: { initialMode?: 'log
       const cred = await signInWithPopup(auth, new GoogleAuthProvider());
       await ensureUserDoc(cred.user);
     } catch (err: unknown) {
-      const firebaseErr = err as { code?: string };
-      setError(getErrorMessage(firebaseErr.code ?? ''));
+      const code = (err as { code?: string }).code ?? '';
+      setError(code === 'auth/popup-closed-by-user' ? 'auth.cancelled' : 'common.error');
     } finally {
       setLoading(false);
     }
   };
 
-  const isLogin = mode === 'login';
+  // `error`/`notice` menyimpan kunci kamus, bukan kalimat jadi — kalau bahasa
+  // diganti saat pesan sedang tampil, pesannya ikut berganti.
+  const messages = (
+    <>
+      {notice && (
+        <div className="rounded-md bg-teal-50 border border-teal-100 px-4 py-3 text-sm text-teal-700 animate-fade-up">
+          {t(notice)}
+        </div>
+      )}
+      {error && (
+        <div className="rounded-md bg-danger-soft border border-danger-rule px-4 py-3 text-sm text-danger animate-fade-up">
+          {t(error)}
+        </div>
+      )}
+    </>
+  );
+
+  if (step === 'code') {
+    return (
+      <div className="w-full max-w-md mx-auto animate-fade-in text-center">
+        <h2 className="section-title">{t('auth.checkEmailTitle')}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-navy-soft">
+          {t('auth.codeSentTo', { digits: CODE_LENGTH, email: email.trim() })}
+        </p>
+
+        <input
+          ref={codeRef}
+          aria-label={t('auth.codeLabel')}
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          value={code}
+          onChange={(e) => handleCodeChange(e.target.value)}
+          disabled={loading}
+          placeholder="······"
+          className="mt-7 w-full rounded-md border border-shore-200 bg-surface px-4 py-4 text-center font-mono text-3xl tracking-[0.5em] text-navy placeholder:text-shore-300 outline-none transition-colors duration-micro focus:border-teal-400 disabled:opacity-50"
+        />
+
+        {loading && (
+          <div className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-teal-700">
+            <LoadingSpinner /> {t('auth.checkingCode')}
+          </div>
+        )}
+
+        <div className="mt-4 space-y-3 text-left">{messages}</div>
+
+        <div className="mt-6 space-y-3">
+          <button
+            onClick={() => sendCode(true)}
+            disabled={loading || cooldown > 0}
+            className="w-full rounded-md border border-shore-200 bg-surface px-4 py-3 text-sm font-medium text-navy transition-colors duration-micro hover:border-shore-300 disabled:opacity-50"
+          >
+            {cooldown > 0 ? t('auth.resendIn', { seconds: cooldown }) : t('auth.resend')}
+          </button>
+        </div>
+
+        <p className="mt-6 text-sm text-navy-soft">
+          {t('auth.wrongEmail')}{' '}
+          <button
+            onClick={() => {
+              setStep('email');
+              setCode('');
+              setError('');
+              setNotice('');
+            }}
+            className="font-medium text-teal-600 hover:text-teal-700 transition-colors"
+          >
+            {t('auth.changeEmail')}
+          </button>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md mx-auto animate-fade-in">
-      {/* Header */}
       <div className="text-center mb-8">
-        {/* Tanpa wordmark di sini: masthead tepat di atasnya sudah membawanya,
-            dan dulu kotak ini malah berisi inisial nyasar "D". */}
-        <h2 className="section-title">
-          {isLogin ? 'Selamat datang' : 'Buat akun baru'}
-        </h2>
-        <p className="mt-2 text-sm text-navy-soft">
-          {isLogin
-            ? 'Masuk untuk melanjutkan petualangan'
-            : 'Mulai jelajahi destinasi indah di berbagai wilayah'}
-        </p>
+        <h2 className="section-title">{t('auth.signInTitle')}</h2>
+        <p className="mt-2 text-sm text-navy-soft">{t('auth.signInLede')}</p>
       </div>
 
-      {/* Google button */}
       <button
         onClick={handleGoogle}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-3 rounded-md border border-shore-200 bg-surface px-4 py-3 text-sm font-medium text-navy transition-colors duration-micro hover:border-shore-300 hover: disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-3 rounded-md border border-shore-200 bg-surface px-4 py-3 text-sm font-medium text-navy transition-colors duration-micro hover:border-shore-300 disabled:opacity-50"
       >
         <GoogleIcon />
-        {isLogin ? 'Masuk dengan Google' : 'Daftar dengan Google'}
+        {t('auth.continueGoogle')}
       </button>
 
-      {/* Divider */}
       <div className="flex items-center gap-4 my-6">
         <div className="flex-1 h-px bg-shore-200" />
-        <span className="text-xs text-navy-soft">atau</span>
+        <span className="text-xs text-navy-soft">{t('auth.or')}</span>
         <div className="flex-1 h-px bg-shore-200" />
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Name — register only */}
-        {!isLogin && (
-          <div className="animate-fade-up">
-            <label className="block text-xs font-medium text-navy-soft mb-1.5">
-              Nama Lengkap
-            </label>
-            <div className="flex items-center gap-3 rounded-md border border-shore-200 bg-surface px-3.5 py-3 transition-colors duration-micro focus-within:border-teal-400 focus-within:">
-              <span className="text-navy-soft"><UserIcon /></span>
-              <input aria-label={t('auth.fullName')}
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t('auth.fullNamePlaceholder')}
-                className="flex-1 bg-transparent text-sm text-navy placeholder:text-navy-soft outline-none"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Email */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          sendCode();
+        }}
+        className="space-y-4"
+      >
         <div>
-          <label className="block text-xs font-medium text-navy-soft mb-1.5">
-            Email
-          </label>
-          <div className="flex items-center gap-3 rounded-md border border-shore-200 bg-surface px-3.5 py-3 transition-colors duration-micro focus-within:border-teal-400 focus-within:">
+          <label className="block text-xs font-medium text-navy-soft mb-1.5">{t('auth.email')}</label>
+          <div className="flex items-center gap-3 rounded-md border border-shore-200 bg-surface px-3.5 py-3 transition-colors duration-micro focus-within:border-teal-400">
             <span className="text-navy-soft"><MailIcon /></span>
-            <input aria-label={t('auth.email')}
+            <input
+              aria-label={t('auth.email')}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="nama@email.com"
+              placeholder={t('auth.emailPlaceholder')}
               required
+              autoComplete="email"
               className="flex-1 bg-transparent text-sm text-navy placeholder:text-navy-soft outline-none"
             />
           </div>
         </div>
 
-        {/* Password */}
-        <div>
-          <label className="block text-xs font-medium text-navy-soft mb-1.5">
-            Password
-          </label>
-          <div className="flex items-center gap-3 rounded-md border border-shore-200 bg-surface px-3.5 py-3 transition-colors duration-micro focus-within:border-teal-400 focus-within:">
-            <span className="text-navy-soft"><LockIcon /></span>
-            <input aria-label={t('auth.password')}
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={isLogin ? 'Masukkan password' : 'Minimal 6 karakter'}
-              required
-              minLength={6}
-              className="flex-1 bg-transparent text-sm text-navy placeholder:text-navy-soft outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="text-navy-soft hover:text-navy transition-colors"
-            >
-              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
-        </div>
+        {messages}
 
-        {/* Lupa password — login saja */}
-        {isLogin && (
-          <div className="text-right -mt-1">
-            <button
-              type="button"
-              onClick={handleForgot}
-              disabled={loading}
-              className="text-xs font-medium text-teal-600 hover:text-teal-700 transition-colors disabled:opacity-50"
-            >
-              Lupa password?
-            </button>
-          </div>
-        )}
-
-        {/* Notice */}
-        {notice && (
-          <div className="rounded-md bg-teal-50 border border-teal-100 px-4 py-3 text-sm text-teal-700 animate-fade-up">
-            {notice}
-          </div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <div className="rounded-md bg-danger-soft border border-danger-rule px-4 py-3 text-sm text-danger animate-fade-up">
-            {error}
-          </div>
-        )}
-
-        {/* Submit */}
         <button
           type="submit"
           disabled={loading}
           className="btn-primary w-full px-4 py-3 text-sm font-medium disabled:opacity-50 disabled:transform-none"
         >
-          {loading ? (
-            <LoadingSpinner />
-          ) : isLogin ? (
-            'Masuk'
-          ) : (
-            'Buat Akun'
-          )}
+          {loading ? <LoadingSpinner /> : t('auth.sendCode')}
         </button>
       </form>
 
-      {/* Toggle mode */}
-      <p className="mt-6 text-center text-sm text-navy-soft">
-        {isLogin ? 'Belum punya akun?' : 'Sudah punya akun?'}{' '}
-        <button
-          onClick={() => {
-            setMode(isLogin ? 'register' : 'login');
-            setError('');
-            setNotice('');
-          }}
-          className="font-medium text-teal-600 hover:text-teal-700 transition-colors"
-        >
-          {isLogin ? 'Daftar sekarang' : 'Masuk'}
-        </button>
+      <p className="mt-6 text-center text-xs leading-relaxed text-navy-soft">
+        {t('auth.newAccountHint')}
       </p>
     </div>
   );

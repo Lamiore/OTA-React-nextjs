@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { setCameraServerUrl, subscribeCameraServerUrl } from '@/lib/firestore';
+import { useLang } from '@/lib/useLang';
 
 /**
  * Pengaturan alamat server kamera lokal (camera-server). Disimpan di
@@ -9,6 +10,7 @@ import { setCameraServerUrl, subscribeCameraServerUrl } from '@/lib/firestore';
  * diganti sekali di sini — semua kamera langsung mengikuti.
  */
 export default function ServerAddressCard() {
+  const { t } = useLang();
   const [saved, setSaved] = useState('');
   const [value, setValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -32,7 +34,7 @@ export default function ServerAddressCard() {
     e.preventDefault();
     const url = value.trim().replace(/\/+$/, '');
     if (!/^https?:\/\//i.test(url)) {
-      setError('Alamat harus diawali http:// atau https://.');
+      setError('camera.urlScheme');
       return;
     }
     setError('');
@@ -41,7 +43,7 @@ export default function ServerAddressCard() {
       await setCameraServerUrl(url);
       setValue(url);
     } catch {
-      setError('Gagal menyimpan alamat. Coba lagi.');
+      setError('camera.urlSaveFailed');
     } finally {
       setSaving(false);
     }
@@ -52,17 +54,14 @@ export default function ServerAddressCard() {
   return (
     <div className="card p-5">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-serif text-base font-medium text-navy">Alamat Server Kamera</h2>
+        <h2 className="font-serif text-base font-medium text-navy">{t('camera.serverAddress')}</h2>
         {!dirty && saved && (
           <span className="rounded-sm bg-teal-50 px-2 py-0.5 text-2xs font-medium text-teal-600">
-            Tersimpan
+            {t('common.saved')}
           </span>
         )}
       </div>
-      <p className="text-xs text-navy-soft mt-1.5 leading-relaxed">
-        Salin dari halaman utama website kamera. Bila WiFi/IP berubah, cukup ganti
-        di sini — semua kamera langsung mengikuti.
-      </p>
+      <p className="text-xs text-navy-soft mt-1.5 leading-relaxed">{t('camera.serverAddressHint')}</p>
       <form onSubmit={handleSave} className="mt-3 flex gap-2">
         <input
           value={value}
@@ -76,10 +75,11 @@ export default function ServerAddressCard() {
           disabled={saving || !dirty}
           className="btn-primary px-4 py-2.5 text-sm shrink-0 disabled:opacity-50"
         >
-          {saving ? 'Menyimpan...' : 'Simpan'}
+          {saving ? t('common.saving') : t('common.save')}
         </button>
       </form>
-      {error && <p className="text-xs text-danger mt-2">{error}</p>}
+      {/* `error` menyimpan kunci kamus, bukan kalimat jadi. */}
+      {error && <p className="text-xs text-danger mt-2">{t(error)}</p>}
     </div>
   );
 }

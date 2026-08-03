@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLang } from '@/lib/useLang';
 
 /**
  * Riwayat deteksi karang untuk SATU kamera. Dipindah dari halaman Monitoring
@@ -19,23 +20,26 @@ interface HistoryResponse {
   history: HistoryItem[];
 }
 
-const HEALTH_BADGE: Record<string, { label: string; cls: string }> = {
-  'Sehat':               { label: 'Sehat',          cls: 'bg-teal-50 text-teal-700' },
-  'Kurang Sehat':        { label: 'Kurang Sehat',    cls: 'bg-warn-soft text-warn' },
-  'Mengalami Pemutihan': { label: 'Pemutihan',       cls: 'bg-danger-soft text-danger' },
-  'Tidak Diketahui':     { label: 'Tidak Diketahui', cls: 'bg-shore-100 text-navy-soft' },
+// Kunci map-nya sengaja tetap bahasa Indonesia: itu nilai mentah yang dikirim
+// server deteksi, bukan teks untuk dibaca. Yang diterjemahkan labelnya saja.
+const HEALTH_BADGE: Record<string, { labelKey: string; cls: string }> = {
+  'Sehat':               { labelKey: 'health.healthy',   cls: 'bg-teal-50 text-teal-700' },
+  'Kurang Sehat':        { labelKey: 'health.poor',      cls: 'bg-warn-soft text-warn' },
+  'Mengalami Pemutihan': { labelKey: 'health.bleaching', cls: 'bg-danger-soft text-danger' },
+  'Tidak Diketahui':     { labelKey: 'health.unknown',   cls: 'bg-shore-100 text-navy-soft' },
 };
 
 const formatJenis = (jenis: string) => jenis.replace(/_/g, ' ');
 
-const formatWaktu = (waktu: number) =>
-  new Date(waktu * 1000).toLocaleTimeString('id-ID', {
+const formatWaktu = (waktu: number, locale: string) =>
+  new Date(waktu * 1000).toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
   });
 
 export default function CameraHistory({ url }: { url: string }) {
+  const { t, locale } = useLang();
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [error, setError] = useState(false);
 
@@ -68,21 +72,19 @@ export default function CameraHistory({ url }: { url: string }) {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-navy">
-        Riwayat Deteksi
-      </h3>
+      <h3 className="text-sm font-semibold text-navy">{t('camera.historyTitle')}</h3>
 
       {error && !data ? (
         <p className="mt-2 rounded-md border border-dashed border-shore-200 bg-surface px-4 py-3 text-xs text-navy-soft">
-          Belum ada deteksi. Riwayat terisi selama kamera ditonton.
+          {t('camera.historyEmptyOffline')}
         </p>
       ) : (
         <div className="mt-2 rounded-md border border-shore-200 bg-surface p-4">
           <div className="mb-3 flex items-baseline gap-2 border-b border-shore-100 pb-3">
             <span className="text-2xl font-semibold text-navy">
-              {data ? data.total.toLocaleString('id-ID') : '—'}
+              {data ? data.total.toLocaleString(locale) : '—'}
             </span>
-            <span className="text-2xs text-navy-soft">total deteksi tercatat</span>
+            <span className="text-2xs text-navy-soft">{t('camera.totalRecorded')}</span>
           </div>
 
           {data && data.history.length > 0 ? (
@@ -95,25 +97,24 @@ export default function CameraHistory({ url }: { url: string }) {
                     className="flex items-center justify-between gap-3 rounded-sm px-2 py-1.5 text-sm hover:bg-shore-50"
                   >
                     <span className="w-16 shrink-0 font-mono text-2xs text-navy-soft">
-                      {formatWaktu(item.waktu)}
+                      {formatWaktu(item.waktu, locale)}
                     </span>
                     <span className="min-w-0 flex-1 truncate capitalize text-sm text-navy">
                       {formatJenis(item.jenis)}
                     </span>
                     <span className={`shrink-0 rounded-xs px-2.5 py-0.5 text-2xs font-medium ${badge.cls}`}>
-                      {badge.label}
+                      {t(badge.labelKey)}
                     </span>
                   </li>
                 );
               })}
             </ul>
           ) : (
-            <p className="py-4 text-center text-2xs text-navy-soft">Belum ada deteksi tercatat</p>
+            <p className="py-4 text-center text-2xs text-navy-soft">{t('camera.historyEmpty')}</p>
           )}
 
           <p className="mt-3 border-t border-shore-100 pt-2.5 text-2xs leading-relaxed text-navy-soft">
-            Catatan: status kesehatan masih estimasi kasar berdasarkan kecerahan gambar —
-            belum tervalidasi sebagai data kesehatan karang yang akurat.
+            {t('camera.healthCaveat')}
           </p>
         </div>
       )}

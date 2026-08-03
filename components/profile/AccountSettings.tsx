@@ -4,10 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   updateProfile,
   linkWithPopup,
-  reauthenticateWithCredential,
-  updatePassword,
   GoogleAuthProvider,
-  EmailAuthProvider,
   type User,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -37,38 +34,33 @@ function CheckIcon() {
 const inputClass =
   'w-full rounded-md border border-shore-200 bg-surface px-4 py-2.5 text-sm text-navy outline-none transition-colors focus:border-teal-400';
 
-function fbMessage(code: string) {
+/** Kode error Firebase → kunci kamus; diterjemahkan saat dirender. */
+function fbMessageKey(code: string) {
   switch (code) {
-    case 'auth/wrong-password':
-    case 'auth/invalid-credential':
-      return 'Password sekarang salah.';
-    case 'auth/weak-password':
-      return 'Password baru minimal 6 karakter.';
     case 'auth/too-many-requests':
-      return 'Terlalu banyak percobaan. Coba lagi nanti.';
+      return 'account.tooManyAttempts';
     case 'auth/requires-recent-login':
-      return 'Sesi kedaluwarsa. Keluar lalu masuk lagi, kemudian coba ulang.';
+      return 'account.sessionExpired';
     case 'auth/popup-closed-by-user':
-      return 'Dibatalkan.';
+      return 'account.cancelled';
     case 'auth/credential-already-in-use':
     case 'auth/email-already-in-use':
-      return 'Akun Google itu sudah terpakai di akun lain.';
+      return 'account.googleInUse';
     default:
-      return 'Terjadi kesalahan. Coba lagi.';
+      return 'common.error';
   }
 }
 
 export default function AccountSettings({ user }: { user: User }) {
   const { t } = useLang();
   const providers = user.providerData.map((p) => p.providerId);
-  const hasPassword = providers.includes('password');
   const [googleLinked, setGoogleLinked] = useState(providers.includes('google.com'));
 
   // ── Profil: nama + telepon ──
   const [name, setName] = useState(user.displayName ?? '');
   const [phone, setPhone] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
-  const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [profileMsg, setProfileMsg] = useState<{ ok: boolean; key: string } | null>(null);
 
   useEffect(() => {
     if (!db) return;
@@ -82,7 +74,7 @@ export default function AccountSettings({ user }: { user: User }) {
     if (!auth?.currentUser) return;
     const nm = name.trim();
     if (!nm) {
-      setProfileMsg({ ok: false, text: 'Nama wajib diisi.' });
+      setProfileMsg({ ok: false, key: 'account.nameRequired' });
       return;
     }
     setProfileMsg(null);
@@ -92,9 +84,9 @@ export default function AccountSettings({ user }: { user: User }) {
         await updateProfile(auth.currentUser, { displayName: nm });
       }
       await updateUserPhone(user.uid, phone.trim());
-      setProfileMsg({ ok: true, text: 'Profil tersimpan.' });
+      setProfileMsg({ ok: true, key: 'account.profileSaved' });
     } catch {
-      setProfileMsg({ ok: false, text: 'Gagal menyimpan. Coba lagi.' });
+      setProfileMsg({ ok: false, key: 'common.saveFailed' });
     } finally {
       setSavingProfile(false);
     }
@@ -102,7 +94,7 @@ export default function AccountSettings({ user }: { user: User }) {
 
   // ── Hubungkan Google ──
   const [linking, setLinking] = useState(false);
-  const [linkMsg, setLinkMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [linkMsg, setLinkMsg] = useState<{ ok: boolean; key: string } | null>(null);
 
   const linkGoogle = async () => {
     if (!auth?.currentUser) return;
@@ -111,57 +103,28 @@ export default function AccountSettings({ user }: { user: User }) {
     try {
       await linkWithPopup(auth.currentUser, new GoogleAuthProvider());
       setGoogleLinked(true);
-      setLinkMsg({ ok: true, text: 'Google terhubung. Lain kali bisa masuk pakai Google.' });
+      setLinkMsg({ ok: true, key: 'account.googleLinkedOk' });
     } catch (err: unknown) {
-      setLinkMsg({ ok: false, text: fbMessage((err as { code?: string }).code ?? '') });
+      setLinkMsg({ ok: false, key: fbMessageKey((err as { code?: string }).code ?? '') });
     } finally {
       setLinking(false);
     }
   };
 
-  // ── Ubah password ──
-  const [curPw, setCurPw] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
-  const [savingPw, setSavingPw] = useState(false);
-  const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // Kartu "Ubah Password" dihapus bersama login password: masuk sekarang hanya
+  // lewat kode email atau Google, jadi password (kalau akun lama masih punya)
+  // tidak dipakai apa pun dan mengubahnya tidak mengubah keamanan akun.
 
-  const changePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!auth?.currentUser || !user.email) return;
-    if (newPw.length < 6) {
-      setPwMsg({ ok: false, text: 'Password baru minimal 6 karakter.' });
-      return;
-    }
-    if (newPw !== confirmPw) {
-      setPwMsg({ ok: false, text: 'Konfirmasi password tidak sama.' });
-      return;
-    }
-    setPwMsg(null);
-    setSavingPw(true);
-    try {
-      const cred = EmailAuthProvider.credential(user.email, curPw);
-      await reauthenticateWithCredential(auth.currentUser, cred);
-      await updatePassword(auth.currentUser, newPw);
-      setCurPw('');
-      setNewPw('');
-      setConfirmPw('');
-      setPwMsg({ ok: true, text: 'Password berhasil diubah.' });
-    } catch (err: unknown) {
-      setPwMsg({ ok: false, text: fbMessage((err as { code?: string }).code ?? '') });
-    } finally {
-      setSavingPw(false);
-    }
-  };
-
-  const banner = (m: { ok: boolean; text: string } | null) =>
+  // Pesan disimpan sebagai kunci kamus, diterjemahkan di sini — supaya ganti
+  // bahasa saat banner sedang tampil ikut mengganti isinya.
+  const banner = (m: { ok: boolean; key: string } | null) =>
     m && (
       <p
         className={`mt-3 rounded-md px-4 py-2.5 text-xs ${
           m.ok ? 'bg-teal-50 text-teal-700' : 'bg-danger-soft text-danger'
         }`}
       >
-        {m.text}
+        {t(m.key)}
       </p>
     );
 
@@ -177,7 +140,7 @@ export default function AccountSettings({ user }: { user: User }) {
         <p className="mb-3 text-sm font-semibold text-navy">{t('account.profile')}</p>
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-navy mb-1.5">Nama</label>
+            <label className="block text-xs font-medium text-navy mb-1.5">{t('account.name')}</label>
             <input aria-label={t('account.name')} value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder={t('auth.fullNamePlaceholder')} />
           </div>
           <div>
@@ -194,7 +157,7 @@ export default function AccountSettings({ user }: { user: User }) {
         </div>
         {banner(profileMsg)}
         <button type="submit" disabled={savingProfile} className="btn-primary w-full px-4 py-2.5 text-sm mt-4 disabled:opacity-50">
-          {savingProfile ? 'Menyimpan...' : 'Simpan Profil'}
+          {savingProfile ? t('common.saving') : t('account.saveProfile')}
         </button>
       </form>
 
@@ -231,45 +194,6 @@ export default function AccountSettings({ user }: { user: User }) {
         </div>
       )}
 
-      {/* Ubah password — hanya untuk akun email/password */}
-      {hasPassword && (
-        <form onSubmit={changePassword} className="px-5 py-4 border-t border-shore-200/80">
-          <p className="mb-3 text-sm font-semibold text-navy">{t('account.changePassword')}</p>
-          <div className="space-y-3">
-            <input
-              type="password"
-              value={curPw}
-              onChange={(e) => setCurPw(e.target.value)}
-              className={inputClass}
-              placeholder={t('account.currentPassword')}
-              autoComplete="current-password"
-              required
-            />
-            <input
-              type="password"
-              value={newPw}
-              onChange={(e) => setNewPw(e.target.value)}
-              className={inputClass}
-              placeholder={t('account.newPassword')}
-              autoComplete="new-password"
-              required
-            />
-            <input
-              type="password"
-              value={confirmPw}
-              onChange={(e) => setConfirmPw(e.target.value)}
-              className={inputClass}
-              placeholder={t('account.confirmPassword')}
-              autoComplete="new-password"
-              required
-            />
-          </div>
-          {banner(pwMsg)}
-          <button type="submit" disabled={savingPw} className="btn-primary w-full px-4 py-2.5 text-sm mt-4 disabled:opacity-50">
-            {savingPw ? 'Menyimpan...' : 'Ubah Password'}
-          </button>
-        </form>
-      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLang } from '@/lib/useLang';
 
 /**
  * Statistik deteksi karang untuk SATU kamera. Dipindah dari halaman Monitoring
@@ -14,15 +15,17 @@ interface Stats {
   by_jenis: Record<string, number>;
 }
 
-const HEALTH_CONFIG: Record<string, { label: string; color: string; bar: string; dot: string }> = {
-  'Sehat':               { label: 'Sehat',        color: 'text-teal-600',  bar: 'bg-teal-500',  dot: 'bg-teal-500' },
-  'Kurang Sehat':        { label: 'Kurang Sehat',  color: 'text-warn', bar: 'bg-star', dot: 'bg-star' },
-  'Mengalami Pemutihan': { label: 'Pemutihan',     color: 'text-danger',   bar: 'bg-danger',   dot: 'bg-danger' },
+// Kuncinya nilai mentah dari server deteksi; labelnya saja yang diterjemahkan.
+const HEALTH_CONFIG: Record<string, { labelKey: string; color: string; bar: string; dot: string }> = {
+  'Sehat':               { labelKey: 'health.healthy',   color: 'text-teal-600', bar: 'bg-teal-500', dot: 'bg-teal-500' },
+  'Kurang Sehat':        { labelKey: 'health.poor',      color: 'text-warn',     bar: 'bg-star',     dot: 'bg-star' },
+  'Mengalami Pemutihan': { labelKey: 'health.bleaching', color: 'text-danger',   bar: 'bg-danger',   dot: 'bg-danger' },
 };
 
 const HEALTH_ORDER = ['Sehat', 'Kurang Sehat', 'Mengalami Pemutihan'];
 
 export default function CameraStats({ url }: { url: string }) {
+  const { t, locale } = useLang();
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState(false);
 
@@ -60,27 +63,25 @@ export default function CameraStats({ url }: { url: string }) {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-navy">
-        Statistik Deteksi
-      </h3>
+      <h3 className="text-sm font-semibold text-navy">{t('camera.statsTitle')}</h3>
 
       {error && !stats ? (
         <p className="mt-2 rounded-md border border-dashed border-shore-200 bg-surface px-4 py-3 text-xs text-navy-soft">
-          Belum ada data deteksi. Statistik terkumpul selama kamera ditonton.
+          {t('camera.statsEmptyOffline')}
         </p>
       ) : (
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
           {/* Total */}
           <div className="rounded-md border border-shore-200 bg-surface p-4">
             <p className="text-2xl font-semibold text-navy">
-              {stats ? stats.total.toLocaleString('id-ID') : '—'}
+              {stats ? stats.total.toLocaleString(locale) : '—'}
             </p>
-            <p className="mt-0.5 text-2xs text-navy-soft">Total karang terdeteksi</p>
+            <p className="mt-0.5 text-2xs text-navy-soft">{t('camera.totalDetected')}</p>
           </div>
 
           {/* Status kesehatan */}
           <div className="rounded-md border border-shore-200 bg-surface p-4">
-            <p className="mb-2.5 text-xs font-medium text-navy">Status Kesehatan</p>
+            <p className="mb-2.5 text-xs font-medium text-navy">{t('camera.healthStatus')}</p>
             {stats && stats.total > 0 ? (
               <div className="space-y-2">
                 {HEALTH_ORDER.map((key) => {
@@ -92,7 +93,7 @@ export default function CameraStats({ url }: { url: string }) {
                       <div className="mb-1 flex items-center justify-between text-2xs">
                         <span className="flex items-center gap-1.5 text-navy-soft">
                           <span className={`h-2 w-2 rounded-full ${cfg.dot}`} />
-                          {cfg.label}
+                          {t(cfg.labelKey)}
                         </span>
                         <span className={`font-medium ${cfg.color}`}>
                           {count} <span className="font-normal text-navy-soft">({pct}%)</span>
@@ -109,13 +110,13 @@ export default function CameraStats({ url }: { url: string }) {
                 })}
               </div>
             ) : (
-              <p className="text-2xs text-navy-soft">Belum ada data</p>
+              <p className="text-2xs text-navy-soft">{t('common.noData')}</p>
             )}
           </div>
 
           {/* Jenis karang */}
           <div className="rounded-md border border-shore-200 bg-surface p-4">
-            <p className="mb-2.5 text-xs font-medium text-navy">Jenis Karang</p>
+            <p className="mb-2.5 text-xs font-medium text-navy">{t('camera.coralTypes')}</p>
             {topJenis.length > 0 ? (
               <div className="space-y-2">
                 {topJenis.map(([jenis, count]) => {
@@ -137,7 +138,7 @@ export default function CameraStats({ url }: { url: string }) {
                 })}
               </div>
             ) : (
-              <p className="text-2xs text-navy-soft">Belum ada data</p>
+              <p className="text-2xs text-navy-soft">{t('common.noData')}</p>
             )}
           </div>
         </div>

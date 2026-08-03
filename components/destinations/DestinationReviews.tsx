@@ -122,7 +122,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
       {user ? (
         <div className="card p-5 sm:p-6 space-y-3">
           <p className="text-sm font-medium text-navy">
-            {myReview ? 'Ubah ulasanmu' : 'Tulis ulasan'}
+            {myReview ? t('review.edit') : t('review.write')}
           </p>
           <div className="flex items-center gap-1" onMouseLeave={() => setHover(0)}>
             {[1, 2, 3, 4, 5].map((i) => (
@@ -151,7 +151,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
               disabled={saving || rating < 1}
               className="btn-primary px-5 py-2.5 text-sm disabled:opacity-50"
             >
-              {saving ? 'Menyimpan…' : myReview ? 'Perbarui' : 'Kirim Ulasan'}
+              {saving ? t('common.saving') : myReview ? t('review.update') : t('review.submit')}
             </button>
             {myReview && (
               <button
@@ -159,7 +159,7 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
                 disabled={saving}
                 className="btn-ghost px-4 py-2.5 text-sm hover:border-danger-rule hover:text-danger disabled:opacity-50"
               >
-                Hapus
+                {t('common.delete')}
               </button>
             )}
           </div>
@@ -168,9 +168,9 @@ export default function DestinationReviews({ destinationId, reviews }: Props) {
         <div className="card p-5 text-center">
           <p className="text-sm text-navy-soft">
             <Link href="/profile" className="text-teal-600 font-medium hover:underline">
-              Masuk
+              {t('nav.login')}
             </Link>{' '}
-            untuk menulis ulasan.
+            {t('review.signInPrompt')}
           </p>
         </div>
       )}

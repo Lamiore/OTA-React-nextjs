@@ -2,23 +2,27 @@ import type { UserRole } from '@/lib/useAuth';
 
 // Peran di atas 'user' saja; pengguna biasa tidak perlu label apa pun.
 // Warnanya mengikuti panel Pengguna di dashboard biar konsisten.
+//
+// `description` menyimpan kunci kamus, bukan kalimat jadi: objek ini hidup di
+// level modul sehingga tidak bisa memanggil t() yang berasal dari hook.
+// Penerjemahannya dilakukan di tempat pemakaian.
 export const roleInfo: Partial<
-  Record<UserRole, { label: string; className: string; description: string }>
+  Record<UserRole, { label: string; className: string; descriptionKey: string }>
 > = {
   admin: {
     label: 'Admin',
     className: 'border-teal-200 bg-teal-50 text-teal-700',
-    description: 'Akses penuh dashboard: destinasi, pengguna, dan kamera.',
+    descriptionKey: 'role.adminDesc',
   },
   pengelola: {
     label: 'Pengelola',
     className: 'border-warn-rule bg-warn-soft text-warn',
-    description: 'Kelola destinasi yang ditetapkan admin beserta booking & kameranya.',
+    descriptionKey: 'role.pengelolaDesc',
   },
   mitra: {
     label: 'Mitra',
     className: 'border-ok/30 bg-ok-soft text-ok',
-    description: 'Boleh mendaftarkan dan memantau kamera milikmu.',
+    descriptionKey: 'role.mitraDesc',
   },
 };
 
