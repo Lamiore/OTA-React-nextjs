@@ -4,49 +4,40 @@ import { useEffect, useState } from 'react';
 import {
   cameraStatus,
   subscribeAllCameras,
-  subscribeDestinations,
+  subscribeMyCameras,
   type Camera,
-  type Destination,
 } from '@/lib/firestore';
 import CameraLiveModal from '@/components/cameras/CameraLiveModal';
 import ServerAddressCard from '@/components/cameras/ServerAddressCard';
+import CameraViewers from './CameraViewers';
 
 interface Props {
   role: string | null;
   uid: string;
 }
 
+/**
+ * Panel Kamera dashboard. Admin melihat semua kamera; pengelola melihat kamera
+ * miliknya lewat query berconstraint `ownerUid` — bukan seluruh koleksi lalu
+ * disaring di klien. Rules bukan filter: query tanpa constraint hanya bisa
+ * dipenuhi cabang admin, jadi versi lama panel ini selalu ditolak untuk
+ * pengelola dan tidak pernah menampilkan apa pun.
+ */
 export default function KameraPanel({ role, uid }: Props) {
   const isPengelola = role === 'pengelola';
 
   const [cameras, setCameras] = useState<Camera[]>([]);
-  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
   const [liveCamera, setLiveCamera] = useState<Camera | null>(null);
 
   useEffect(() => {
-    const unsub = subscribeDestinations(setDestinations);
-    return () => unsub();
-  }, []);
-
-  const managedDestinations = destinations.filter((d) => d.managerUid === uid);
-  const managedLocations = new Set(managedDestinations.map((d) => d.location));
-  const noAssignment = isPengelola && managedDestinations.length === 0; // pengelola tanpa destinasi → jangan tampilkan kamera apa pun
-
-  useEffect(() => {
-    if (noAssignment) {
-      setCameras([]);
-      setLoading(false);
-      return;
-    }
     const handle = (data: Camera[]) => {
-      setCameras(isPengelola ? data.filter((c) => managedLocations.has(c.location)) : data);
+      setCameras(data);
       setLoading(false);
     };
-    const unsub = subscribeAllCameras(handle);
+    const unsub = isPengelola ? subscribeMyCameras(uid, handle) : subscribeAllCameras(handle);
     return () => unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPengelola, noAssignment, uid, destinations]);
+  }, [isPengelola, uid]);
 
   return (
     <div className="animate-fade-in">
@@ -55,9 +46,7 @@ export default function KameraPanel({ role, uid }: Props) {
       <h1 className="font-serif text-2xl font-medium text-navy">Kamera</h1>
       <p className="mt-1 text-sm text-navy-soft">
         {isPengelola
-          ? managedDestinations.length > 0
-            ? `Destinasi ${managedDestinations.map((d) => d.name).join(', ')} — ${cameras.length} kamera`
-            : 'Destinasi belum ditetapkan admin'
+          ? `${cameras.length} kamera milikmu`
           : `${cameras.length} kamera terdaftar`}
       </p>
 
@@ -68,33 +57,28 @@ export default function KameraPanel({ role, uid }: Props) {
         </div>
       )}
 
-      {noAssignment ? (
-        <div className="card p-8 text-center mt-6">
-          <p className="text-sm text-navy-soft">
-            Destinasimu belum ditetapkan admin. Hubungi admin untuk menetapkan destinasi
-            agar kamera di destinasimu muncul di sini.
-          </p>
-        </div>
-      ) : (
-        <div className={isPengelola ? 'mt-6 space-y-3' : 'mt-4 space-y-3'}>
-          {loading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="card p-5 animate-pulse space-y-3">
-                <div className="h-4 w-2/3 rounded-full bg-shore-100" />
-                <div className="h-3 w-1/2 rounded-full bg-shore-100" />
-              </div>
-            ))
-          ) : cameras.length === 0 ? (
-            <div className="card p-8 text-center">
-              <p className="text-sm text-navy-soft">
-                Belum ada kamera terdaftar{isPengelola && managedDestinations.length > 0 ? ` di destinasi ${managedDestinations.map((d) => d.name).join(', ')}` : ''}.
-              </p>
+      <div className={isPengelola ? 'mt-6 space-y-3' : 'mt-4 space-y-3'}>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="card p-5 animate-pulse space-y-3">
+              <div className="h-4 w-2/3 rounded-full bg-shore-100" />
+              <div className="h-3 w-1/2 rounded-full bg-shore-100" />
             </div>
-          ) : (
-            cameras.map((c) => {
-              const status = cameraStatus(c);
-              return (
-                <div key={c.id} className="card flex flex-wrap items-center gap-4 px-5 py-4">
+          ))
+        ) : cameras.length === 0 ? (
+          <div className="card p-8 text-center">
+            <p className="text-sm text-navy-soft">
+              {isPengelola
+                ? 'Kamu belum mendaftarkan kamera. Daftarkan lewat menu Kamera di profil.'
+                : 'Belum ada kamera terdaftar.'}
+            </p>
+          </div>
+        ) : (
+          cameras.map((c) => {
+            const status = cameraStatus(c);
+            return (
+              <div key={c.id} className="card px-5 py-4">
+                <div className="flex flex-wrap items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-navy truncate">{c.name}</p>
@@ -124,11 +108,13 @@ export default function KameraPanel({ role, uid }: Props) {
                     <span className="text-xs text-navy-soft shrink-0">Belum aktif</span>
                   )}
                 </div>
-              );
-            })
-          )}
-        </div>
-      )}
+
+                <CameraViewers camera={c} editable={c.ownerUid === uid} />
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }
