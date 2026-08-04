@@ -168,11 +168,6 @@ export default function DestinasiPanel() {
   const handleSave = async () => {
     if (!form.name.trim() || !form.location.trim()) return;
     setSaving(true);
-    // Denormalisasi kamera yang di-link ke dokumen destinasi (publik) supaya
-    // halaman /destinations/[id] bisa menampilkan stream tanpa membaca koleksi
-    // cameras yang privat. Saat unlink (cameraId kosong) field ini WAJIB
-    // di-clear agar stream lama tidak "nyangkut" publik.
-    const linkedCam = form.cameraId ? cameras.find((c) => c.id === form.cameraId) : null;
     // Koordinat ditulis berpasangan sebagai null saat kosong/tidak valid —
     // Firestore menolak undefined, dan null membersihkan nilai lama saat edit.
     const coords = parseCoords(coordInput);
@@ -187,9 +182,6 @@ export default function DestinasiPanel() {
       // Stasiun dimatikan → id paket sensor ikut dibersihkan, biar destinasi ini
       // tidak diam-diam masih menempel ke cabang RTDB paket lama.
       stationId: form.hasMonitoring ? (form.stationId ?? '') : '',
-      cameraStreamId: linkedCam?.cameraId ?? '',
-      cameraName: linkedCam?.name ?? '',
-      cameraStreamUrl: linkedCam?.streamUrl ?? '',
     };
     if (editingId) {
       await updateDestination(editingId, data);

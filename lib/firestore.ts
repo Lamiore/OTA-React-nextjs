@@ -63,16 +63,10 @@ export interface Destination {
   stationId?: string;
   /** Uid pengelola yang mengelola destinasi ini (ditetapkan admin). Kosong = belum ada pengelola. */
   managerUid?: string;
-  /** Tautan ke kamera mitra/pengelola (id dokumen dari koleksi 'cameras') */
+  /** Tautan ke kamera pengelola — id dokumen koleksi 'cameras', bukan id
+   *  stream. Aman ada di dokumen publik: tidak bisa dipakai menyusun URL
+   *  siaran, dan dokumen kameranya sendiri dijaga rules. */
   cameraId?: string;
-  /**
-   * Snapshot kamera yang di-link, denormalisasi saat menyimpan destinasi.
-   * Halaman publik /destinations/[id] memakai ini agar bisa menampilkan stream
-   * tanpa membaca koleksi 'cameras' (yang privat). Kosong = tidak ada kamera.
-   */
-  cameraStreamId?: string; // = Camera.cameraId (id stream di server kamera)
-  cameraName?: string;
-  cameraStreamUrl?: string; // legacy: kamera lama dengan URL stream langsung
 }
 
 export type DestinationInput = Omit<Destination, "id">;
@@ -301,9 +295,6 @@ const AUTO_DEST_DEFAULTS = {
   hasMonitoring: false,
   stationId: "",
   cameraId: "",
-  cameraStreamId: "",
-  cameraName: "",
-  cameraStreamUrl: "",
 };
 
 /**

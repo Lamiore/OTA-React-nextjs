@@ -1,15 +1,15 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { subscribeCameraServerUrl } from '@/lib/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { cameraStatus, subscribeCameraServerUrl, type Camera } from '@/lib/firestore';
 import { subscribeMonitoring, type SensorReading } from '@/lib/realtime';
 import { useLang } from '@/lib/useLang';
 
 interface Props {
-  /** Denormalisasi dari kamera yang di-link ke destinasi (halaman ini tidak membaca koleksi cameras). */
-  cameraStreamId?: string;
-  cameraStreamUrl?: string; // legacy: kamera lama dengan URL stream langsung
-  cameraName?: string;
+  /** Id dokumen kamera yang ditautkan ke destinasi ini. */
+  cameraDocId?: string;
   /** Path RTDB paket sensor destinasi ini (dari stationPath); null = tanpa sensor. */
   sensorPath: string | null;
 }
@@ -36,39 +36,59 @@ function relTime(sec: number, t: (k: string, v?: Record<string, string | number>
 
 /**
  * Panel "Pantau Langsung" gabungan: stream kamera + sensor IoT dalam satu card.
- * Kamera dirender dari data denormalisasi di dokumen destinasi (publik), jadi
- * pengunjung tidak perlu membaca koleksi cameras yang privat. Sensor dibaca dari
- * cabang RTDB milik paket sensor destinasi ini (sensorPath).
+ *
+ * Kameranya dibaca langsung dari dokumen `cameras/{docId}`, bukan dari field
+ * yang didenormalisasi ke dokumen destinasi. Itu disengaja: dokumen destinasi
+ * dibaca publik, jadi id stream yang menempel di sana bisa dipakai siapa pun
+ * merakit URL siaran sendiri. Sekarang rules yang jadi satu-satunya gerbang —
+ * pembaca tanpa hak kena permission-denied dan blok kameranya tidak dirender.
+ * Tidak ada pengecekan role di komponen ini.
+ *
+ * Sensor dibaca dari cabang RTDB milik paket sensor destinasi ini (sensorPath).
  */
-export default function LiveMonitorPanel({
-  cameraStreamId,
-  cameraStreamUrl,
-  cameraName,
-  sensorPath,
-}: Props) {
+export default function LiveMonitorPanel({ cameraDocId, sensorPath }: Props) {
   const { t } = useLang();
-  const hasCamera = !!(cameraStreamId || cameraStreamUrl);
   const hasMonitoring = !!sensorPath;
 
   // ── Kamera ──
+  const [cam, setCam] = useState<Camera | null>(null);
   const [serverUrl, setServerUrl] = useState<string | null>(null); // null = loading
   const [error, setError] = useState(false);
   const [loaded, setLoaded] = useState(false); // frame pertama sudah masuk
 
   useEffect(() => {
-    if (!hasCamera || cameraStreamUrl) return; // legacy tidak butuh server URL
+    if (!cameraDocId || !db) {
+      setCam(null);
+      return;
+    }
+    // Callback error wajib: pengunjung tanpa hak MEMANG kena permission-denied
+    // di sini. Tanpa penanganan, listener-nya mati dan tiap kunjungan halaman
+    // destinasi publik meninggalkan error di konsol.
+    return onSnapshot(
+      doc(db, 'cameras', cameraDocId),
+      (snap) => setCam(snap.exists() ? ({ id: snap.id, ...snap.data() } as Camera) : null),
+      () => setCam(null),
+    );
+  }, [cameraDocId]);
+
+  // Kamera yang belum disetujui server VPS tidak punya siaran untuk ditampilkan.
+  const hasCamera = !!cam && cameraStatus(cam) === 'approved';
+  const cameraName = cam?.name;
+
+  useEffect(() => {
+    if (!hasCamera || cam?.streamUrl) return; // legacy tidak butuh server URL
     return subscribeCameraServerUrl(setServerUrl);
-  }, [hasCamera, cameraStreamUrl]);
+  }, [hasCamera, cam?.streamUrl]);
 
   const src = !hasCamera
     ? ''
-    : cameraStreamUrl
-      ? cameraStreamUrl
+    : cam!.streamUrl
+      ? cam!.streamUrl
       : serverUrl === null
         ? null // masih memuat alamat server
         : serverUrl === ''
           ? '' // alamat server belum diatur
-          : `${serverUrl.replace(/\/+$/, '')}/stream/${cameraStreamId}`;
+          : `${serverUrl.replace(/\/+$/, '')}/stream/${cam!.cameraId}`;
 
   useEffect(() => {
     setError(false);

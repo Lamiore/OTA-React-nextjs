@@ -359,14 +359,9 @@ export default function DestinationDetail() {
               </button>
             </section>
 
-            {/* Pantau langsung — kamera (kalau di-link) + sensor IoT dalam satu card */}
-            {(dest.cameraStreamId || dest.cameraStreamUrl || stationPath(dest)) && (
-              <LiveMonitorPanel
-                cameraStreamId={dest.cameraStreamId}
-                cameraStreamUrl={dest.cameraStreamUrl}
-                cameraName={dest.cameraName}
-                sensorPath={stationPath(dest)}
-              />
+            {/* Pantau langsung — kamera (kalau di-link & boleh ditonton) + sensor IoT */}
+            {(dest.cameraId || stationPath(dest)) && (
+              <LiveMonitorPanel cameraDocId={dest.cameraId} sensorPath={stationPath(dest)} />
             )}
 
             {/* Ulasan pengunjung */}
