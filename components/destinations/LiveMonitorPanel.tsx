@@ -57,10 +57,11 @@ export default function LiveMonitorPanel({ cameraDocId, sensorPath }: Props) {
   const [loaded, setLoaded] = useState(false); // frame pertama sudah masuk
 
   useEffect(() => {
-    if (!cameraDocId || !db) {
-      setCam(null);
-      return;
-    }
+    // Reset dulu, sinkron: tanpa ini, pindah destinasi lewat navigasi sisi-klien
+    // (id berubah, cameraDocId ikut berubah) membiarkan kamera destinasi LAMA
+    // tetap tampil sampai snapshot kamera baru datang — src diturunkan dari cam.
+    setCam(null);
+    if (!cameraDocId || !db) return;
     // Callback error wajib: pengunjung tanpa hak MEMANG kena permission-denied
     // di sini. Tanpa penanganan, listener-nya mati dan tiap kunjungan halaman
     // destinasi publik meninggalkan error di konsol.
