@@ -755,25 +755,21 @@ Gerbang aksesnya. Tugas ini dibuka dengan pembuktian asumsi yang seluruh desain 
 
 **Kenapa `normalizeViewerEmail` tinggal di `lib/format.ts`, bukan `lib/firestore.ts`:** berkas `*.check.ts` dijalankan `node` polos. `lib/firestore.ts` meng-import `firebase/firestore` **dan** `./firebase`, yang menginisialisasi app Firebase dari env `NEXT_PUBLIC_*` yang tidak pernah dimuat `node` — cek yang meng-importnya akan gagal saat inisialisasi, bukan saat assertion. Itu sebabnya `lib/verification.ts` mencatat larangan import di komentar kepalanya, dan `destinationKeys.check.ts` membaca `.tsx` sebagai teks. `lib/format.ts` nol import dan sudah punya `format.check.ts` — di situlah fungsi ini seharusnya berada.
 
-- [ ] **Step 1: Buktikan klaim `email` ada di ID token — GERBANG**
+- [x] **Step 1: Buktikan klaim `email` ada di ID token — GERBANG (SUDAH LOLOS 4 Agustus 2026)**
 
-Jalankan `npm run dev`, masuk lewat login kode email, lalu di konsol browser:
+Sudah dibuktikan sebelum eksekusi rencana ini dimulai; **jangan diulang, lanjut ke Step 2.**
 
-```js
-(await firebase.auth().currentUser.getIdTokenResult()).claims.email
+Caranya: `createCustomToken(uid)` lewat Admin SDK (jalur yang sama persis dengan `/api/auth/verify-code`), ditukar jadi ID token lewat `identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken`, lalu payload token-nya didekode. Hasilnya untuk uid pengelola `yZ7a1It5SVNJFqAKdIxqEyeusn13`:
+
+```json
+{
+  "email": "anakgilegile@gmail.com",
+  "email_verified": true,
+  "firebase": { "sign_in_provider": "custom" }
+}
 ```
 
-Kalau `firebase` tidak terekspos global, tambahkan sementara `window.__auth = auth;` di `lib/firebase.ts`, muat ulang, lalu:
-
-```js
-(await window.__auth.currentUser.getIdTokenResult()).claims
-```
-
-Diharapkan: objek klaim memuat `email` berisi alamat yang dipakai masuk, dan nilainya huruf kecil.
-
-**Kalau `email` tidak ada:** BERHENTI. Seluruh desain allowlist bertumpu padanya. Laporkan ke pemilik proyek — jalan gantinya allowlist berbasis uid + route Admin SDK yang menerjemahkan email → uid, dan itu perubahan spec, bukan perubahan rencana. Jangan lanjut ke Step 2.
-
-Buang `window.__auth` kalau tadi ditambahkan.
+`email` ada, huruf kecil, dan `sign_in_provider` memang `custom` — jalur login kode email. Rule `request.auth.token.email in resource.data.get('viewers', [])` akan bekerja.
 
 - [ ] **Step 2: Tulis cek yang gagal untuk normalisasi email**
 
