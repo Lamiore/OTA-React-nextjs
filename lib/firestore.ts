@@ -347,10 +347,11 @@ export async function approveRoleRequest(
   const name = verification?.destination?.trim();
   if (role === "pengelola" && name) {
     // ponytail: pencarian nama kembar dibaca di luar batch, jadi dua admin yang
-    // menyetujui dua pengaju bernama destinasi sama pada saat bersamaan
-    // sama-sama melihat "belum ada" dan membuat dua dokumen. Proyek ini satu
-    // admin, jadi dibiarkan; naikkan ke runTransaction (sudah diimport di file
-    // ini) kalau adminnya nanti lebih dari satu.
+    // menyetujui dua pengaju bernama destinasi sama pada detik yang sama
+    // sama-sama melihat "belum ada" dan membuat dua dokumen. Ada dua admin di
+    // proyek ini, tapi persetujuan itu tindakan manual yang jarang dan hampir
+    // mustahil bertabrakan sedetik; kalau nanti pengajuannya ramai, naikkan ke
+    // runTransaction (sudah diimport di file ini).
     const snap = await getDocs(collection(db, "destinations"));
     const existing = snap.docs.find(
       (d) => (d.data().name ?? "").trim().toLowerCase() === name.toLowerCase()
