@@ -390,11 +390,11 @@ const DICT: Record<string, Record<Lang, string>> = {
     en: "Tap the heart on a destination card to save it.",
   },
 
-  // ── Form pengajuan mitra / pengelola ──
-  "verifyForm.title": { id: "Verifikasi Akun Mitra", en: "Partner Account Verification" },
+  // ── Form pengajuan pengelola ──
+  "verifyForm.title": { id: "Ajukan Jadi Pengelola", en: "Apply to Be a Manager" },
   "verifyForm.desc": {
-    id: "Untuk mendaftarkan kamera, akunmu perlu diverifikasi admin terlebih dahulu. Lengkapi data di bawah — setelah disetujui, role akunmu naik menjadi mitra.",
-    en: "To register a camera, an admin needs to verify your account first. Fill in the details below — once approved, your account becomes a partner.",
+    id: "Lengkapi data di bawah. Setelah disetujui admin, role akunmu naik menjadi pengelola dan destinasi yang kamu usulkan dibuat otomatis.",
+    en: "Fill in the details below. Once an admin approves, your account becomes a manager and the destination you propose is created automatically.",
   },
   "verifyForm.namePlaceholder": { id: "Nama penanggung jawab", en: "Person in charge" },
   "verifyForm.phone": { id: "No. HP", en: "Phone" },
@@ -457,12 +457,7 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: ", termasuk kewajiban membeli paket sensor dari Nusa dan pembayaran pengunjung yang diterima langsung oleh pengelola.",
     en: ", including the obligation to buy the sensor package from Nusa and to receive visitor payments directly as the manager.",
   },
-  "verifyForm.agreeTailMitra": {
-    id: ", termasuk kewajiban membeli kamera dari Nusa dan pemasangannya oleh petugas Nusa.",
-    en: ", including the obligation to buy the camera from Nusa and have it installed by Nusa staff.",
-  },
   "verifyForm.submitting": { id: "Mengirim...", en: "Submitting..." },
-  "verifyForm.submitMitra": { id: "Ajukan Verifikasi", en: "Request Verification" },
   "verifyForm.submitPengelola": { id: "Ajukan Jadi Pengelola", en: "Apply to Be a Manager" },
   "verifyForm.submitFailed": {
     id: "Gagal mengirim pengajuan. Coba lagi.",
@@ -496,10 +491,6 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Kamu harus menyatakan berhak mengelola lokasi yang diusulkan.",
     en: "You must declare you're entitled to manage the proposed site.",
   },
-  "verifyForm.mustAgreeMitra": {
-    id: "Kamu harus menyetujui Perjanjian Mitra dulu.",
-    en: "You must accept the Partner Agreement first.",
-  },
   "verifyForm.mustAgreePengelola": {
     id: "Kamu harus menyetujui Perjanjian Pengelola dulu.",
     en: "You must accept the Manager Agreement first.",
@@ -508,17 +499,13 @@ const DICT: Record<string, Record<Lang, string>> = {
   // ── Monitoring / kamera ──
   "camera.title": { id: "Kamera", en: "Cameras" },
   "camera.lede": { id: "Daftarkan dan pantau kamera milikmu", en: "Register and monitor your own cameras" },
-  "camera.ledeUnverified": {
-    id: "Verifikasi akun untuk mendaftarkan kamera",
-    en: "Verify your account to register a camera",
+  "camera.ledeViewer": {
+    id: "Kamera yang boleh kamu tonton muncul di halaman destinasinya.",
+    en: "Cameras you're allowed to watch appear on their destination page.",
   },
-  "camera.pendingNote": {
-    id: "Pengajuan sedang ditinjau admin. Kamu akan bisa menambahkan kamera setelah pengajuan disetujui.",
-    en: "An admin is reviewing your request. You'll be able to add cameras once it's approved.",
-  },
-  "camera.rejectedNote": {
-    id: "Pengajuan verifikasimu ditolak admin. Periksa kembali datamu lalu ajukan ulang.",
-    en: "An admin rejected your verification. Check your details and submit again.",
+  "camera.viewerNote": {
+    id: "Kamera dipasang dan dikelola pengelola destinasi. Setelah kamu membeli paket dan pengelola menambahkan emailmu, siaran langsungnya muncul di halaman destinasi tersebut.",
+    en: "Cameras are installed and managed by the destination's manager. Once you buy a package and the manager adds your email, the live feed appears on that destination's page.",
   },
   "camera.empty": {
     id: "Belum ada kamera. Tambahkan kamera pertamamu.",
@@ -620,7 +607,7 @@ const DICT: Record<string, Record<Lang, string>> = {
   "health.bleaching": { id: "Pemutihan", en: "Bleaching" },
   "health.unknown": { id: "Tidak Diketahui", en: "Unknown" },
 
-  // ── Jadi pengelola & verifikasi mitra ──
+  // ── Jadi pengelola ──
   "manager.title": { id: "Jadi Pengelola", en: "Become a Manager" },
   "manager.subtitle": {
     id: "Kelola destinasi, booking & kamera wilayahmu",
@@ -629,11 +616,6 @@ const DICT: Record<string, Record<Lang, string>> = {
   "manager.formDesc": {
     id: "Pengelola mengurus destinasi yang ditetapkan admin — data destinasi, booking, dan kamera di wilayahnya. Isi data di bawah; pengajuan ditinjau admin dulu.",
     en: "A manager looks after the destinations an admin assigns — destination data, bookings, and cameras in their area. Fill in the details below; an admin reviews the request first.",
-  },
-  "manager.requestOngoing": { id: "Ada Pengajuan Berjalan", en: "Request In Progress" },
-  "manager.mitraPendingNote": {
-    id: "Pengajuan verifikasi mitra kamu masih ditinjau admin. Tunggu hasilnya dulu sebelum mengajukan diri jadi pengelola.",
-    en: "Your partner verification is still under admin review. Wait for the outcome before applying to become a manager.",
   },
   "manager.pendingNote": {
     id: "Pengajuanmu sedang ditinjau admin. Kalau disetujui, role akunmu naik jadi pengelola dan menu Dashboard muncul di profil.",
@@ -792,10 +774,6 @@ const DICT: Record<string, Record<Lang, string>> = {
   "role.pengelolaDesc": {
     id: "Kelola destinasi yang ditetapkan admin beserta booking & kameranya.",
     en: "Manage the destinations assigned by an admin, plus their bookings & cameras.",
-  },
-  "role.mitraDesc": {
-    id: "Boleh mendaftarkan dan memantau kamera milikmu.",
-    en: "You can register and monitor your own cameras.",
   },
 
   // ── Masuk tanpa password (kode 6 digit) ──

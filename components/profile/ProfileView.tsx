@@ -445,8 +445,8 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
           </div>
         </div>
 
-        {/* Peran akun — hanya untuk mitra ke atas; pengguna biasa tidak punya
-            apa pun untuk ditampilkan di sini. */}
+        {/* Peran akun — hanya untuk pengelola ke atas; pengguna biasa tidak
+            punya apa pun untuk ditampilkan di sini. */}
         {roleCard && (
           <div className="card overflow-hidden mt-4">
             <div className="px-5 py-4 border-b border-shore-200/80">
