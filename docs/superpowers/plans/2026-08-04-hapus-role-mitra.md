@@ -1519,6 +1519,10 @@ Diharapkan: semua LULUS, build sukses.
 
 Butuh dua akun: `anakgilegile@gmail.com` (pengelola, pemilik kamera "test") dan satu akun user biasa. Kamera "test" tertaut ke destinasi Desa Wisata Bahoi (`/destinations/alGlcRJJQ0gb5y3vbo4S`).
 
+**Jalankan uji ini HANYA setelah ketiga operasi produksi selesai berurutan: (1) kode ter-deploy, (2) `firestore.rules` ter-deploy, (3) dokumen destinasi dibersihkan.** Membalik (1) dan (2) membuat pengunjung anonim di halaman Bahoi melihat skeleton berputar selamanya — lihat "Urutan penerapan" di spec.
+
+**Pakai kamera "test" yang sudah tertaut, jangan mendaftarkan kamera baru untuk uji ini.** `destinations.cameraId` hanya ditulis `DestinasiPanel` yang dirender admin saja, dan rules mengecualikan `cameraId` dari kolom yang boleh disunting pengelola — kamera baru tidak akan muncul di halaman destinasi mana pun sampai admin menautkannya.
+
 1. **Tanpa login** (jendela penyamaran) → buka halaman Bahoi. Blok kamera **tidak ada**; blok sensor tetap tampil. Konsol **bersih** dari permission-denied.
 2. **Login sebagai user biasa yang belum ditambahkan** → halaman Bahoi. Blok kamera masih tidak ada.
 3. **Login sebagai pengelola** → `/dashboard` → Kamera → tambahkan email user biasa tadi, **ketik dengan huruf campur**. Chip yang muncul harus huruf kecil semua.

@@ -217,6 +217,27 @@ tetap disimpan lewat `...form`.
 menyisakan nama "Mitra" pada tipe yang tidak lagi punya hubungan dengan mitra akan
 menyesatkan pembaca berikutnya.
 
+## Urutan penerapan — tidak boleh dibalik
+
+Tiga operasi produksi harus dijalankan **dalam urutan ini**:
+
+1. **Merge & deploy kode dulu.**
+2. **Baru deploy `firestore.rules`.**
+3. **Terakhir bersihkan dokumen destinasi.**
+
+Poin 1 mendahului 2 bukan soal rapi. Rules baru menutup baca `settings/cameraServer`
+jadi hanya untuk pengguna yang sudah masuk. Kode **lama** menurunkan `hasCamera` dari
+`cameraStreamId` di dokumen destinasi yang publik — bukan dari baca dokumen kamera
+yang terautentikasi — sehingga pengunjung anonim di halaman Bahoi tetap memanggil
+`subscribeCameraServerUrl`. Kalau rules dideploy sementara kode lama masih jalan,
+panggilan itu ditolak, dan karena `subscribeCameraServerUrl` tidak punya callback
+error, `serverUrl` tersangkut `null` dan pengunjung melihat skeleton berputar
+selamanya tanpa pesan apa pun. Kode baru tidak punya masalah ini: `hasCamera`-nya
+menuntut baca dokumen kamera yang sudah pasti butuh login.
+
+Poin 3 paling akhir karena kode lama masih membaca ketiga field itu — membersihkannya
+sebelum kode baru live mematikan blok kamera di produksi.
+
 ## Migrasi data
 
 Satu dokumen, dijalankan sekali lewat Admin SDK (bukan MCP — `updateMask`-nya tidak
@@ -234,12 +255,20 @@ Kamera "test" sudah dipindahkan kepemilikannya (lihat bagian *Keadaan produksi*)
   `node`-polos — ini penjaga regresi yang sudah ada, bukan berkas baru.
 - `lib/i18nHardcoded.check.ts` tetap lulus setelah kunci mitra dicabut.
 - Uji manual berurutan: pengelola buka dashboard › Kamera dan **kameranya muncul**
-  (ini yang gagal sebelum perbaikan query) → daftarkan kamera baru dari `/kamera` →
-  tambahkan email user biasa **dengan huruf besar-kecil campur** untuk membuktikan
-  normalisasinya jalan → user itu buka halaman destinasi dan blok kamera muncul →
-  hapus emailnya → blok kamera hilang → buka halaman destinasi tanpa login: blok
-  kamera tidak ada, blok sensor tetap tampil, dan **konsol bersih** dari error
-  permission-denied.
+  (ini yang gagal sebelum perbaikan query) → tambahkan email user biasa **dengan
+  huruf besar-kecil campur** untuk membuktikan normalisasinya jalan → user itu buka
+  halaman destinasi dan blok kamera muncul → hapus emailnya → blok kamera hilang →
+  buka halaman destinasi tanpa login: blok kamera tidak ada, blok sensor tetap
+  tampil, dan **konsol bersih** dari error permission-denied.
+
+  **Pakai kamera yang sudah tertaut ke destinasi** (kamera "test" di Desa Wisata
+  Bahoi). Mendaftarkan kamera baru dari `/kamera` tidak cukup untuk uji ini:
+  `destinations.cameraId` hanya ditulis `DestinasiPanel`, yang cuma dirender untuk
+  admin, dan rules mengecualikan `cameraId` dari kolom yang boleh disunting
+  pengelola. Kamera baru **harus ditautkan admin dulu** sebelum bisa muncul di
+  halaman destinasi mana pun. Kalau ingin menguji kamera baru, sisipkan langkah
+  admin itu; kalau tidak, blok kameranya tidak muncul dan gejalanya menyerupai
+  fitur yang rusak padahal bukan.
 - Sebelum rules dipasang: buktikan klaim `email` ada di ID token
   (`getIdTokenResult()` di konsol browser setelah login kode email).
 
