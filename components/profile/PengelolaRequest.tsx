@@ -5,15 +5,14 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { db } from '@/lib/firebase';
 import type { UserRole } from '@/lib/useAuth';
-import { requestedRole, type MitraVerification } from '@/lib/firestore';
+import { type RoleVerification } from '@/lib/firestore';
 import { packageRecipient } from '@/lib/verification';
 import { useLang } from '@/lib/useLang';
 import VerificationForm from '@/components/cameras/VerificationForm';
 
 /**
- * Pengajuan jadi pengelola dari Pengaturan. Alur & penyimpanannya sama dengan
- * verifikasi mitra di halaman Kamera (users/{uid}.verification), dibedakan oleh
- * `requestedRole`; admin menyetujui dari dashboard Pengguna.
+ * Pengajuan jadi pengelola dari Pengaturan. Tersimpan di
+ * users/{uid}.verification; admin menyetujui dari dashboard Pengguna.
  */
 export default function PengelolaRequest({
   user,
@@ -23,7 +22,7 @@ export default function PengelolaRequest({
   role: UserRole | null;
 }) {
   const { t } = useLang();
-  const [verification, setVerification] = useState<MitraVerification | null>(null);
+  const [verification, setVerification] = useState<RoleVerification | null>(null);
   const [loading, setLoading] = useState(true);
   const [resubmitting, setResubmitting] = useState(false);
 
@@ -33,7 +32,7 @@ export default function PengelolaRequest({
       return;
     }
     const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
-      setVerification((snap.data()?.verification as MitraVerification | undefined) ?? null);
+      setVerification((snap.data()?.verification as RoleVerification | undefined) ?? null);
       setLoading(false);
     });
     return () => unsub();
@@ -43,7 +42,6 @@ export default function PengelolaRequest({
   if (role === 'pengelola' || role === 'admin') return null;
 
   const pending = verification?.status === 'pending';
-  const forPengelola = verification ? requestedRole(verification) === 'pengelola' : false;
 
   const wrap = (children: React.ReactNode) => (
     <div className="card overflow-hidden mb-4">
@@ -64,21 +62,7 @@ export default function PengelolaRequest({
     );
   }
 
-  // Pengajuan mitra masih ditinjau — jangan sampai tertimpa pengajuan pengelola.
-  if (pending && !forPengelola) {
-    return wrap(
-      <>
-        <span className="inline-flex rounded-sm bg-warn-soft px-2.5 py-1 text-2xs font-medium text-warn">
-          {t('manager.requestOngoing')}
-        </span>
-        <p className="text-sm text-navy-soft mt-3 leading-relaxed">
-          {t('manager.mitraPendingNote')}
-        </p>
-      </>
-    );
-  }
-
-  if (pending && forPengelola) {
+  if (pending) {
     return wrap(
       <>
         <span className="inline-flex rounded-sm bg-warn-soft px-2.5 py-1 text-2xs font-medium text-warn">
@@ -117,7 +101,7 @@ export default function PengelolaRequest({
     );
   }
 
-  if (verification?.status === 'rejected' && forPengelola && !resubmitting) {
+  if (verification?.status === 'rejected' && !resubmitting) {
     return wrap(
       <>
         <span className="inline-flex rounded-sm bg-danger-soft px-2.5 py-1 text-2xs font-medium text-danger">
@@ -141,7 +125,6 @@ export default function PengelolaRequest({
       <VerificationForm
         uid={user.uid}
         initial={verification ?? undefined}
-        requestedRole="pengelola"
         title={t('manager.title')}
         description={t('manager.formDesc')}
       />

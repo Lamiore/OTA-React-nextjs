@@ -5,24 +5,15 @@ import { mailer, MAIL_FROM } from '@/lib/mailer';
 export const runtime = 'nodejs';
 
 const COPY = {
-  mitra: {
-    subject: 'Pengajuan mitra disetujui — Nusa',
-    title: 'Akun kamu sekarang Mitra',
-    body: 'Pengajuan verifikasi mitra kamu sudah disetujui admin. Kamu bisa mendaftarkan dan memantau kamera milikmu lewat menu Kamera.',
-    cta: 'Buka Halaman Kamera',
-    path: '/kamera',
-  },
-  pengelola: {
-    subject: 'Pengajuan pengelola disetujui — Nusa',
-    title: 'Akun kamu sekarang Pengelola',
-    body: 'Pengajuan jadi pengelola sudah disetujui admin. Menu Dashboard sekarang terbuka untuk mengelola destinasi, booking, dan kamera di wilayahmu. Penetapan destinasi dilakukan admin.',
-    cta: 'Buka Dashboard',
-    path: '/dashboard',
-  },
+  subject: 'Pengajuan pengelola disetujui — Nusa',
+  title: 'Akun kamu sekarang Pengelola',
+  body: 'Pengajuan jadi pengelola sudah disetujui admin. Menu Dashboard sekarang terbuka untuk mengelola destinasi, booking, dan kamera di wilayahmu.',
+  cta: 'Buka Dashboard',
+  path: '/dashboard',
 } as const;
 
 /**
- * Email pemberitahuan saat admin menyetujui pengajuan mitra/pengelola.
+ * Email pemberitahuan saat admin menyetujui pengajuan pengelola.
  * Hanya admin yang boleh memanggil: wajib kirim Firebase ID token di header
  * Authorization, dan role pemanggil dicek ke Firestore lewat Admin SDK.
  */
@@ -43,13 +34,12 @@ export async function POST(req: Request) {
   }
 
   let uid: unknown;
-  let role: unknown;
   try {
-    ({ uid, role } = await req.json());
+    ({ uid } = await req.json());
   } catch {
     return NextResponse.json({ error: 'bad-request' }, { status: 400 });
   }
-  if (typeof uid !== 'string' || (role !== 'mitra' && role !== 'pengelola')) {
+  if (typeof uid !== 'string') {
     return NextResponse.json({ error: 'bad-request' }, { status: 400 });
   }
 
@@ -57,7 +47,7 @@ export async function POST(req: Request) {
   if (!target?.email) return NextResponse.json({ error: 'no-email' }, { status: 404 });
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-  const c = COPY[role];
+  const c = COPY;
   const link = `${appUrl}${c.path}`;
 
   try {

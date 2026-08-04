@@ -15,8 +15,10 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
+  type FirestoreError,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
+import { normalizeViewerEmail } from "./format";
 
 // ── Destinations ──
 
@@ -62,16 +64,10 @@ export interface Destination {
   stationId?: string;
   /** Uid pengelola yang mengelola destinasi ini (ditetapkan admin). Kosong = belum ada pengelola. */
   managerUid?: string;
-  /** Tautan ke kamera mitra/pengelola (id dokumen dari koleksi 'cameras') */
+  /** Tautan ke kamera pengelola — id dokumen koleksi 'cameras', bukan id
+   *  stream. Aman ada di dokumen publik: tidak bisa dipakai menyusun URL
+   *  siaran, dan dokumen kameranya sendiri dijaga rules. */
   cameraId?: string;
-  /**
-   * Snapshot kamera yang di-link, denormalisasi saat menyimpan destinasi.
-   * Halaman publik /destinations/[id] memakai ini agar bisa menampilkan stream
-   * tanpa membaca koleksi 'cameras' (yang privat). Kosong = tidak ada kamera.
-   */
-  cameraStreamId?: string; // = Camera.cameraId (id stream di server kamera)
-  cameraName?: string;
-  cameraStreamUrl?: string; // legacy: kamera lama dengan URL stream langsung
 }
 
 export type DestinationInput = Omit<Destination, "id">;
@@ -139,13 +135,11 @@ export async function deleteDestination(id: string) {
 
 // ── Users ──
 
-export interface MitraVerification {
+export interface RoleVerification {
   fullName: string; // nama lengkap penanggung jawab
   phone: string; // no. HP/WhatsApp aktif
   organization: string; // instansi/organisasi (operator dive, resort, ...)
   status: "pending" | "approved" | "rejected";
-  /** Role yang diajukan. Dokumen lama tanpa field = pengajuan mitra. */
-  requestedRole?: "mitra" | "pengelola";
   /** Nama destinasi yang diketik pengaju. Dokumennya dibuat otomatis oleh
    *  approveRoleRequest saat admin menyetujui — admin tidak membuatnya manual. */
   destination?: string;
@@ -159,26 +153,20 @@ export interface MitraVerification {
   /** Pengaju mencentang pernyataan berhak mengelola lokasi. Waktunya mengikuti
    *  agreedAt — keduanya dicentang di form yang sama. */
   declaredRights?: boolean;
-  /** Alamat kirim paket sensor + kode pos. Hanya pengajuan pengelola: kamera
-   *  mitra dipasang petugas Nusa, jadi tidak perlu dikirim. */
+  /** Alamat kirim paket sensor + kode pos. */
   shippingAddress?: string;
   postalCode?: string;
   /** Penerima paket bila bukan pendaftar. Kosong = pendaftar sendiri; pakai
    *  packageRecipient() dari lib/verification, jangan baca langsung. */
   recipientName?: string;
   recipientPhone?: string;
-  /** Versi Perjanjian Pengelola yang disetujui. Kosong pada pengajuan mitra
-   *  dan pengajuan pengelola sebelum v1.0 terbit. */
+  /** Versi Perjanjian Pengelola yang disetujui. Kosong pada pengajuan sebelum
+   *  v1.0 terbit. */
   agreementVersion?: string;
   /** Waktu checkbox persetujuan dicentang. unknown mengikuti submittedAt. */
   agreedAt?: unknown;
   submittedAt: unknown;
   reviewedAt?: unknown;
-}
-
-/** Role yang diajukan; dokumen lama tanpa field diperlakukan "mitra". */
-export function requestedRole(v: Pick<MitraVerification, "requestedRole">) {
-  return v.requestedRole ?? "mitra";
 }
 
 export interface AppUser {
@@ -188,11 +176,11 @@ export interface AppUser {
   photoURL: string;
   /** No. HP/WhatsApp kontak — diisi sendiri di Pengaturan Akun. */
   phone?: string;
-  role: "user" | "mitra" | "pengelola" | "admin";
+  role: "user" | "pengelola" | "admin";
   /** Id destinasi tersimpan (wishlist) — di-toggle dari tombol hati di kartu destinasi. */
   saved?: string[];
-  /** Pengajuan verifikasi mitra; tidak ada berarti belum pernah mengajukan. */
-  verification?: MitraVerification;
+  /** Pengajuan jadi pengelola; tidak ada berarti belum pernah mengajukan. */
+  verification?: RoleVerification;
 }
 
 export function subscribeUsers(callback: (users: AppUser[]) => void) {
@@ -256,8 +244,8 @@ export async function toggleSavedDestination(
 }
 
 /**
- * Kirim pengajuan naik role (mitra dari halaman Kamera, pengelola dari
- * Pengaturan). Satu pengajuan aktif per user — pengajuan baru menimpa yang lama.
+ * Kirim pengajuan jadi pengelola dari Pengaturan. Satu pengajuan aktif per
+ * user — pengajuan baru menimpa yang lama.
  */
 export async function submitRoleRequest(
   uid: string,
@@ -265,7 +253,6 @@ export async function submitRoleRequest(
     fullName: string;
     phone: string;
     organization: string;
-    requestedRole: "mitra" | "pengelola";
     destination?: string;
     newDestination?: boolean;
     destinationLocation?: string;
@@ -292,7 +279,6 @@ export async function submitRoleRequest(
   });
 }
 
-/** Setujui pengajuan: role naik sesuai yang diajukan. */
 /** Tampilan bawaan destinasi hasil pembuatan otomatis. Pengelola menggantinya
  *  sendiri lewat panel Destinasi — nilai di sini cuma supaya kartunya tidak
  *  kosong sebelum disunting. */
@@ -310,9 +296,6 @@ const AUTO_DEST_DEFAULTS = {
   hasMonitoring: false,
   stationId: "",
   cameraId: "",
-  cameraStreamId: "",
-  cameraName: "",
-  cameraStreamUrl: "",
 };
 
 /**
@@ -330,22 +313,21 @@ const AUTO_DEST_DEFAULTS = {
  */
 export async function approveRoleRequest(
   uid: string,
-  role: "mitra" | "pengelola" = "mitra",
   verification?: Pick<
-    MitraVerification,
+    RoleVerification,
     "destination" | "destinationLocation" | "destinationDescription"
   >
 ) {
   if (!db) return;
   const batch = writeBatch(db);
   batch.update(doc(db, "users", uid), {
-    role,
+    role: "pengelola",
     "verification.status": "approved",
     "verification.reviewedAt": serverTimestamp(),
   });
 
   const name = verification?.destination?.trim();
-  if (role === "pengelola" && name) {
+  if (name) {
     // ponytail: pencarian nama kembar dibaca di luar batch, jadi dua admin yang
     // menyetujui dua pengaju bernama destinasi sama pada detik yang sama
     // sama-sama melihat "belum ada" dan membuat dua dokumen. Ada dua admin di
@@ -381,7 +363,7 @@ export async function rejectRoleRequest(uid: string) {
   });
 }
 
-// ── Cameras (kamera mitra — terpisah dari monitoring IoT) ──
+// ── Cameras (kamera pengelola — terpisah dari monitoring IoT) ──
 
 /** Status validasi kamera oleh admin di server VPS. */
 export type CameraStatus = "pending" | "approved" | "rejected";
@@ -399,6 +381,10 @@ export interface Camera {
   source?: string;
   /** Validasi admin. Dokumen lama tanpa field diperlakukan "approved" (server VPS). */
   status?: CameraStatus;
+  /** Email yang boleh menonton kamera ini, selalu huruf kecil tanpa spasi tepi.
+   *  Ditulis pemilik lewat panel Kamera di dashboard; dicocokkan rules dengan
+   *  `request.auth.token.email`. Kosong/absen = hanya pemilik & admin. */
+  viewers?: string[];
   createdAt: unknown;
 }
 
@@ -427,9 +413,26 @@ export function cameraStatus(c: Pick<Camera, "status">): CameraStatus {
   return c.status ?? "approved";
 }
 
-/** Mitra ke atas boleh mengelola kamera; pengelola & admin tanpa verifikasi. */
+/** Pengelola & admin boleh mengelola kamera. */
 export function canManageCameras(role: string | null | undefined): boolean {
-  return role === "mitra" || role === "pengelola" || role === "admin";
+  return role === "pengelola" || role === "admin";
+}
+
+/** Beri satu email hak menonton kamera. arrayUnion, jadi menambah email yang
+ *  sudah ada tidak menduplikasinya. */
+export async function addCameraViewer(cameraDocId: string, email: string) {
+  if (!db) return;
+  await updateDoc(doc(db, "cameras", cameraDocId), {
+    viewers: arrayUnion(normalizeViewerEmail(email)),
+  });
+}
+
+/** Cabut hak menonton satu email. */
+export async function removeCameraViewer(cameraDocId: string, email: string) {
+  if (!db) return;
+  await updateDoc(doc(db, "cameras", cameraDocId), {
+    viewers: arrayRemove(normalizeViewerEmail(email)),
+  });
 }
 
 /**
@@ -457,20 +460,32 @@ export async function deleteCamera(id: string) {
 
 export function subscribeMyCameras(
   uid: string,
-  callback: (cameras: Camera[]) => void
+  callback: (cameras: Camera[]) => void,
+  onError?: (err: FirestoreError) => void
 ) {
   if (!db) return () => {};
   const q = query(collection(db, "cameras"), where("ownerUid", "==", uid));
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
-  });
+  return onSnapshot(
+    q,
+    (snap) => {
+      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
+    },
+    onError
+  );
 }
 
-export function subscribeAllCameras(callback: (cameras: Camera[]) => void) {
+export function subscribeAllCameras(
+  callback: (cameras: Camera[]) => void,
+  onError?: (err: FirestoreError) => void
+) {
   if (!db) return () => {};
-  return onSnapshot(collection(db, "cameras"), (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
-  });
+  return onSnapshot(
+    collection(db, "cameras"),
+    (snap) => {
+      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
+    },
+    onError
+  );
 }
 
 // ── Pengaturan server kamera ──

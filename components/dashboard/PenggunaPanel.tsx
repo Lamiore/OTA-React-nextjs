@@ -5,7 +5,6 @@ import {
   approveRoleRequest,
   deleteUserAccount,
   rejectRoleRequest,
-  requestedRole,
   subscribeUsers,
   updateUserRole,
   type AppUser,
@@ -16,7 +15,6 @@ import { packageRecipient } from '@/lib/verification';
 
 const roleColors: Record<AppUser['role'], string> = {
   user: 'bg-shore-100 text-navy-soft',
-  mitra: 'bg-shore-100 text-navy-soft',
   pengelola: 'bg-warn-soft text-warn',
   admin: 'bg-teal-100 text-teal-700',
 };
@@ -66,16 +64,15 @@ export default function PenggunaPanel() {
         await rejectRoleRequest(u.uid);
         return;
       }
-      const role = requestedRole(u.verification ?? {});
       // Data destinasi ikut dikirim: approveRoleRequest yang membuat dokumennya
       // dan menautkan managerUid, jadi admin tidak perlu bikin manual dulu.
-      await approveRoleRequest(u.uid, role, u.verification);
+      await approveRoleRequest(u.uid, u.verification);
       // Persetujuan sudah tersimpan; email cuma pemberitahuan — gagal kirim
       // tidak membatalkan apa pun, cukup diberitahukan ke admin.
       try {
-        await notifyApproval(u.uid, role);
+        await notifyApproval(u.uid);
       } catch {
-        setMailWarn(`Role ${role} untuk ${u.name || u.email} sudah aktif, tapi email pemberitahuan gagal terkirim.`);
+        setMailWarn(`Role pengelola untuk ${u.name || u.email} sudah aktif, tapi email pemberitahuan gagal terkirim.`);
       }
     } finally {
       setReviewingUid(null);
@@ -130,7 +127,6 @@ export default function PenggunaPanel() {
                 className={`rounded-sm px-3 py-1.5 text-xs font-medium border border-shore-200 outline-none cursor-pointer transition-colors focus:border-teal-400 disabled:opacity-50 ${roleColors[u.role]}`}
               >
                 <option value="user">User</option>
-                <option value="mitra">Mitra</option>
                 <option value="pengelola">Pengelola</option>
                 <option value="admin">Admin</option>
               </select>
@@ -150,11 +146,11 @@ export default function PenggunaPanel() {
               </button>
             </div>
 
-            {/* Pengajuan naik role (mitra dari halaman Kamera, pengelola dari Pengaturan) */}
+            {/* Pengajuan jadi pengelola, dikirim dari Pengaturan Akun */}
             {u.verification?.status === 'pending' && (
               <div className="mt-4 rounded-md border border-warn-rule bg-warn-soft/60 p-4">
                 <span className="inline-flex rounded-sm bg-warn-soft px-2.5 py-1 text-2xs font-medium text-warn">
-                  {requestedRole(u.verification) === 'pengelola' ? 'Pengajuan Pengelola' : 'Pengajuan Mitra'}
+                  Pengajuan Pengelola
                 </span>
                 <div className="mt-3 space-y-1 text-sm text-navy">
                   <p><span className="text-navy-soft">Nama:</span> {u.verification.fullName}</p>

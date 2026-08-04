@@ -19,11 +19,6 @@ export const roleInfo: Partial<
     className: 'border-warn-rule bg-warn-soft text-warn',
     descriptionKey: 'role.pengelolaDesc',
   },
-  mitra: {
-    label: 'Mitra',
-    className: 'border-ok/30 bg-ok-soft text-ok',
-    descriptionKey: 'role.mitraDesc',
-  },
 };
 
 export default function RoleBadge({ role }: { role: UserRole | null }) {

@@ -168,11 +168,6 @@ export default function DestinasiPanel() {
   const handleSave = async () => {
     if (!form.name.trim() || !form.location.trim()) return;
     setSaving(true);
-    // Denormalisasi kamera yang di-link ke dokumen destinasi (publik) supaya
-    // halaman /destinations/[id] bisa menampilkan stream tanpa membaca koleksi
-    // cameras yang privat. Saat unlink (cameraId kosong) field ini WAJIB
-    // di-clear agar stream lama tidak "nyangkut" publik.
-    const linkedCam = form.cameraId ? cameras.find((c) => c.id === form.cameraId) : null;
     // Koordinat ditulis berpasangan sebagai null saat kosong/tidak valid —
     // Firestore menolak undefined, dan null membersihkan nilai lama saat edit.
     const coords = parseCoords(coordInput);
@@ -187,9 +182,6 @@ export default function DestinasiPanel() {
       // Stasiun dimatikan → id paket sensor ikut dibersihkan, biar destinasi ini
       // tidak diam-diam masih menempel ke cabang RTDB paket lama.
       stationId: form.hasMonitoring ? (form.stationId ?? '') : '',
-      cameraStreamId: linkedCam?.cameraId ?? '',
-      cameraName: linkedCam?.name ?? '',
-      cameraStreamUrl: linkedCam?.streamUrl ?? '',
     };
     if (editingId) {
       await updateDestination(editingId, data);
@@ -428,8 +420,8 @@ export default function DestinasiPanel() {
 
               {/* Hubungkan Kamera */}
               <div>
-                <label className="block text-xs font-medium text-navy-soft mb-1.5">Hubungkan Kamera Mitra/Pengelola</label>
-                <select aria-label="Hubungkan Kamera Mitra/Pengelola"
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Hubungkan Kamera Pengelola</label>
+                <select aria-label="Hubungkan Kamera Pengelola"
                   value={form.cameraId || ''}
                   onChange={(e) => setForm({ ...form, cameraId: e.target.value })}
                   className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
@@ -437,7 +429,7 @@ export default function DestinasiPanel() {
                   <option value="">-- Tanpa Kamera --</option>
                   {cameras.map((cam) => (
                     <option key={cam.id} value={cam.id}>
-                      {cam.name} {cam.location ? `(${cam.location})` : ''} — {cam.ownerName || 'Mitra'}
+                      {cam.name} {cam.location ? `(${cam.location})` : ''} — {cam.ownerName || 'Pengelola'}
                     </option>
                   ))}
                 </select>
