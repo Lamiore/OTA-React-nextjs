@@ -428,8 +428,8 @@ export default function DestinasiPanel() {
 
               {/* Hubungkan Kamera */}
               <div>
-                <label className="block text-xs font-medium text-navy-soft mb-1.5">Hubungkan Kamera Mitra/Pengelola</label>
-                <select aria-label="Hubungkan Kamera Mitra/Pengelola"
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Hubungkan Kamera Pengelola</label>
+                <select aria-label="Hubungkan Kamera Pengelola"
                   value={form.cameraId || ''}
                   onChange={(e) => setForm({ ...form, cameraId: e.target.value })}
                   className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
@@ -437,7 +437,7 @@ export default function DestinasiPanel() {
                   <option value="">-- Tanpa Kamera --</option>
                   {cameras.map((cam) => (
                     <option key={cam.id} value={cam.id}>
-                      {cam.name} {cam.location ? `(${cam.location})` : ''} — {cam.ownerName || 'Mitra'}
+                      {cam.name} {cam.location ? `(${cam.location})` : ''} — {cam.ownerName || 'Pengelola'}
                     </option>
                   ))}
                 </select>
