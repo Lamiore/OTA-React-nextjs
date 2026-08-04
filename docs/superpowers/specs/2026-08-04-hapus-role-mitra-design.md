@@ -39,7 +39,7 @@ rule tulis di bawah bertumpu pada `ownerUid`.
 
 ```
 cameras/{id}
-  + viewers: string[]          // alamat email, bukan uid
+  + viewers: string[]          // alamat email (lowercase, trimmed), bukan uid
 
 destinations/{id}
     cameraId: string           // sudah ada — doc id kamera, bukan id stream
@@ -55,6 +55,13 @@ cocokkan ke `request.auth.token.email` di rules. Yang kedua nol kode server, dan
 bonusnya pengelola bisa memberi akses ke email yang belum punya akun — orangnya
 langsung bisa menonton begitu mendaftar.
 
+**Email wajib dinormalkan saat ditulis.** `verify-code` masuk dengan email yang
+sudah di-`normalized`, jadi `request.auth.token.email` selalu huruf kecil dan tanpa
+spasi. Operator `in` mencocokkan string persis: `Orang@Mail.com` yang diketik
+pengelola tidak akan pernah cocok, dan gagalnya muncul sebagai "akses ditolak" —
+mode gagal yang paling sulit dilacak. UI menerapkan transformasi yang sama dengan
+route auth (`trim().toLowerCase()`) sebelum menyimpan.
+
 **Kenapa tiga field denormalisasi kamera dihapus dari destinasi.** Dokumen
 `destinations` itu `allow read: if true`, dan `settings/cameraServer` juga publik.
 Selama `cameraStreamId` masih ada di sana, siapa pun bisa merakit
@@ -68,13 +75,12 @@ Firestore, bukan id stream, dan tidak bisa dipakai menyusun URL apa pun.
 ```js
 match /cameras/{cameraId} {
   function camUserRole() { ... }          // tetap
-  function camUserLocation() { ... }      // tetap
+  // camUserLocation() dihapus — lihat "Cabang baca pengelola dicabut" di bawah
 
   allow read: if request.auth != null
     && (
       resource.data.ownerUid == request.auth.uid
       || camUserRole() == 'admin'
-      || (camUserRole() == 'pengelola' && resource.data.location == camUserLocation())
       || request.auth.token.email in resource.data.get('viewers', [])
     );
 
@@ -100,6 +106,39 @@ match /settings/{settingId} {
 kamera lama tidak punya field itu dan akses langsung akan meledak jadi error, bukan
 `false`.
 
+### Cabang baca pengelola dicabut — dan itu memperbaiki bug yang sudah ada
+
+Cabang `camUserRole() == 'pengelola' && resource.data.location == camUserLocation()`
+dihapus dari rule baca, begitu juga fungsi `camUserLocation()`.
+
+Bukan cuma karena jadi mubazir setelah pengelola memiliki kameranya sendiri.
+**Cabang itu membuat panel Kamera pengelola gagal muat hari ini.** Rules Firestore
+bukan filter: `subscribeAllCameras()` (`lib/firestore.ts:469`) itu query koleksi
+tanpa constraint apa pun, dan satu-satunya cabang yang bisa memenuhinya adalah
+`camUserRole() == 'admin'` — cabang yang tidak bergantung pada isi dokumen. Cabang
+pengelola bergantung pada `resource.data.location`, jadi Firestore menolak seluruh
+query untuk pengelola. `KameraPanel` menyaring hasilnya di klien
+(`managedLocations.has(c.location)`), yang tidak pernah kejadian karena datanya
+tidak pernah sampai.
+
+Perbaikannya sejalan dengan pemindahan kepemilikan yang sudah dilakukan: jalur
+pengelola memakai query berconstraint
+
+```ts
+query(collection(db, 'cameras'), where('ownerUid', '==', uid))
+```
+
+yang secara terbukti memenuhi klausa pertama rule baca. `subscribeAllCameras` tetap
+ada untuk admin; `KameraPanel` memilih salah satunya berdasarkan role, dan
+penyaringan `managedLocations` di klien ikut dibuang.
+
+Efek sampingnya bagus: ini menghapus gagasan ketiga tentang "wilayah pengelola".
+Sebelumnya ada tiga yang saling bersaing — `users.location` (dipakai rules),
+`destinations.managerUid` (dipakai `KameraPanel`), dan kepemilikan kamera. Di
+produksi ketiganya sudah berbeda: pengelola ber-`location: "Likupang"` sementara
+kameranya ber-`location: "bahoi, sulawesi utara"`. Setelah perubahan ini yang
+tersisa satu: `ownerUid`.
+
 **Yang harus diverifikasi sebelum rules ini dipasang:** ID token dari login kode
 email membawa klaim `email`. Login lewat `createCustomToken(uid)` di
 `app/api/auth/verify-code/route.ts`, dan akun Auth-nya selalu dibuat dengan `email`,
@@ -121,8 +160,14 @@ yang dibaca darinya di sini.
 
 **`KameraPanel.tsx` (dashboard) dapat kelola penonton.** Tiap kartu kamera yang
 `ownerUid`-nya sama dengan pengelola yang sedang login mendapat input email +
-daftar chip penonton dengan tombol hapus. Admin melihat daftarnya tapi tidak
-mengelola — rule tulisnya bertumpu pada kepemilikan, dan admin bukan pemilik.
+daftar chip penonton dengan tombol hapus. Email dinormalkan (`trim().toLowerCase()`)
+sebelum disimpan. Admin melihat daftarnya tapi tidak mengelola — rule tulisnya
+bertumpu pada kepemilikan, dan admin bukan pemilik.
+
+Sumber datanya ikut berubah sesuai bagian rules di atas: pengelola memakai query
+`where('ownerUid', '==', uid)`, admin tetap `subscribeAllCameras()`. Penyaringan
+`managedLocations` / `noAssignment` di klien dibuang — kamera pengelola sekarang
+ditentukan kepemilikan, bukan kecocokan nama wilayah.
 
 **`LiveMonitorPanel.tsx` berubah sumber data.** Prop `cameraStreamId` /
 `cameraStreamUrl` / `cameraName` diganti satu prop `cameraDocId`. Komponen
@@ -130,6 +175,15 @@ berlangganan `cameras/{docId}`; kalau rules menolak atau dokumennya kosong,
 `hasCamera` jadi `false` dan blok kamera tidak dirender — blok sensor tetap
 tampil. Tidak ada pengecekan role di klien sama sekali: rules satu-satunya gerbang,
 jadi tidak ada dua sumber kebenaran yang bisa berbeda.
+
+Callback error `onSnapshot` **wajib** dipasang, bukan opsional: pengunjung anonim
+memang dirancang kena permission-denied di sini. Tanpa penanganan, listener-nya mati
+dan setiap kunjungan halaman destinasi publik meninggalkan error di konsol.
+
+```ts
+onSnapshot(doc(db, 'cameras', cameraDocId), (snap) => setCam(snap.data() ?? null),
+  () => setCam(null));
+```
 
 `app/destinations/[id]/page.tsx` menyesuaikan syarat rendernya jadi
 `dest.cameraId || stationPath(dest)`.
@@ -146,6 +200,7 @@ tetap disimpan lewat `...form`.
 | `lib/verification.ts` | `AGREEMENT.mitra`, `"mitra"` dari `RoleRequestInput.requestedRole`, cabang `mustAgreeMitra` |
 | `lib/verification.check.ts` | 12 kasus uji bermitra |
 | `lib/firestore.ts` | `requestedRole()` + fallback, default `= "mitra"` di `approveRoleRequest` (baris 333), `"mitra"` dari tipe `AppUser.role` & `MitraVerification.requestedRole`, `"mitra"` di `canManageCameras` |
+| `lib/firestore.ts` | `Destination.cameraStreamId` / `cameraName` / `cameraStreamUrl` (baris 72–74) berikut nilai awalnya (baris 313–315) — kalau tipenya dibiarkan, tiap simpan destinasi berikutnya menulis ulang string kosong ke field yang seharusnya sudah tidak ada |
 | `lib/useAuth.ts` | `'mitra'` dari `UserRole` |
 | `lib/sendVerification.ts` | `'mitra'` dari parameter `notifyApproval` |
 | `lib/i18n.ts` | ~7 kunci (`verifyForm.agreeTailMitra`, `verifyForm.submitMitra`, `verifyForm.mustAgreeMitra`, `manager.mitraPendingNote`, `role.mitraDesc`, dan teks `verifyForm.title`/`lede` yang menyebut mitra) |
@@ -153,9 +208,10 @@ tetap disimpan lewat `...form`.
 | `components/cameras/CameraSection.tsx` | cabang pending / rejected / form |
 | `components/profile/PengelolaRequest.tsx` | guard "mitra pending" (baris 67–75) |
 | `components/profile/RoleBadge.tsx` | entri `mitra` |
+| `components/profile/ProfileView.tsx` | komentar "hanya untuk mitra ke atas" (baris 448) menyesuaikan; `roleCard` sendiri ikut benar otomatis begitu entri `mitra` hilang dari `RoleBadge` — periksa kondisinya, bukan cuma komentarnya |
 | `components/dashboard/PenggunaPanel.tsx` | `<option value="mitra">`, warna badge `mitra` |
 | `app/api/notify-approval/route.ts` | template email mitra, `role !== 'mitra'` di validasi |
-| `firestore.rules` | `'mitra'` di `cameras.create` dan `settings.write` |
+| `firestore.rules` | `'mitra'` di `cameras.create` dan `settings.write`; cabang baca pengelola berbasis lokasi + fungsi `camUserLocation()` |
 
 `MitraVerification` sebagai **nama tipe** ikut diganti jadi `RoleVerification` —
 menyisakan nama "Mitra" pada tipe yang tidak lagi punya hubungan dengan mitra akan
@@ -177,10 +233,15 @@ Kamera "test" sudah dipindahkan kepemilikannya (lihat bagian *Keadaan produksi*)
 - `lib/verification.check.ts` dirapikan mengikuti tipe baru dan tetap lulus
   `node`-polos — ini penjaga regresi yang sudah ada, bukan berkas baru.
 - `lib/i18nHardcoded.check.ts` tetap lulus setelah kunci mitra dicabut.
-- Uji manual berurutan: pengelola daftarkan kamera → tambahkan email user biasa →
-  user itu buka halaman destinasi dan blok kamera muncul → hapus emailnya → blok
-  kamera hilang → buka halaman destinasi tanpa login, blok kamera tidak ada
-  sementara blok sensor tetap tampil.
+- Uji manual berurutan: pengelola buka dashboard › Kamera dan **kameranya muncul**
+  (ini yang gagal sebelum perbaikan query) → daftarkan kamera baru dari `/kamera` →
+  tambahkan email user biasa **dengan huruf besar-kecil campur** untuk membuktikan
+  normalisasinya jalan → user itu buka halaman destinasi dan blok kamera muncul →
+  hapus emailnya → blok kamera hilang → buka halaman destinasi tanpa login: blok
+  kamera tidak ada, blok sensor tetap tampil, dan **konsol bersih** dari error
+  permission-denied.
+- Sebelum rules dipasang: buktikan klaim `email` ada di ID token
+  (`getIdTokenResult()` di konsol browser setelah login kode email).
 
 ## Di luar cakupan
 
