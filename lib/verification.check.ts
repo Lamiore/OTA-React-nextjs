@@ -1,7 +1,7 @@
 /**
  * Cek validasi form pengajuan naik role — gerbang yang menahan pengajuan tanpa
- * persetujuan perjanjian. Kalau logikanya rusak, orang bisa jadi mitra atau
- * pengelola tanpa pernah diberi tahu dia harus beli alat dari Nusa.
+ * persetujuan perjanjian. Kalau logikanya rusak, orang bisa jadi pengelola
+ * tanpa pernah diberi tahu dia harus beli alat dari Nusa.
  *
  * Jalankan: node lib/verification.check.ts
  */
@@ -35,17 +35,15 @@ const destinasi = {
   declaredRights: true,
 } as const;
 
-// Kolom wajib kosong ditolak lebih dulu, apa pun rolenya — termasuk yang isinya
-// cuma spasi.
+// Kolom wajib kosong ditolak lebih dulu — termasuk yang isinya cuma spasi.
 assert.equal(
-  validateRoleRequest({ ...lengkap, fullName: '   ', requestedRole: 'mitra', agreed: true }),
+  validateRoleRequest({ ...lengkap, fullName: '   ', agreed: true }),
   'verifyForm.allFieldsRequired'
 );
 assert.equal(
   validateRoleRequest({
     ...lengkap,
     phone: '',
-    requestedRole: 'pengelola',
     ...destinasi,
     agreed: true,
   }),
@@ -56,26 +54,22 @@ assert.equal(
 assert.equal(
   validateRoleRequest({
     ...lengkap,
-    requestedRole: 'pengelola',
     destination: '',
     agreed: true,
   }),
   'verifyForm.newDestNameRequired'
 );
 
-// Belum menyetujui — pesannya menyebut dokumen yang sesuai rolenya.
+// Belum menyetujui — form tanpa centang perjanjian selalu ditolak.
 assert.equal(
-  validateRoleRequest({ ...lengkap, requestedRole: 'mitra', agreed: false }),
-  'verifyForm.mustAgreeMitra'
+  validateRoleRequest({ ...lengkap, ...alamat, ...destinasi, agreed: false }),
+  'verifyForm.mustAgreePengelola',
+  'form tanpa centang perjanjian harus ditolak'
 );
+
+// agreed yang tidak diisi sama sekali diperlakukan sama dengan belum dicentang.
 assert.equal(
-  validateRoleRequest({
-    ...lengkap,
-    ...alamat,
-    requestedRole: 'pengelola',
-    ...destinasi,
-    agreed: false,
-  }),
+  validateRoleRequest({ ...lengkap, ...alamat, ...destinasi }),
   'verifyForm.mustAgreePengelola'
 );
 
@@ -85,7 +79,6 @@ assert.equal(
     ...lengkap,
     ...alamat,
     shippingAddress: '   ',
-    requestedRole: 'pengelola',
     ...destinasi,
     agreed: true,
   }),
@@ -99,7 +92,6 @@ for (const postalCode of ['', '9537', '953712', '9537a', ' 95371 x']) {
       ...lengkap,
       ...alamat,
       postalCode,
-      requestedRole: 'pengelola',
       ...destinasi,
       agreed: true,
     }),
@@ -108,25 +100,12 @@ for (const postalCode of ['', '9537', '953712', '9537a', ' 95371 x']) {
   );
 }
 
-// Alamat tidak pernah diminta dari mitra — kameranya dipasang petugas Nusa.
-assert.equal(
-  validateRoleRequest({ ...lengkap, requestedRole: 'mitra', agreed: true }),
-  null
-);
-
-// agreed yang tidak diisi sama sekali diperlakukan sama dengan belum dicentang.
-assert.equal(
-  validateRoleRequest({ ...lengkap, requestedRole: 'mitra' }),
-  'verifyForm.mustAgreeMitra'
-);
-
 // Kolom kosong dan destinasi diperiksa sebelum persetujuan: jangan suruh orang
 // menyetujui perjanjian untuk form yang belum diisi.
 assert.equal(
   validateRoleRequest({
     ...lengkap,
     organization: '',
-    requestedRole: 'pengelola',
     ...destinasi,
     agreed: false,
   }),
@@ -135,7 +114,6 @@ assert.equal(
 assert.equal(
   validateRoleRequest({
     ...lengkap,
-    requestedRole: 'pengelola',
     destination: '',
     agreed: false,
   }),
@@ -144,14 +122,9 @@ assert.equal(
 
 // Lengkap dan sudah menyetujui.
 assert.equal(
-  validateRoleRequest({ ...lengkap, requestedRole: 'mitra', agreed: true }),
-  null
-);
-assert.equal(
   validateRoleRequest({
     ...lengkap,
     ...alamat,
-    requestedRole: 'pengelola',
     ...destinasi,
     agreed: true,
   }),
@@ -189,7 +162,7 @@ const usulan = {
   landRights: LAND_RIGHTS[2],
 } as const;
 
-const pengaju = { ...lengkap, ...alamat, requestedRole: 'pengelola' } as const;
+const pengaju = { ...lengkap, ...alamat } as const;
 
 // Tiap kolom usulan diperiksa satu per satu — kosong dan spasi sama-sama ditolak.
 for (const [kolom, isi, pesan] of [
@@ -262,25 +235,9 @@ assert.equal(
   'verifyForm.newDestLocationRequired'
 );
 
-// Mitra tidak pernah dimintai kolom destinasi mana pun — jalurnya beda.
-assert.equal(
-  validateRoleRequest({ ...lengkap, requestedRole: 'mitra', agreed: true }),
-  null
-);
-
-// Mitra tidak pernah dimintai kolom destinasi mana pun — jalurnya beda.
-assert.equal(
-  validateRoleRequest({ ...lengkap, requestedRole: 'mitra', agreed: true }),
-  null
-);
-
-// Tiap role punya dokumen sendiri: versi terisi, tautan berbeda, label berbeda.
-for (const role of ['mitra', 'pengelola'] as const) {
-  assert.ok(AGREEMENT[role].version.length > 0);
-  assert.ok(AGREEMENT[role].path.startsWith('/'));
-  assert.ok(AGREEMENT[role].label.length > 0);
-}
-assert.notEqual(AGREEMENT.mitra.path, AGREEMENT.pengelola.path);
-assert.notEqual(AGREEMENT.mitra.label, AGREEMENT.pengelola.label);
+// Perjanjian pengelola satu-satunya yang tersisa setelah role mitra dihapus.
+assert.equal(AGREEMENT.pengelola.path, '/syarat-pengelola');
+assert.ok(/^\d+\.\d+$/.test(AGREEMENT.pengelola.version));
+assert.ok(AGREEMENT.pengelola.label.length > 0);
 
 console.log('verification.ts OK');

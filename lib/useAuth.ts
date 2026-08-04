@@ -6,7 +6,7 @@ import type { User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
-export type UserRole = 'user' | 'mitra' | 'pengelola' | 'admin';
+export type UserRole = 'user' | 'pengelola' | 'admin';
 
 export function useAuthState() {
   const [user, setUser] = useState<User | null>(null);
