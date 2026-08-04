@@ -17,6 +17,7 @@ import {
   arrayRemove,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
+import { normalizeViewerEmail } from "./format";
 
 // ── Destinations ──
 
@@ -388,6 +389,10 @@ export interface Camera {
   source?: string;
   /** Validasi admin. Dokumen lama tanpa field diperlakukan "approved" (server VPS). */
   status?: CameraStatus;
+  /** Email yang boleh menonton kamera ini, selalu huruf kecil tanpa spasi tepi.
+   *  Ditulis pemilik lewat panel Kamera di dashboard; dicocokkan rules dengan
+   *  `request.auth.token.email`. Kosong/absen = hanya pemilik & admin. */
+  viewers?: string[];
   createdAt: unknown;
 }
 
@@ -419,6 +424,23 @@ export function cameraStatus(c: Pick<Camera, "status">): CameraStatus {
 /** Pengelola & admin boleh mengelola kamera. */
 export function canManageCameras(role: string | null | undefined): boolean {
   return role === "pengelola" || role === "admin";
+}
+
+/** Beri satu email hak menonton kamera. arrayUnion, jadi menambah email yang
+ *  sudah ada tidak menduplikasinya. */
+export async function addCameraViewer(cameraDocId: string, email: string) {
+  if (!db) return;
+  await updateDoc(doc(db, "cameras", cameraDocId), {
+    viewers: arrayUnion(normalizeViewerEmail(email)),
+  });
+}
+
+/** Cabut hak menonton satu email. */
+export async function removeCameraViewer(cameraDocId: string, email: string) {
+  if (!db) return;
+  await updateDoc(doc(db, "cameras", cameraDocId), {
+    viewers: arrayRemove(normalizeViewerEmail(email)),
+  });
 }
 
 /**

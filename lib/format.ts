@@ -52,3 +52,16 @@ export function formatTimestamp(value: unknown): string | null {
     year: 'numeric',
   });
 }
+
+/**
+ * Bentuk simpan email penonton kamera: sama persis dengan klaim `email` di ID
+ * token (huruf kecil, tanpa spasi tepi). Rules mencocokkannya dengan operator
+ * `in` yang membandingkan string persis — tanpa ini, email berhuruf besar
+ * tersimpan apa adanya dan aksesnya ditolak diam-diam.
+ *
+ * Tinggal di sini, bukan di firestore.ts, supaya format.check.ts bisa
+ * menjalankannya dengan `node` polos — firestore.ts meng-import Firebase SDK.
+ */
+export function normalizeViewerEmail(email: string): string {
+  return email.trim().toLowerCase();
+}

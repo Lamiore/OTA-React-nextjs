@@ -5,7 +5,7 @@
  * Jalankan: node lib/format.check.ts
  */
 import assert from 'node:assert/strict';
-import { formatTimestamp, parseCoords, waLink } from './format.ts';
+import { formatTimestamp, normalizeViewerEmail, parseCoords, waLink } from './format.ts';
 
 // Koordinat — bentuk yang disalin Google Maps.
 assert.deepEqual(parseCoords('1.4508, 125.0917'), { lat: 1.4508, lng: 125.0917 });
@@ -43,5 +43,39 @@ assert.equal(formatTimestamp(undefined), null);
 assert.equal(formatTimestamp({}), null);
 assert.equal(formatTimestamp('30 Juli 2026'), null);
 assert.equal(formatTimestamp({ toDate: () => new Date('bukan tanggal') }), null);
+
+// ── normalizeViewerEmail ──
+//
+// Kenapa ini dijaga: rules mencocokkan `request.auth.token.email` dengan daftar
+// `viewers` memakai operator `in`, yang membandingkan string persis. ID token
+// selalu memuat email huruf kecil (route verify-code memasukkannya sudah
+// dinormalkan), sedangkan pengelola mengetik bebas. Kalau "Orang@Mail.com"
+// tersimpan apa adanya, orangnya tidak akan pernah bisa menonton — dan gagalnya
+// muncul sebagai "akses ditolak", bukan sebagai kesalahan input. Nyaris mustahil
+// dilacak dari gejalanya.
+
+assert.equal(
+  normalizeViewerEmail('Orang@Mail.com'),
+  'orang@mail.com',
+  'huruf besar harus diturunkan'
+);
+
+assert.equal(
+  normalizeViewerEmail('  orang@mail.com  '),
+  'orang@mail.com',
+  'spasi tepi hasil salin-tempel harus dibuang'
+);
+
+assert.equal(
+  normalizeViewerEmail(' ORANG@MAIL.COM '),
+  'orang@mail.com',
+  'spasi dan huruf besar sekaligus'
+);
+
+assert.equal(
+  normalizeViewerEmail('orang@mail.com'),
+  'orang@mail.com',
+  'yang sudah normal tidak berubah'
+);
 
 console.log('format.ts OK');
