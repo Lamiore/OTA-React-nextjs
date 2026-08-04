@@ -85,6 +85,12 @@ service cloud.firestore {
       }
       // Baca: pemilik, admin, atau email yang dimasukkan pemilik ke `viewers`.
       //
+      // Urutan sengaja: dua cek pertama cuma baca dokumen kamera itu sendiri
+      // (gratis). camUserRole() ditaruh paling akhir karena isinya get() ke
+      // users/{uid} milik si pembaca — get() itu berbayar, dan kalau ditaruh
+      // di depan, setiap penonton allowlist (bukan admin) bayar get() itu dulu
+      // padahal dia lolos lewat cek viewers, bukan cek admin.
+      //
       // Cabang "pengelola untuk kamera di wilayahnya" sengaja tidak ada.
       // Bukan cuma karena pengelola sekarang memiliki kameranya sendiri: cabang
       // itu bergantung pada isi dokumen (`resource.data.location`), dan rules
@@ -98,8 +104,8 @@ service cloud.firestore {
       allow read: if request.auth != null
         && (
           resource.data.ownerUid == request.auth.uid
-          || camUserRole() == 'admin'
           || request.auth.token.email in resource.data.get('viewers', [])
+          || camUserRole() == 'admin'
         );
       // Hanya pengelola/admin boleh mendaftarkan kamera miliknya sendiri, dan
       // wajib berstatus 'pending' — validasi approve/reject hanya dari server
@@ -113,9 +119,13 @@ service cloud.firestore {
       // Pemilik mengelola daftar penontonnya, dan HANYA itu. hasOnly() wajib:
       // tanpanya pemilik bisa menyetujui kameranya sendiri lewat jalur ini,
       // padahal approve/reject eksklusif milik server VPS.
+      // `viewers is list` wajib juga: tanpanya SDK mentah bisa menulis viewers
+      // bukan-list (mis. string), lalu `email in viewers` di rule baca error dan
+      // kamera itu terkunci dari semua pembaca sampai field-nya dibetulkan lagi.
       allow update: if request.auth != null
         && resource.data.ownerUid == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewers']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewers'])
+        && request.resource.data.viewers is list;
     }
 
     match /reviews/{reviewId} {
@@ -137,10 +147,14 @@ service cloud.firestore {
       function settingsUserRole() {
         return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
       }
-      // Alamat server kamera: 'cameraServer' publik (halaman destinasi publik
-      // menyusun URL stream dari sini, termasuk pengunjung anonim); setting lain
-      // tetap butuh login. Bukan rahasia — stream memang publik.
-      allow read: if settingId == 'cameraServer' || request.auth != null;
+      // Alamat server kamera dulu publik: halaman destinasi publik menyusun URL
+      // stream dari sini, termasuk untuk pengunjung anonim. Sekarang dokumen
+      // kamera sendiri sudah digerbangi rules (match /cameras/{cameraId}) dan id
+      // stream-nya tidak lagi didenormalisasi ke dokumen destinasi publik, jadi
+      // pengunjung anonim tidak pernah punya cameraId untuk disusun jadi URL.
+      // Alamat server hanya berguna bagi pembaca yang sudah bisa membaca
+      // dokumen kameranya — dan itu selalu pengguna yang sudah masuk.
+      allow read: if request.auth != null;
       // Hanya pengelola kamera yang boleh mengubah alamat server.
       allow write: if request.auth != null
         && settingsUserRole() in ['pengelola', 'admin'];
