@@ -15,6 +15,7 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
+  type FirestoreError,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import { normalizeViewerEmail } from "./format";
@@ -459,20 +460,32 @@ export async function deleteCamera(id: string) {
 
 export function subscribeMyCameras(
   uid: string,
-  callback: (cameras: Camera[]) => void
+  callback: (cameras: Camera[]) => void,
+  onError?: (err: FirestoreError) => void
 ) {
   if (!db) return () => {};
   const q = query(collection(db, "cameras"), where("ownerUid", "==", uid));
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
-  });
+  return onSnapshot(
+    q,
+    (snap) => {
+      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
+    },
+    onError
+  );
 }
 
-export function subscribeAllCameras(callback: (cameras: Camera[]) => void) {
+export function subscribeAllCameras(
+  callback: (cameras: Camera[]) => void,
+  onError?: (err: FirestoreError) => void
+) {
   if (!db) return () => {};
-  return onSnapshot(collection(db, "cameras"), (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
-  });
+  return onSnapshot(
+    collection(db, "cameras"),
+    (snap) => {
+      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Camera)));
+    },
+    onError
+  );
 }
 
 // ── Pengaturan server kamera ──

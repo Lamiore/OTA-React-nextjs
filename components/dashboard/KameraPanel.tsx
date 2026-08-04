@@ -28,6 +28,7 @@ export default function KameraPanel({ role, uid }: Props) {
 
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [liveCamera, setLiveCamera] = useState<Camera | null>(null);
 
   useEffect(() => {
@@ -35,7 +36,16 @@ export default function KameraPanel({ role, uid }: Props) {
       setCameras(data);
       setLoading(false);
     };
-    const unsub = isPengelola ? subscribeMyCameras(uid, handle) : subscribeAllCameras(handle);
+    // Callback error wajib: tanpanya, permission-denied (mis. rules baru belum
+    // ke-deploy) membiarkan `loading` nyangkut true selamanya — skeleton yang
+    // tidak pernah selesai, plus error listener yang tak tertangani di konsol.
+    const onError = () => {
+      setLoadError(true);
+      setLoading(false);
+    };
+    const unsub = isPengelola
+      ? subscribeMyCameras(uid, handle, onError)
+      : subscribeAllCameras(handle, onError);
     return () => unsub();
   }, [isPengelola, uid]);
 
@@ -65,6 +75,12 @@ export default function KameraPanel({ role, uid }: Props) {
               <div className="h-3 w-1/2 rounded-full bg-shore-100" />
             </div>
           ))
+        ) : loadError ? (
+          <div className="card p-8 text-center">
+            <p className="text-sm text-navy-soft">
+              Daftar kamera gagal dimuat. Coba muat ulang halaman.
+            </p>
+          </div>
         ) : cameras.length === 0 ? (
           <div className="card p-8 text-center">
             <p className="text-sm text-navy-soft">
