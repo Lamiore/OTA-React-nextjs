@@ -36,9 +36,33 @@ service cloud.firestore {
     }
 
     match /destinations/{docId} {
+      function destUserRole() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      }
       allow read: if true;
-      allow write: if request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'pengelola'];
+
+      // Membuat & menghapus destinasi tetap admin. Dokumen destinasi pengelola
+      // dibuat otomatis oleh approveRoleRequest — yang jalan sebagai admin saat
+      // menyetujui pengajuan, jadi tetap lewat cabang ini.
+      allow create, delete: if request.auth != null && destUserRole() == 'admin';
+
+      // Pengelola hanya boleh menyunting destinasi kelolaannya sendiri, dan
+      // hanya kolom yang dijanjikan Pasal 3 Perjanjian Pengelola. hasOnly()
+      // wajib ada, bukan cuma cek managerUid: tanpa itu pengelola bisa
+      // mengalihkan destinasinya ke orang lain dengan menulis ulang managerUid,
+      // atau menyerobot stationId/cameraId milik perangkat lain.
+      // Daftar ini harus sama persis dengan EDITABLE_KEYS di
+      // components/dashboard/PengelolaDestinasiPanel.tsx.
+      allow update: if request.auth != null
+        && (
+          destUserRole() == 'admin'
+          || (
+            destUserRole() == 'pengelola'
+            && resource.data.managerUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['description', 'image', 'images', 'lat', 'lng', 'priceItems', 'whatsapp'])
+          )
+        );
     }
 
     match /monitoring_data/{docId} {

@@ -1,18 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import {
-  subscribeDestinations,
-  submitRoleRequest,
-  type Destination,
-  type MitraVerification,
-} from '@/lib/firestore';
-import {
-  AGREEMENT,
-  LAND_RIGHTS,
-  NEW_DESTINATION,
-  validateRoleRequest,
-} from '@/lib/verification';
+import { useState } from 'react';
+import { submitRoleRequest, type MitraVerification } from '@/lib/firestore';
+import { AGREEMENT, LAND_RIGHTS, validateRoleRequest } from '@/lib/verification';
 import { useLang } from '@/lib/useLang';
 
 interface Props {
@@ -38,14 +28,9 @@ export default function VerificationForm({
   const [fullName, setFullName] = useState(initial?.fullName ?? '');
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [organization, setOrganization] = useState(initial?.organization ?? '');
-  // Pilihan dropdown: id destinasi terdaftar atau sentinel "usulkan baru".
-  const [destChoice, setDestChoice] = useState(
-    initial?.newDestination ? NEW_DESTINATION : initial?.destination ?? ''
-  );
-  const isNewDest = destChoice === NEW_DESTINATION;
-  const [newDestName, setNewDestName] = useState(
-    initial?.newDestination ? initial.destination ?? '' : ''
-  );
+  // Destinasi ditulis bebas, bukan dipilih dari daftar: dokumennya baru dibuat
+  // saat pengajuan disetujui, jadi tidak ada yang bisa dipilih lebih dulu.
+  const [destination, setDestination] = useState(initial?.destination ?? '');
   const [destinationLocation, setDestinationLocation] = useState(
     initial?.destinationLocation ?? ''
   );
@@ -54,24 +39,15 @@ export default function VerificationForm({
   );
   const [landRights, setLandRights] = useState(initial?.landRights ?? '');
   const [declaredRights, setDeclaredRights] = useState(false);
-  // Nama yang benar-benar dikirim: usulan yang diketik, atau pilihan dari daftar.
-  const destination = isNewDest ? newDestName : destChoice;
   const [shippingAddress, setShippingAddress] = useState(initial?.shippingAddress ?? '');
   const [postalCode, setPostalCode] = useState(initial?.postalCode ?? '');
   const [recipientName, setRecipientName] = useState(initial?.recipientName ?? '');
   const [recipientPhone, setRecipientPhone] = useState(initial?.recipientPhone ?? '');
-  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   // Selalu mulai false, termasuk saat ajukan ulang setelah ditolak: isi
   // perjanjian bisa sudah berubah sejak pengajuan sebelumnya.
   const [agreed, setAgreed] = useState(false);
-
-  useEffect(() => {
-    if (!isPengelola) return;
-    const unsub = subscribeDestinations(setDestinations);
-    return () => unsub();
-  }, [isPengelola]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +57,6 @@ export default function VerificationForm({
       organization,
       requestedRole,
       destination,
-      newDestination: isNewDest,
       destinationLocation,
       destinationDescription,
       landRights,
@@ -107,15 +82,12 @@ export default function VerificationForm({
         agreementVersion: agreement.version,
         ...(isPengelola && {
           destination: destination.trim(),
-          ...(isNewDest && {
-            newDestination: true,
-            destinationLocation: destinationLocation.trim(),
-            destinationDescription: destinationDescription.trim(),
-            landRights,
-            // Disimpan, bukan cuma divalidasi: Pasal 2 ayat 4 memakai pernyataan
-            // ini sebagai dasar pencabutan, jadi harus ada jejaknya.
-            declaredRights: true,
-          }),
+          destinationLocation: destinationLocation.trim(),
+          destinationDescription: destinationDescription.trim(),
+          landRights,
+          // Disimpan, bukan cuma divalidasi: Pasal 2 ayat 4 memakai pernyataan
+          // ini sebagai dasar pencabutan, jadi harus ada jejaknya.
+          declaredRights: true,
           shippingAddress: shippingAddress.trim(),
           postalCode: postalCode.trim(),
           recipientName: recipientName.trim(),
@@ -174,30 +146,6 @@ export default function VerificationForm({
         </div>
 
         {isPengelola && (
-          <div>
-            <label className="block text-xs font-medium text-navy mb-1.5">{t('verifyForm.managedDest')}</label>
-            <select aria-label={t('verifyForm.managedDest')}
-              value={destChoice}
-              onChange={(e) => setDestChoice(e.target.value)}
-              className={`${inputClass} cursor-pointer`}
-            >
-              <option value="">{t('verifyForm.pickDest')}</option>
-              {destinations.map((d) => (
-                <option key={d.id} value={d.name}>
-                  {d.name} — {d.location}
-                </option>
-              ))}
-              <option value={NEW_DESTINATION}>
-                {t('verifyForm.proposeNew')}
-              </option>
-            </select>
-            <p className="text-2xs text-navy-soft mt-1.5">
-              {t('verifyForm.destFinalNote')}
-            </p>
-          </div>
-        )}
-
-        {isPengelola && isNewDest && (
           <div className="rounded-md border border-shore-200 bg-shore-50/60 p-4 space-y-4">
             <div>
               <h3 className="text-xs font-medium text-navy">{t('verifyForm.proposedDest')}</h3>
@@ -208,8 +156,8 @@ export default function VerificationForm({
             <div>
               <label className="block text-xs font-medium text-navy mb-1.5">{t('verifyForm.destName')}</label>
               <input aria-label={t('verifyForm.destName')}
-                value={newDestName}
-                onChange={(e) => setNewDestName(e.target.value)}
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
                 placeholder={t('verifyForm.destNamePlaceholder')}
                 className={inputClass}
               />
@@ -316,7 +264,7 @@ export default function VerificationForm({
           </div>
         )}
 
-        {isNewDest && (
+        {isPengelola && (
           <label className="flex cursor-pointer items-start gap-3">
             <input
               type="checkbox"

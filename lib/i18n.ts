@@ -403,20 +403,10 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Operator dive, resort, komunitas, ...",
     en: "Dive operator, resort, community, ...",
   },
-  "verifyForm.managedDest": { id: "Destinasi yang Dikelola", en: "Destination You Manage" },
-  "verifyForm.pickDest": { id: "-- Pilih destinasi --", en: "-- Choose a destination --" },
-  "verifyForm.proposeNew": {
-    id: "Destinasinya belum ada — saya usulkan baru",
-    en: "It isn't listed — I'd like to propose it",
-  },
-  "verifyForm.destFinalNote": {
-    id: "Penetapan akhir destinasi tetap oleh admin setelah pengajuan disetujui.",
-    en: "An admin makes the final destination assignment after approval.",
-  },
-  "verifyForm.proposedDest": { id: "Destinasi yang Diusulkan", en: "Proposed Destination" },
+  "verifyForm.proposedDest": { id: "Destinasi yang Dikelola", en: "Destination You Manage" },
   "verifyForm.proposedDestHint": {
-    id: "Nusa terbuka untuk destinasi di seluruh Indonesia. Isi sebisamu — foto, titik peta, dan daftar harga diurus bareng admin setelah pengajuan disetujui.",
-    en: "Nusa is open to destinations across Indonesia. Fill in what you can — photos, map pin, and pricing are sorted out with an admin after approval.",
+    id: "Nusa terbuka untuk destinasi di seluruh Indonesia. Tulis sendiri destinasimu — datanya dibuat otomatis begitu pengajuan disetujui, lalu foto, titik peta, dan daftar harga kamu lengkapi sendiri lewat Dashboard.",
+    en: "Nusa is open to destinations across Indonesia. Write in your own destination — its record is created automatically once your application is approved, then you fill in photos, map pin, and pricing yourself from the Dashboard.",
   },
   "verifyForm.destName": { id: "Nama Destinasi", en: "Destination Name" },
   "verifyForm.destNamePlaceholder": {
@@ -496,10 +486,6 @@ const DICT: Record<string, Record<Lang, string>> = {
   "verifyForm.landRightsRequired": {
     id: "Pilih dasar hakmu mengelola lokasi itu.",
     en: "Choose the basis for your right to manage that site.",
-  },
-  "verifyForm.destRequired": {
-    id: "Pilih destinasi yang ingin dikelola.",
-    en: "Choose the destination you want to manage.",
   },
   "verifyForm.shippingRequired": {
     id: "Alamat pengiriman paket sensor wajib diisi.",
@@ -665,7 +651,6 @@ const DICT: Record<string, Record<Lang, string>> = {
   "verify.phoneLabel": { id: "No. HP:", en: "Phone:" },
   "verify.orgLabel": { id: "Instansi:", en: "Organisation:" },
   "verify.destLabel": { id: "Destinasi:", en: "Destination:" },
-  "verify.newProposal": { id: "(usulan baru)", en: "(new proposal)" },
   "verify.shipTo": { id: "Paket sensor dikirim ke", en: "Sensor package ships to" },
   "verify.recipient": { id: "a/n", en: "Attn:" },
   "verify.wrongAddress": {

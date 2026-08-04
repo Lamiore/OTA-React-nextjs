@@ -9,7 +9,6 @@ import assert from 'node:assert/strict';
 import {
   AGREEMENT,
   LAND_RIGHTS,
-  NEW_DESTINATION,
   packageRecipient,
   validateRoleRequest,
 } from './verification.ts';
@@ -26,6 +25,16 @@ const alamat = {
   postalCode: '95371',
 } as const;
 
+/** Empat kolom destinasi, wajib di semua pengajuan pengelola sejak dokumennya
+ *  dibuat otomatis saat disetujui. Dipakai tes yang menguji hal lain. */
+const destinasi = {
+  destination: 'Bahoi',
+  destinationLocation: 'Desa Bahoi, Kec. Likupang Barat',
+  destinationDescription: 'Desa ekowisata pesisir dengan mangrove dan terumbu.',
+  landRights: LAND_RIGHTS[2],
+  declaredRights: true,
+} as const;
+
 // Kolom wajib kosong ditolak lebih dulu, apa pun rolenya — termasuk yang isinya
 // cuma spasi.
 assert.equal(
@@ -37,13 +46,13 @@ assert.equal(
     ...lengkap,
     phone: '',
     requestedRole: 'pengelola',
-    destination: 'Bahoi',
+    ...destinasi,
     agreed: true,
   }),
   'verifyForm.allFieldsRequired'
 );
 
-// Pengelola tanpa memilih destinasi.
+// Pengelola tanpa menuliskan nama destinasi.
 assert.equal(
   validateRoleRequest({
     ...lengkap,
@@ -51,7 +60,7 @@ assert.equal(
     destination: '',
     agreed: true,
   }),
-  'verifyForm.destRequired'
+  'verifyForm.newDestNameRequired'
 );
 
 // Belum menyetujui — pesannya menyebut dokumen yang sesuai rolenya.
@@ -64,7 +73,7 @@ assert.equal(
     ...lengkap,
     ...alamat,
     requestedRole: 'pengelola',
-    destination: 'Bahoi',
+    ...destinasi,
     agreed: false,
   }),
   'verifyForm.mustAgreePengelola'
@@ -77,7 +86,7 @@ assert.equal(
     ...alamat,
     shippingAddress: '   ',
     requestedRole: 'pengelola',
-    destination: 'Bahoi',
+    ...destinasi,
     agreed: true,
   }),
   'verifyForm.shippingRequired'
@@ -91,7 +100,7 @@ for (const postalCode of ['', '9537', '953712', '9537a', ' 95371 x']) {
       ...alamat,
       postalCode,
       requestedRole: 'pengelola',
-      destination: 'Bahoi',
+      ...destinasi,
       agreed: true,
     }),
     'verifyForm.postalCodeInvalid',
@@ -118,7 +127,7 @@ assert.equal(
     ...lengkap,
     organization: '',
     requestedRole: 'pengelola',
-    destination: 'Bahoi',
+    ...destinasi,
     agreed: false,
   }),
   'verifyForm.allFieldsRequired'
@@ -130,7 +139,7 @@ assert.equal(
     destination: '',
     agreed: false,
   }),
-  'verifyForm.destRequired'
+  'verifyForm.newDestNameRequired'
 );
 
 // Lengkap dan sudah menyetujui.
@@ -143,7 +152,7 @@ assert.equal(
     ...lengkap,
     ...alamat,
     requestedRole: 'pengelola',
-    destination: 'Bahoi',
+    ...destinasi,
     agreed: true,
   }),
   null
@@ -169,11 +178,11 @@ assert.deepEqual(packageRecipient({ ...lengkap, recipientName: 'Sari' }), {
   phone: '081234567890',
 });
 
-// --- Usulan destinasi baru -------------------------------------------------
+// --- Destinasi yang dikelola -----------------------------------------------
 
-/** Usulan lengkap: yang membedakannya dari pengajuan biasa cuma empat kolom. */
+/** Empat kolom destinasi — sekarang wajib di semua pengajuan pengelola, karena
+ *  dokumen destinasinya dibuat dari sini saat pengajuan disetujui. */
 const usulan = {
-  newDestination: true,
   destination: 'Pantai Tanjung Merah',
   destinationLocation: 'Desa Tanjung Merah, Kec. Matuari, Kota Bitung, Sulawesi Utara',
   destinationDescription: 'Pantai berpasir hitam, ada gazebo dan warung, ramai akhir pekan.',
@@ -206,8 +215,8 @@ for (const [kolom, isi, pesan] of [
   );
 }
 
-// "Pilih destinasi" tidak boleh muncul di jalur usulan — pesannya harus yang
-// menyuruh menulis nama, bukan memilih dari daftar yang memang belum ada isinya.
+// Destinasi ditulis, bukan dipilih: nama kosong selalu minta ditulis, tidak
+// pernah menyuruh memilih dari daftar (daftarnya sudah tidak ada di form).
 assert.equal(
   validateRoleRequest({ ...pengaju, ...usulan, destination: '', agreed: true }),
   'verifyForm.newDestNameRequired'
@@ -241,16 +250,29 @@ assert.equal(
   null
 );
 
-// Pengajuan ke destinasi terdaftar tidak pernah diminta pernyataan hak.
+// Nama destinasi saja tidak cukup: lokasi & deskripsi ikut dipakai membuat
+// dokumennya saat disetujui, jadi keduanya tetap diminta.
 assert.equal(
-  validateRoleRequest({ ...pengaju, destination: 'Bahoi', agreed: true }),
+  validateRoleRequest({
+    ...pengaju,
+    destination: 'Bahoi',
+    declaredRights: true,
+    agreed: true,
+  }),
+  'verifyForm.newDestLocationRequired'
+);
+
+// Mitra tidak pernah dimintai kolom destinasi mana pun — jalurnya beda.
+assert.equal(
+  validateRoleRequest({ ...lengkap, requestedRole: 'mitra', agreed: true }),
   null
 );
 
-// Sentinel dropdown tidak boleh bocor jadi nama destinasi yang tersimpan: form
-// menukarnya dengan nama yang diketik, jadi nilainya wajib beda dari nama mana pun.
-assert.notEqual(NEW_DESTINATION, '');
-assert.ok(!LAND_RIGHTS.includes(NEW_DESTINATION as never));
+// Mitra tidak pernah dimintai kolom destinasi mana pun — jalurnya beda.
+assert.equal(
+  validateRoleRequest({ ...lengkap, requestedRole: 'mitra', agreed: true }),
+  null
+);
 
 // Tiap role punya dokumen sendiri: versi terisi, tautan berbeda, label berbeda.
 for (const role of ['mitra', 'pengelola'] as const) {

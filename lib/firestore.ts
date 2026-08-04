@@ -11,6 +11,7 @@ import {
   deleteDoc,
   onSnapshot,
   runTransaction,
+  writeBatch,
   serverTimestamp,
   arrayUnion,
   arrayRemove,
@@ -145,11 +146,11 @@ export interface MitraVerification {
   status: "pending" | "approved" | "rejected";
   /** Role yang diajukan. Dokumen lama tanpa field = pengajuan mitra. */
   requestedRole?: "mitra" | "pengelola";
-  /** Destinasi yang ingin dikelola — hanya untuk pengajuan pengelola. Berisi
-   *  nama usulan (belum ada dokumennya) bila `newDestination` true. */
+  /** Nama destinasi yang diketik pengaju. Dokumennya dibuat otomatis oleh
+   *  approveRoleRequest saat admin menyetujui — admin tidak membuatnya manual. */
   destination?: string;
-  /** Destinasi yang diusulkan belum terdaftar. Admin membuat dokumennya dulu di
-   *  panel Destinasi, baru menyetujui pengajuan ini. */
+  /** Legacy: penanda "usulan destinasi baru" dari saat destinasi masih dipilih
+   *  lewat dropdown. Tidak ditulis lagi — sekarang semua pengajuan begitu. */
   newDestination?: boolean;
   destinationLocation?: string;
   destinationDescription?: string;
@@ -292,16 +293,78 @@ export async function submitRoleRequest(
 }
 
 /** Setujui pengajuan: role naik sesuai yang diajukan. */
+/** Tampilan bawaan destinasi hasil pembuatan otomatis. Pengelola menggantinya
+ *  sendiri lewat panel Destinasi — nilai di sini cuma supaya kartunya tidak
+ *  kosong sebelum disunting. */
+const AUTO_DEST_DEFAULTS = {
+  emoji: "📍",
+  thumbColor: "#3FA7C4",
+  tags: [] as string[],
+  image: "",
+  images: [] as string[],
+  priceItems: [],
+  description: "",
+  whatsapp: "",
+  lat: null,
+  lng: null,
+  hasMonitoring: false,
+  stationId: "",
+  cameraId: "",
+  cameraStreamId: "",
+  cameraName: "",
+  cameraStreamUrl: "",
+};
+
+/**
+ * Setujui pengajuan naik role. Untuk pengelola sekaligus menyiapkan destinasi
+ * kelolaannya: dokumen destinasi dibuat dari data pengajuan dan `managerUid`
+ * diarahkan ke pengaju — admin tidak perlu membuatnya manual lebih dulu.
+ *
+ * Keduanya lewat writeBatch supaya tidak pernah setengah jadi: kalau role naik
+ * tapi destinasinya gagal dibuat, tombol Setujui sudah hilang (status terlanjur
+ * `approved`) dan pengelola terjebak tanpa destinasi tanpa jalan ulang.
+ *
+ * Destinasi bernama sama (abaikan huruf besar/kecil dan spasi tepi) dipakai
+ * ulang, bukan diduplikat — dua pengaju yang menulis "Pulau Gangga" menunjuk
+ * tempat yang sama, dan pengelola terakhir yang disetujui memegangnya.
+ */
 export async function approveRoleRequest(
   uid: string,
-  role: "mitra" | "pengelola" = "mitra"
+  role: "mitra" | "pengelola" = "mitra",
+  verification?: Pick<
+    MitraVerification,
+    "destination" | "destinationLocation" | "destinationDescription"
+  >
 ) {
   if (!db) return;
-  await updateDoc(doc(db, "users", uid), {
+  const batch = writeBatch(db);
+  batch.update(doc(db, "users", uid), {
     role,
     "verification.status": "approved",
     "verification.reviewedAt": serverTimestamp(),
   });
+
+  const name = verification?.destination?.trim();
+  if (role === "pengelola" && name) {
+    const snap = await getDocs(collection(db, "destinations"));
+    const existing = snap.docs.find(
+      (d) => (d.data().name ?? "").trim().toLowerCase() === name.toLowerCase()
+    );
+    if (existing) {
+      batch.update(existing.ref, { managerUid: uid });
+    } else {
+      batch.set(doc(collection(db, "destinations")), {
+        ...AUTO_DEST_DEFAULTS,
+        name,
+        location: verification?.destinationLocation?.trim() ?? "",
+        description: verification?.destinationDescription?.trim() ?? "",
+        managerUid: uid,
+        createdAt: serverTimestamp(),
+      });
+    }
+  }
+
+  await batch.commit();
 }
 
 export async function rejectRoleRequest(uid: string) {

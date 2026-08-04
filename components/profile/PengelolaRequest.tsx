@@ -94,9 +94,6 @@ export default function PengelolaRequest({
           {verification!.destination && (
             <p>
               <span className="text-navy-soft">{t('verify.destLabel')}</span> {verification!.destination}
-              {verification!.newDestination && (
-                <span className="text-navy-soft"> {t('verify.newProposal')}</span>
-              )}
             </p>
           )}
         </div>

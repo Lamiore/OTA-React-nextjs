@@ -10,34 +10,35 @@ export const metadata: Metadata = {
     'Hak, kewajiban, dan ketentuan paket pemantauan bagi pengelola destinasi Nusa.',
 };
 
-/** Tanggal berlaku v1.1. Ditulis di sini karena hanya dipakai di halaman ini. */
-const BERLAKU_SEJAK = '3 Agustus 2026';
+/** Tanggal berlaku v1.2. Ditulis di sini karena hanya dipakai di halaman ini. */
+const BERLAKU_SEJAK = '4 Agustus 2026';
 
 const PASAL: { judul: string; ayat: string[] }[] = [
   {
     judul: '1. Ruang Lingkup',
     ayat: [
       'Perjanjian ini mengatur hubungan antara Nusa ("Platform") dan pengguna yang disetujui menjadi pengelola destinasi ("Pengelola").',
-      'Pengajuan terbuka bagi siapa pun di seluruh Indonesia, baik untuk destinasi yang sudah terdaftar di Platform maupun destinasi baru yang diusulkan sendiri oleh pengaju.',
-      'Destinasi yang dikelola ditetapkan oleh admin Platform. Pilihan maupun usulan destinasi pada formulir pengajuan bersifat usulan, bukan penetapan.',
+      'Pengajuan terbuka bagi siapa pun di seluruh Indonesia. Destinasi yang ingin dikelola dituliskan sendiri oleh pengaju pada formulir pengajuan.',
+      'Destinasi yang dituliskan pengaju bersifat usulan, bukan penetapan. Penetapan terjadi pada saat admin Platform menyetujui pengajuan; sejak saat itu data destinasinya dibuat dan langsung menjadi kelolaan Pengelola.',
+      'Bila nama destinasi yang dituliskan sudah terdaftar di Platform, pengajuan yang disetujui menautkan Pengelola ke destinasi yang sudah ada tersebut, bukan membuat data baru yang serupa.',
       'Perjanjian ini bukan perjanjian kerja. Pengelola bukan karyawan Platform, tidak menerima upah, dan tidak memperoleh hak ketenagakerjaan dari Platform.',
     ],
   },
   {
-    judul: '2. Usulan Destinasi Baru',
+    judul: '2. Destinasi yang Diusulkan',
     ayat: [
-      'Pengaju yang mengusulkan destinasi baru menyatakan berhak mengelola lokasi tersebut atas dasar yang dipilihnya pada formulir: lahan milik sendiri atau keluarga, izin pemilik lahan, izin atau penunjukan pemerintah desa/kelurahan, izin dinas pariwisata atau pengelola kawasan, atau melalui Pokdarwis maupun BUMDes.',
+      'Pengaju menyatakan berhak mengelola lokasi yang diusulkannya atas dasar yang dipilihnya pada formulir: lahan milik sendiri atau keluarga, izin pemilik lahan, izin atau penunjukan pemerintah desa/kelurahan, izin dinas pariwisata atau pengelola kawasan, atau melalui Pokdarwis maupun BUMDes.',
       'Platform tidak meminta unggahan berkas pada formulir. Sebelum pengajuan disetujui, admin menghubungi pengaju melalui nomor WhatsApp yang didaftarkan untuk memastikan kebenaran pernyataan tersebut, dan berhak meminta bukti pendukung pada tahap itu.',
       'Seluruh perizinan yang diwajibkan peraturan setempat untuk membuka dan mengoperasikan destinasi menjadi tanggung jawab Pengelola, bukan Platform. Platform tidak mengurus, mewakili, atau menjamin perizinan tersebut.',
       'Pengaju bertanggung jawab atas kebenaran seluruh data yang diisinya. Data yang keliru atau pernyataan hak yang tidak benar menjadi alasan penolakan pengajuan, dan bila baru diketahui setelah disetujui, menjadi alasan pencabutan status Pengelola beserta penghapusan destinasinya dari Platform.',
-      'Bila lokasi yang diusulkan sudah memiliki Pengelola lain di Platform, atau diusulkan oleh lebih dari satu orang, admin yang memutuskan penetapannya.',
-      'Destinasi baru tayang di Platform setelah admin membuat datanya dan menyetujui pengajuan. Platform berhak menolak usulan tanpa harus menyebutkan alasannya, termasuk atas pertimbangan keselamatan, kelestarian lingkungan, atau kawasan yang dilindungi.',
+      'Bila lokasi yang diusulkan sudah memiliki Pengelola lain di Platform, atau diusulkan oleh lebih dari satu orang, admin yang memutuskan penetapannya. Persetujuan yang diberikan kemudian mengalihkan kelolaan destinasi tersebut kepada Pengelola yang terakhir disetujui.',
+      'Destinasi tayang di Platform sejak pengajuan disetujui, dengan data awal berupa nama, wilayah, dan deskripsi yang dituliskan pengaju. Foto, titik lokasi, daftar harga, dan kontak WhatsApp dilengkapi sendiri oleh Pengelola melalui Dashboard. Platform berhak menolak usulan tanpa harus menyebutkan alasannya, termasuk atas pertimbangan keselamatan, kelestarian lingkungan, atau kawasan yang dilindungi.',
     ],
   },
   {
     judul: '3. Hak Pengelola',
     ayat: [
-      'Mengubah data destinasi yang dikelolanya: deskripsi, foto, titik lokasi, daftar harga, dan kontak WhatsApp.',
+      'Mengubah data destinasi yang dikelolanya melalui Dashboard: deskripsi, foto, titik lokasi, daftar harga, dan kontak WhatsApp. Nama dan wilayah destinasi hanya dapat diubah oleh admin Platform.',
       'Melihat dan mengonfirmasi pesanan yang masuk ke destinasinya.',
       'Mendaftarkan kamera pemantau dan melihat streamnya.',
       'Mengakses statistik kunjungan dan bacaan sensor destinasinya melalui Dashboard.',

@@ -67,7 +67,9 @@ export default function PenggunaPanel() {
         return;
       }
       const role = requestedRole(u.verification ?? {});
-      await approveRoleRequest(u.uid, role);
+      // Data destinasi ikut dikirim: approveRoleRequest yang membuat dokumennya
+      // dan menautkan managerUid, jadi admin tidak perlu bikin manual dulu.
+      await approveRoleRequest(u.uid, role, u.verification);
       // Persetujuan sudah tersimpan; email cuma pemberitahuan — gagal kirim
       // tidak membatalkan apa pun, cukup diberitahukan ke admin.
       try {
@@ -162,11 +164,6 @@ export default function PenggunaPanel() {
                     <p>
                       <span className="text-navy-soft">Destinasi diminta:</span>{' '}
                       {u.verification.destination}
-                      {u.verification.newDestination && (
-                        <span className="ml-1.5 inline-flex rounded-sm bg-warn-soft px-1.5 py-0.5 text-2xs font-medium text-warn">
-                          usulan baru
-                        </span>
-                      )}
                     </p>
                   )}
                   {u.verification.agreementVersion && (
@@ -181,9 +178,11 @@ export default function PenggunaPanel() {
                     </p>
                   )}
                 </div>
-                {u.verification.newDestination && (
+                {/* Detail destinasi ada di semua pengajuan pengelola sekarang;
+                    dokumen lama (dropdown) tidak punya, jadi tetap dijaga. */}
+                {u.verification.destinationLocation && (
                   <div className="mt-3 rounded-md border border-shore-200 bg-surface p-3">
-                    <p className="text-2xs font-medium text-navy">Usulan destinasi baru</p>
+                    <p className="text-2xs font-medium text-navy">Destinasi yang akan dibuat</p>
                     <div className="mt-1.5 space-y-1 text-sm text-navy">
                       <p><span className="text-navy-soft">Lokasi:</span> {u.verification.destinationLocation}</p>
                       <p>
@@ -196,8 +195,10 @@ export default function PenggunaPanel() {
                       <p className="leading-relaxed">{u.verification.destinationDescription}</p>
                     </div>
                     <p className="text-2xs text-navy-soft mt-2 leading-relaxed">
-                      Pastikan dasar haknya lewat WhatsApp, lalu buat destinasinya
-                      di panel Destinasi sebelum menyetujui pengajuan ini.
+                      Pastikan dasar haknya lewat WhatsApp sebelum menyetujui.
+                      Begitu disetujui, destinasi ini dibuat otomatis dan langsung
+                      jadi kelolaannya — tidak perlu dibuat manual di panel Destinasi.
+                      Nama yang sudah terdaftar dipakai ulang, bukan diduplikat.
                     </p>
                   </div>
                 )}

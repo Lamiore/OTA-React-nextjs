@@ -86,7 +86,9 @@ function ScanIcon() {
 const allMenuItems: { key: DashboardPage; label: string; icon: React.ReactNode; roles: string[] }[] = [
   { key: 'statistik', label: 'Statistik', icon: <ChartIcon />, roles: ['admin', 'pengelola'] },
   { key: 'scan', label: 'Scan Tiket', icon: <ScanIcon />, roles: ['admin', 'pengelola'] },
-  { key: 'destinasi', label: 'Destinasi', icon: <MapIcon />, roles: ['admin'] },
+  // Pengelola ikut dapat menu ini, tapi panelnya lain (PengelolaDestinasiPanel):
+  // hanya destinasi kelolaannya, dan hanya kolom yang dijanjikan Pasal 3.
+  { key: 'destinasi', label: 'Destinasi', icon: <MapIcon />, roles: ['admin', 'pengelola'] },
   { key: 'pengguna', label: 'Pengguna', icon: <UsersIcon />, roles: ['admin'] },
   { key: 'kamera', label: 'Kamera', icon: <CameraIcon />, roles: ['admin', 'pengelola'] },
 ];

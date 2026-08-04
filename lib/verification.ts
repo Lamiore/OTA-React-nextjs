@@ -22,17 +22,14 @@ export const AGREEMENT = {
     label: "Perjanjian Mitra",
   },
   pengelola: {
-    version: "1.1",
+    // 1.2: destinasi tidak lagi ditetapkan admin dari daftar yang sudah ada —
+    // pengaju menuliskan sendiri destinasinya dan dokumennya dibuat otomatis
+    // saat pengajuan disetujui. Pasal 1 dan 3 ikut berubah, jadi versinya naik.
+    version: "1.2",
     path: "/syarat-pengelola",
     label: "Perjanjian Pengelola",
   },
 } as const;
-
-/**
- * Nilai <option> penanda "destinasinya belum ada di daftar". Dipakai bersama
- * oleh form dan validasi supaya keduanya tidak pernah memakai sentinel berbeda.
- */
-export const NEW_DESTINATION = "__baru__";
 
 /**
  * Dasar hak seseorang mengelola lokasi yang diusulkannya. Ini pengganti unggah
@@ -52,16 +49,14 @@ export interface RoleRequestInput {
   phone: string;
   organization: string;
   requestedRole: "mitra" | "pengelola";
-  /** Nama destinasi. Yang sudah terdaftar dipilih dari daftar; kalau
-   *  `newDestination` true ini nama usulan yang diketik sendiri. */
+  /** Nama destinasi yang diketik pengaju. Dokumennya dibuat otomatis saat
+   *  pengajuan disetujui — pengaju tidak memilih dari daftar yang sudah ada. */
   destination?: string;
-  /** Kolom di bawah ini hanya untuk usulan destinasi baru. */
-  newDestination?: boolean;
   destinationLocation?: string;
   destinationDescription?: string;
   /** Salah satu LAND_RIGHTS. */
   landRights?: string;
-  /** Centang pernyataan hak mengelola lokasi — hanya usulan destinasi baru. */
+  /** Centang pernyataan berhak mengelola lokasi yang diajukan. */
   declaredRights?: boolean;
   /** Alamat kirim paket sensor — wajib untuk pengelola, tak dipakai mitra
    *  (kamera mitra dipasang petugas Nusa, bukan dikirim). */
@@ -110,21 +105,19 @@ export function validateRoleRequest(input: RoleRequestInput): string | null {
     return "verifyForm.allFieldsRequired";
   }
   if (input.requestedRole === "pengelola") {
-    if (input.newDestination) {
-      if (!input.destination?.trim()) {
-        return "verifyForm.newDestNameRequired";
-      }
-      if (!input.destinationLocation?.trim()) {
-        return "verifyForm.newDestLocationRequired";
-      }
-      if (!input.destinationDescription?.trim()) {
-        return "verifyForm.newDestDescRequired";
-      }
-      if (!input.landRights) {
-        return "verifyForm.landRightsRequired";
-      }
-    } else if (!input.destination) {
-      return "verifyForm.destRequired";
+    // Destinasi selalu ditulis sendiri: dokumennya dibuat saat disetujui, jadi
+    // keempat kolom ini wajib — tanpa salah satunya dokumen tidak bisa dibuat.
+    if (!input.destination?.trim()) {
+      return "verifyForm.newDestNameRequired";
+    }
+    if (!input.destinationLocation?.trim()) {
+      return "verifyForm.newDestLocationRequired";
+    }
+    if (!input.destinationDescription?.trim()) {
+      return "verifyForm.newDestDescRequired";
+    }
+    if (!input.landRights) {
+      return "verifyForm.landRightsRequired";
     }
     if (!input.shippingAddress?.trim()) {
       return "verifyForm.shippingRequired";
@@ -137,7 +130,7 @@ export function validateRoleRequest(input: RoleRequestInput): string | null {
   }
   // Pernyataan hak diperiksa sebelum persetujuan perjanjian: yang satu soal
   // fakta pengaju, yang lain soal isi dokumen — jangan digabung jadi satu.
-  if (input.newDestination && !input.declaredRights) {
+  if (input.requestedRole === "pengelola" && !input.declaredRights) {
     return "verifyForm.declareRightsRequired";
   }
   if (!input.agreed) {

@@ -8,6 +8,7 @@ import StatistikPanel from '@/components/dashboard/StatistikPanel';
 import PengelolaStatistikPanel from '@/components/dashboard/PengelolaStatistikPanel';
 import ScanPanel from '@/components/dashboard/ScanPanel';
 import DestinasiPanel from '@/components/dashboard/DestinasiPanel';
+import PengelolaDestinasiPanel from '@/components/dashboard/PengelolaDestinasiPanel';
 import PenggunaPanel from '@/components/dashboard/PenggunaPanel';
 import KameraPanel from '@/components/dashboard/KameraPanel';
 
@@ -43,7 +44,8 @@ export default function Dashboard() {
         <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
           {page === 'statistik' && (role === 'admin' ? <StatistikPanel /> : <PengelolaStatistikPanel uid={user.uid} />)}
           {page === 'scan' && <ScanPanel />}
-          {page === 'destinasi' && role === 'admin' && <DestinasiPanel />}
+          {page === 'destinasi' &&
+            (role === 'admin' ? <DestinasiPanel /> : <PengelolaDestinasiPanel uid={user.uid} />)}
           {page === 'pengguna' && role === 'admin' && <PenggunaPanel />}
           {page === 'kamera' && (role === 'admin' || role === 'pengelola') && <KameraPanel role={role} uid={user.uid} />}
         </div>
