@@ -27,8 +27,9 @@
 | `lib/useAuth.ts` | tipe `UserRole` tiga nilai |
 | `lib/verification.ts` | aturan form pengajuan pengelola (satu-satunya jenis pengajuan) |
 | `lib/verification.check.ts` | penjaga regresi validasi pengajuan |
-| `lib/firestore.ts` | tipe + operasi Firestore; **baru:** `normalizeViewerEmail`, `addCameraViewer`, `removeCameraViewer` |
-| `lib/cameraViewers.check.ts` | **baru** — penjaga normalisasi email penonton |
+| `lib/firestore.ts` | tipe + operasi Firestore; **baru:** `addCameraViewer`, `removeCameraViewer` |
+| `lib/format.ts` | transformasi string tanpa import; **baru:** `normalizeViewerEmail` |
+| `lib/format.check.ts` | penjaga transformasi string, **bertambah** kasus normalisasi email penonton |
 | `lib/sendVerification.ts` | pemberitahuan persetujuan (role tunggal) |
 | `lib/i18n.ts` | kamus tanpa kunci mitra |
 | `firestore.rules` | gerbang akses kamera: pemilik / admin / penonton |
@@ -739,17 +740,20 @@ git commit -m "refactor: cabut role mitra dari komponen, rute, dan kamus"
 Gerbang aksesnya. Tugas ini dibuka dengan pembuktian asumsi yang seluruh desain bergantung padanya: klaim `email` benar-benar ada di ID token.
 
 **Files:**
-- Create: `lib/cameraViewers.check.ts`
-- Modify: `lib/firestore.ts` (tipe `Camera` + tiga fungsi baru)
+- Modify: `lib/format.ts` (fungsi baru di akhir berkas)
+- Modify: `lib/format.check.ts` (empat assertion baru)
+- Modify: `lib/firestore.ts` (tipe `Camera` + dua fungsi baru)
 - Modify: `firestore.rules:82-108, 125-136`
 
 **Interfaces:**
 - Consumes: `Camera`, `db` (`lib/firestore.ts`)
 - Produces:
-  - `normalizeViewerEmail(email: string): string`
+  - `normalizeViewerEmail(email: string): string` — **di `lib/format.ts`**, bukan `firestore.ts`
   - `addCameraViewer(cameraDocId: string, email: string): Promise<void>`
   - `removeCameraViewer(cameraDocId: string, email: string): Promise<void>`
   - `Camera.viewers?: string[]`
+
+**Kenapa `normalizeViewerEmail` tinggal di `lib/format.ts`, bukan `lib/firestore.ts`:** berkas `*.check.ts` dijalankan `node` polos. `lib/firestore.ts` meng-import `firebase/firestore` **dan** `./firebase`, yang menginisialisasi app Firebase dari env `NEXT_PUBLIC_*` yang tidak pernah dimuat `node` — cek yang meng-importnya akan gagal saat inisialisasi, bukan saat assertion. Itu sebabnya `lib/verification.ts` mencatat larangan import di komentar kepalanya, dan `destinationKeys.check.ts` membaca `.tsx` sebagai teks. `lib/format.ts` nol import dan sudah punya `format.check.ts` — di situlah fungsi ini seharusnya berada.
 
 - [ ] **Step 1: Buktikan klaim `email` ada di ID token — GERBANG**
 
@@ -773,24 +777,18 @@ Buang `window.__auth` kalau tadi ditambahkan.
 
 - [ ] **Step 2: Tulis cek yang gagal untuk normalisasi email**
 
-Buat `lib/cameraViewers.check.ts`:
+Tambahkan di akhir `lib/format.check.ts` (sesuaikan gaya assertion dengan yang sudah ada di berkas itu):
 
 ```ts
-/**
- * Cek normalisasi email penonton kamera.
- *
- * Kenapa ini dijaga: rules mencocokkan `request.auth.token.email` dengan daftar
- * `viewers` memakai operator `in`, yang membandingkan string persis. ID token
- * selalu memuat email huruf kecil (route verify-code memasukkannya sudah
- * dinormalkan), sedangkan pengelola mengetik bebas. Kalau "Orang@Mail.com"
- * tersimpan apa adanya, orangnya tidak akan pernah bisa menonton — dan gagalnya
- * muncul sebagai "akses ditolak", bukan sebagai kesalahan input. Nyaris mustahil
- * dilacak dari gejalanya.
- *
- * Jalankan: node lib/cameraViewers.check.ts
- */
-import assert from 'node:assert/strict';
-import { normalizeViewerEmail } from './firestore.ts';
+// ── normalizeViewerEmail ──
+//
+// Kenapa ini dijaga: rules mencocokkan `request.auth.token.email` dengan daftar
+// `viewers` memakai operator `in`, yang membandingkan string persis. ID token
+// selalu memuat email huruf kecil (route verify-code memasukkannya sudah
+// dinormalkan), sedangkan pengelola mengetik bebas. Kalau "Orang@Mail.com"
+// tersimpan apa adanya, orangnya tidak akan pernah bisa menonton — dan gagalnya
+// muncul sebagai "akses ditolak", bukan sebagai kesalahan input. Nyaris mustahil
+// dilacak dari gejalanya.
 
 assert.equal(
   normalizeViewerEmail('Orang@Mail.com'),
@@ -815,21 +813,38 @@ assert.equal(
   'orang@mail.com',
   'yang sudah normal tidak berubah'
 );
-
-console.log('cameraViewers.check.ts lulus');
 ```
+
+Tambahkan `normalizeViewerEmail` ke daftar import dari `./format.ts` di kepala berkas itu.
 
 - [ ] **Step 3: Jalankan cek untuk memastikan gagal**
 
 ```bash
-node lib/cameraViewers.check.ts
+node lib/format.check.ts
 ```
 
-Diharapkan: GAGAL dengan `SyntaxError` atau `is not a function` — `normalizeViewerEmail` belum ada.
+Diharapkan: GAGAL dengan `SyntaxError: The requested module './format.ts' does not provide an export named 'normalizeViewerEmail'`.
 
-`lib/firestore.ts` meng-import `firebase/firestore`, jadi Node harus bisa menyelesaikannya dari `node_modules`. Jalankan dari akar proyek. Kalau resolusinya bermasalah, jalankan `node --experimental-strip-types lib/cameraViewers.check.ts`.
+- [ ] **Step 4a: Tambahkan `normalizeViewerEmail` ke `lib/format.ts`**
 
-- [ ] **Step 4: Tambahkan operasi penonton ke `lib/firestore.ts`**
+Di akhir berkas:
+
+```ts
+/**
+ * Bentuk simpan email penonton kamera: sama persis dengan klaim `email` di ID
+ * token (huruf kecil, tanpa spasi tepi). Rules mencocokkannya dengan operator
+ * `in` yang membandingkan string persis — tanpa ini, email berhuruf besar
+ * tersimpan apa adanya dan aksesnya ditolak diam-diam.
+ *
+ * Tinggal di sini, bukan di firestore.ts, supaya format.check.ts bisa
+ * menjalankannya dengan `node` polos — firestore.ts meng-import Firebase SDK.
+ */
+export function normalizeViewerEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+```
+
+- [ ] **Step 4b: Tambahkan operasi penonton ke `lib/firestore.ts`**
 
 Tambahkan `viewers` ke interface `Camera` (setelah field `status`):
 
@@ -840,19 +855,9 @@ Tambahkan `viewers` ke interface `Camera` (setelah field `status`):
   viewers?: string[];
 ```
 
-Lalu di bawah `canManageCameras`, tambahkan:
+Lalu di bawah `canManageCameras`, tambahkan (dan import `normalizeViewerEmail` dari `./format`):
 
 ```ts
-/**
- * Bentuk simpan email penonton: sama persis dengan klaim `email` di ID token
- * (huruf kecil, tanpa spasi tepi). Rules mencocokkannya dengan operator `in`
- * yang membandingkan string persis — tanpa ini, email berhuruf besar tersimpan
- * apa adanya dan aksesnya ditolak diam-diam.
- */
-export function normalizeViewerEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
 /** Beri satu email hak menonton kamera. arrayUnion, jadi menambah email yang
  *  sudah ada tidak menduplikasinya. */
 export async function addCameraViewer(cameraDocId: string, email: string) {
@@ -871,15 +876,19 @@ export async function removeCameraViewer(cameraDocId: string, email: string) {
 }
 ```
 
-`arrayUnion`, `arrayRemove`, `doc`, dan `updateDoc` semuanya sudah ada di blok import berkas ini — jangan tambah import baru.
+`arrayUnion`, `arrayRemove`, `doc`, dan `updateDoc` semuanya sudah ada di blok import Firestore berkas ini. Yang perlu ditambahkan hanya satu baris:
+
+```ts
+import { normalizeViewerEmail } from "./format";
+```
 
 - [ ] **Step 5: Jalankan cek untuk memastikan lulus**
 
 ```bash
-node lib/cameraViewers.check.ts
+node lib/format.check.ts
 ```
 
-Diharapkan: `cameraViewers.check.ts lulus`.
+Diharapkan: LULUS, tanpa keluaran error.
 
 - [ ] **Step 6: Perbarui `firestore.rules`**
 
@@ -936,11 +945,9 @@ Lalu di blok `settings` (baris 133-135), buang `'mitra'`:
 
 - [ ] **Step 7: Validasi sintaks rules**
 
-```bash
-npx firebase deploy --only firestore:rules --dry-run
-```
+Pakai tool MCP Firebase `firebase_validate_security_rules` dengan isi `firestore.rules`. (Jangan pakai `firebase deploy --only firestore:rules --dry-run` — flag `--dry-run` tidak ada di perintah itu.)
 
-Diharapkan: laporan kompilasi tanpa error. Kalau `--dry-run` tidak didukung versi CLI-nya, jalankan `npx firebase firestore:rules:release --help` untuk memastikan CLI hidup, lalu langsung ke Step 8 — deploy sendiri menolak rules yang tidak kompilasi.
+Diharapkan: validasi lolos tanpa temuan. Perhatikan khususnya `resource.data.get('viewers', [])` dan `diff().affectedKeys().hasOnly()` — keduanya sintaks rules v2 dan harus diterima.
 
 - [ ] **Step 8: Pastikan penjaga kopling destinasi masih hijau**
 
@@ -963,7 +970,7 @@ Setelah ini panel Kamera pengelola akan **kosong** sampai Task 4 mengganti query
 - [ ] **Step 10: Commit**
 
 ```bash
-git add lib/firestore.ts lib/cameraViewers.check.ts firestore.rules
+git add lib/format.ts lib/format.check.ts lib/firestore.ts firestore.rules
 git commit -m "feat: allowlist penonton kamera berbasis email + rules"
 ```
 
@@ -1387,6 +1394,8 @@ export default function LiveMonitorPanel({ cameraDocId, sensorPath }: Props) {
 
 Sisa berkas tidak berubah: `cameraBlock` sudah memakai `hasCamera`, `src`, dan `cameraName` yang semuanya masih ada dengan nama yang sama.
 
+**Satu perubahan perilaku yang disengaja:** `hasCamera` sekarang menuntut `cameraStatus(cam) === 'approved'`. Versi lama merender siaran untuk kamera apa pun yang ditautkan admin, termasuk yang masih `pending` atau sudah `rejected` — hasilnya kotak hitam "Tidak ada koneksi" di halaman publik. Sekarang blok kameranya tidak muncul sama sekali sampai server VPS menyetujuinya. Ini perbaikan, bukan efek samping tak sengaja.
+
 - [ ] **Step 3: Sesuaikan pemanggilan di halaman destinasi**
 
 `app/destinations/[id]/page.tsx:362-370`:
@@ -1505,7 +1514,6 @@ node lib/format.check.ts \
   && node lib/loginCode.check.ts \
   && node lib/verification.check.ts \
   && node lib/destinationKeys.check.ts \
-  && node lib/cameraViewers.check.ts \
   && npm run build
 ```
 
