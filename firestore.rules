@@ -23,7 +23,7 @@ service cloud.firestore {
         && request.auth.uid == userId
         && request.resource.data.role == 'user';
 
-      // Update: admin bebas (termasuk ubah role, wilayah pengelola, approve/tolak mitra);
+      // Update: admin bebas (termasuk ubah role, wilayah pengelola, approve/tolak pengajuan pengelola);
       // pemilik boleh update dokumennya sendiri HANYA jika role tidak berubah.
       allow update: if request.auth != null
         && (
