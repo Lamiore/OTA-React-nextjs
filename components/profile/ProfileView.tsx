@@ -17,6 +17,8 @@ import { useTheme } from '@/lib/useTheme';
 import { useLang } from '@/lib/useLang';
 import { LANGS } from '@/lib/i18n';
 import { waLink } from '@/lib/format';
+import { ADMIN_EMAIL, ADMIN_WA } from '@/lib/contact';
+import { useCameraAccess } from '@/lib/useCameraAccess';
 
 function LogOutIcon() {
   return (
@@ -71,10 +73,10 @@ function GlobeIcon() {
   );
 }
 
-// Kontak dukungan Nusa. Nomor kosong = tombol WhatsApp disembunyikan
-// (waLink mengembalikan null), jadi tidak ada tautan mati di halaman bantuan.
-const SUPPORT_EMAIL = 'ilham_lam@icloud.com';
-const SUPPORT_WA = '';
+// Kontak dukungan Nusa — dari lib/contact supaya sama dengan nomor admin yang
+// ditampilkan di kartu status pengajuan pengelola.
+const SUPPORT_EMAIL = ADMIN_EMAIL;
+const SUPPORT_WA = ADMIN_WA;
 
 /**
  * FAQ hidup di level modul, jadi tidak bisa memanggil t() langsung — t() datang
@@ -212,12 +214,22 @@ function BackButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+/** Tab profil yang bisa dituju lewat ?view= — dipakai Footer untuk menaut
+ *  langsung ke riwayat, pengaturan (tempat form pengelola), dan bantuan. */
+const TABS = ['menu', 'riwayat', 'tersimpan', 'pengaturan', 'bantuan'] as const;
+type Tab = (typeof TABS)[number];
+
 export default function ProfileView({ user, role }: { user: User; role: UserRole | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'menu' | 'riwayat' | 'tersimpan' | 'pengaturan' | 'bantuan'>(
-    searchParams.get('view') === 'riwayat' ? 'riwayat' : 'menu'
-  );
+  // ?view= dibuka untuk semua tab, bukan cuma riwayat: tautan footer menunjuk
+  // ke tab tertentu, dan nilai yang tidak dikenal jatuh ke menu — bukan layar
+  // kosong.
+  const [view, setView] = useState<Tab>(() => {
+    const v = searchParams.get('view');
+    return TABS.includes(v as Tab) ? (v as Tab) : 'menu';
+  });
+  const { allowed: canSeeCameras } = useCameraAccess();
   const { theme, setTheme, mounted } = useTheme();
   const isDark = theme === 'dark';
   const { lang, setLang, t } = useLang();
@@ -522,7 +534,11 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
 
       {/* Menu items */}
       <div className="card mt-4 divide-y divide-shore-200/80 overflow-hidden">
-        {menuItems.map((item) => (
+        {menuItems
+          // Monitoring cuma untuk yang punya kamera — pengelola/admin, atau
+          // pengguna yang emailnya sudah dimasukkan pemilik kamera ke viewers.
+          .filter((item) => item.key !== 'camera' || canSeeCameras)
+          .map((item) => (
           <button
             key={item.key}
             onClick={menuActions[item.key]}

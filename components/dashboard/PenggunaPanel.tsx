@@ -11,7 +11,6 @@ import {
 } from '@/lib/firestore';
 import { notifyApproval } from '@/lib/sendVerification';
 import { formatTimestamp, waLink } from '@/lib/format';
-import { packageRecipient } from '@/lib/verification';
 
 const roleColors: Record<AppUser['role'], string> = {
   user: 'bg-shore-100 text-navy-soft',
@@ -154,7 +153,30 @@ export default function PenggunaPanel() {
                 </span>
                 <div className="mt-3 space-y-1 text-sm text-navy">
                   <p><span className="text-navy-soft">Nama:</span> {u.verification.fullName}</p>
-                  <p><span className="text-navy-soft">No. HP:</span> {u.verification.phone}</p>
+                  {/* Ditautkan ke WhatsApp: seluruh sisa proses pengajuan
+                      dibicarakan di sana, jadi admin tidak perlu menyalin
+                      nomornya manual. */}
+                  <p>
+                    <span className="text-navy-soft">No. HP:</span>{' '}
+                    {(() => {
+                      const wa = waLink(
+                        u.verification.phone,
+                        `Halo ${u.verification.fullName}, soal pengajuanmu jadi pengelola Nusa untuk ${u.verification.destination ?? 'destinasi'}.`
+                      );
+                      return wa ? (
+                        <a
+                          href={wa}
+                          target="_blank"
+                          rel="noopener"
+                          className="font-medium text-teal-700 underline underline-offset-2"
+                        >
+                          {u.verification.phone}
+                        </a>
+                      ) : (
+                        u.verification.phone
+                      );
+                    })()}
+                  </p>
                   <p><span className="text-navy-soft">Instansi:</span> {u.verification.organization}</p>
                   {u.verification.destination && (
                     <p>
@@ -196,39 +218,6 @@ export default function PenggunaPanel() {
                       jadi kelolaannya — tidak perlu dibuat manual di panel Destinasi.
                       Nama yang sudah terdaftar dipakai ulang, bukan diduplikat.
                     </p>
-                  </div>
-                )}
-                {u.verification.shippingAddress && (
-                  <div className="mt-3 rounded-md border border-shore-200 bg-surface p-3">
-                    <p className="text-2xs font-medium text-navy">Kirim paket sensor ke</p>
-                    <p className="text-sm text-navy mt-1 leading-relaxed">
-                      {u.verification.shippingAddress}
-                      {u.verification.postalCode && ` ${u.verification.postalCode}`}
-                    </p>
-                    {(() => {
-                      const to = packageRecipient(u.verification!);
-                      const wa = waLink(
-                        to.phone,
-                        `Halo ${to.name}, paket sensor Nusa untuk ${u.verification!.destination ?? 'destinasi'} siap dikirim.`
-                      );
-                      return (
-                        <p className="text-2xs text-navy-soft mt-2">
-                          a/n {to.name} ·{' '}
-                          {wa ? (
-                            <a
-                              href={wa}
-                              target="_blank"
-                              rel="noopener"
-                              className="font-medium text-teal-700 underline underline-offset-2"
-                            >
-                              {to.phone}
-                            </a>
-                          ) : (
-                            to.phone
-                          )}
-                        </p>
-                      );
-                    })()}
                   </div>
                 )}
                 <div className="flex gap-2 mt-4">

@@ -66,7 +66,14 @@ export interface Destination {
   managerUid?: string;
   /** Tautan ke kamera pengelola — id dokumen koleksi 'cameras', bukan id
    *  stream. Aman ada di dokumen publik: tidak bisa dipakai menyusun URL
-   *  siaran, dan dokumen kameranya sendiri dijaga rules. */
+   *  siaran, dan dokumen kameranya sendiri dijaga rules.
+   *
+   *  Satu destinasi boleh punya lebih dari satu kamera (dermaga, pantai,
+   *  bawah air). Jangan dibaca langsung — pakai destinationCameraIds(). */
+  cameraIds?: string[];
+  /** Bentuk lama: satu kamera per destinasi. Masih dibaca supaya dokumen yang
+   *  belum pernah disimpan editor baru tetap menayangkan kameranya — tidak
+   *  perlu migrasi. Yang ditulis sekarang selalu cameraIds. */
   cameraId?: string;
 }
 
@@ -153,13 +160,6 @@ export interface RoleVerification {
   /** Pengaju mencentang pernyataan berhak mengelola lokasi. Waktunya mengikuti
    *  agreedAt — keduanya dicentang di form yang sama. */
   declaredRights?: boolean;
-  /** Alamat kirim paket sensor + kode pos. */
-  shippingAddress?: string;
-  postalCode?: string;
-  /** Penerima paket bila bukan pendaftar. Kosong = pendaftar sendiri; pakai
-   *  packageRecipient() dari lib/verification, jangan baca langsung. */
-  recipientName?: string;
-  recipientPhone?: string;
   /** Versi Perjanjian Pengelola yang disetujui. Kosong pada pengajuan sebelum
    *  v1.0 terbit. */
   agreementVersion?: string;
@@ -259,10 +259,6 @@ export async function submitRoleRequest(
     destinationDescription?: string;
     landRights?: string;
     declaredRights?: boolean;
-    shippingAddress?: string;
-    postalCode?: string;
-    recipientName?: string;
-    recipientPhone?: string;
     agreementVersion?: string;
   }
 ) {
@@ -295,7 +291,7 @@ const AUTO_DEST_DEFAULTS = {
   lng: null,
   hasMonitoring: false,
   stationId: "",
-  cameraId: "",
+  cameraIds: [],
 };
 
 /**

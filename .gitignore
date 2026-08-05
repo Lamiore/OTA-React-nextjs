@@ -62,3 +62,6 @@ next-env.d.ts
 serviceAccount.json
 /Proyek_Karang/**/serviceAccount*.json
 *-firebase-adminsdk-*.json
+
+# Artefak browser-testing (Playwright MCP)
+.playwright-mcp/

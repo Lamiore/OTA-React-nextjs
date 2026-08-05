@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { cameraStatus, subscribeCameraServerUrl, type Camera } from '@/lib/firestore';
@@ -8,8 +8,8 @@ import { subscribeMonitoring, type SensorReading } from '@/lib/realtime';
 import { useLang } from '@/lib/useLang';
 
 interface Props {
-  /** Id dokumen kamera yang ditautkan ke destinasi ini. */
-  cameraDocId?: string;
+  /** Id dokumen kamera yang ditautkan ke destinasi ini. Boleh lebih dari satu. */
+  cameraDocIds: string[];
   /** Path RTDB paket sensor destinasi ini (dari stationPath); null = tanpa sensor. */
   sensorPath: string | null;
 }
@@ -35,6 +35,186 @@ function relTime(sec: number, t: (k: string, v?: Record<string, string | number>
 }
 
 /**
+ * Satu kotak siaran. Berdiri sendiri karena status "frame pertama sudah masuk"
+ * dan "koneksinya gagal" itu milik masing-masing kamera — kalau ditaruh di
+ * induknya, satu kamera mati akan menampilkan pesan gagal di semua kamera.
+ */
+function CameraFeed({ cam, serverUrl }: { cam: Camera; serverUrl: string | null }) {
+  const { t } = useLang();
+  const [error, setError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const src = cam.streamUrl
+    ? cam.streamUrl
+    : serverUrl === null
+      ? null // masih memuat alamat server
+      : serverUrl === ''
+        ? '' // alamat server belum diatur
+        : `${serverUrl.replace(/\/+$/, '')}/stream/${cam.cameraId}`;
+
+  useEffect(() => {
+    setError(false);
+    setLoaded(false);
+  }, [src]);
+
+  // "Live" hanya kalau frame beneran masuk — koneksi terbuka tanpa frame ≠ live.
+  const streaming = !!src && !error && loaded;
+
+  return (
+    <div className="relative w-full aspect-video rounded-md overflow-hidden bg-ink">
+      {src === null ? (
+        <div className="absolute inset-0 animate-pulse bg-white/5" />
+      ) : src === '' ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
+          <p className="text-sm">{t('camera.noServerUrl')}</p>
+          <p className="text-xs text-white/50">{t('camera.noServerUrlHintAdmin')}</p>
+        </div>
+      ) : error ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
+          <p className="text-sm">{t('camera.noConnection')}</p>
+          <p className="text-xs text-white/50">{t('camera.noConnectionHint')}</p>
+        </div>
+      ) : (
+        <>
+          <img
+            key={src}
+            src={src}
+            alt={`Stream ${cam.name}`}
+            className="w-full h-full object-contain"
+            onLoad={() => setLoaded(true)}
+            onError={() => setError(true)}
+          />
+          {!loaded && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 text-white/70">
+              <span className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white/80 animate-spin" />
+              <p className="text-sm">Menghubungkan ke kamera…</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {streaming && (
+        <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-xs bg-teal-500 px-2.5 py-1 text-2xs font-medium text-white shadow-sm">
+          <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+          Live
+        </span>
+      )}
+
+      {cam.name && (
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 via-ink/40 to-transparent px-4 pt-10 pb-3">
+          <p className="text-sm font-medium text-white drop-shadow-sm">{cam.name}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChevronIcon({ dir }: { dir: 'left' | 'right' }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={dir === 'left' ? 'rotate-180' : undefined}
+      aria-hidden="true"
+    >
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+/**
+ * Geser antar kamera saat destinasinya punya lebih dari satu.
+ *
+ * Semua kamera tetap terpasang di dalam track, cuma digeser — bukan
+ * dirender-ulang satu per satu. Ini yang penting: siaran MJPEG harus
+ * menyambung ulang dari nol setiap kali <img>-nya dilepas, jadi kalau kamera
+ * ditukar dengan cara mengganti isi DOM, tiap pindah kamera berarti menunggu
+ * buffer lagi. Jumlah koneksinya pun sama saja dengan tata letak grid
+ * sebelumnya — semuanya memang sudah tersambung.
+ *
+ * Menggesernya pakai scroll-snap CSS, bukan transform yang diatur JS: dengan
+ * begitu geser-jari di ponsel jalan sendiri tanpa kode tambahan, dan tombol
+ * panah cukup memanggil scrollTo.
+ */
+function CameraCarousel({ cams, serverUrl }: { cams: Camera[]; serverUrl: string | null }) {
+  const { t } = useLang();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(0);
+
+  // Satu kamera tidak butuh track, tombol, maupun titik — tampil apa adanya.
+  if (cams.length === 1) return <CameraFeed cam={cams[0]} serverUrl={serverUrl} />;
+
+  const goTo = (i: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    // Memutar: dari kamera terakhir, "berikutnya" kembali ke yang pertama.
+    // Dengan begitu tombolnya tidak pernah mati dan tidak perlu status disabled.
+    const next = (i + cams.length) % cams.length;
+    el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="relative">
+      <div
+        ref={trackRef}
+        // Indeks diturunkan dari posisi scroll, bukan disimpan terpisah: geser
+        // jari dan tombol panah jadi ikut sumber yang sama, jadi titiknya tidak
+        // pernah menunjuk kamera yang berbeda dari yang sedang terlihat.
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          if (el.clientWidth) setIndex(Math.round(el.scrollLeft / el.clientWidth));
+        }}
+        className="flex snap-x snap-mandatory overflow-x-auto scrollbar-hide"
+      >
+        {cams.map((c) => (
+          <div key={c.id} className="w-full shrink-0 snap-center">
+            <CameraFeed cam={c} serverUrl={serverUrl} />
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => goTo(index - 1)}
+        aria-label={t('monitor.prevCamera')}
+        className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-ink/60 p-2 text-white backdrop-blur-sm transition-colors hover:bg-ink/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      >
+        <ChevronIcon dir="left" />
+      </button>
+      <button
+        type="button"
+        onClick={() => goTo(index + 1)}
+        aria-label={t('monitor.nextCamera')}
+        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-ink/60 p-2 text-white backdrop-blur-sm transition-colors hover:bg-ink/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      >
+        <ChevronIcon dir="right" />
+      </button>
+
+      <div className="mt-2.5 flex justify-center gap-1.5">
+        {cams.map((c, i) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => goTo(i)}
+            aria-label={t('monitor.goToCamera', { n: i + 1 })}
+            aria-current={i === index ? 'true' : undefined}
+            className={`h-1.5 rounded-full transition-all ${
+              i === index ? 'w-5 bg-teal-600' : 'w-1.5 bg-shore-300 hover:bg-shore-400'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Panel "Pantau Langsung" gabungan: stream kamera + sensor IoT dalam satu card.
  *
  * Kameranya dibaca langsung dari dokumen `cameras/{docId}`, bukan dari field
@@ -46,58 +226,59 @@ function relTime(sec: number, t: (k: string, v?: Record<string, string | number>
  *
  * Sensor dibaca dari cabang RTDB milik paket sensor destinasi ini (sensorPath).
  */
-export default function LiveMonitorPanel({ cameraDocId, sensorPath }: Props) {
+export default function LiveMonitorPanel({ cameraDocIds, sensorPath }: Props) {
   const { t } = useLang();
   const hasMonitoring = !!sensorPath;
 
   // ── Kamera ──
-  const [cam, setCam] = useState<Camera | null>(null);
+  // Satu langganan per kamera, hasilnya dikumpulkan per id. Kamera yang ditolak
+  // rules (pengunjung tanpa hak) jatuh jadi null dan tidak ikut dirender —
+  // itulah sebabnya daftar yang tayang diturunkan dari isi map ini, bukan dari
+  // panjang cameraDocIds.
+  const [cams, setCams] = useState<Record<string, Camera | null>>({});
   const [serverUrl, setServerUrl] = useState<string | null>(null); // null = loading
-  const [error, setError] = useState(false);
-  const [loaded, setLoaded] = useState(false); // frame pertama sudah masuk
+
+  // Dibekukan jadi string supaya array literal baru tiap render tidak memicu
+  // langganan ulang setiap kali komponen induk render.
+  const idsKey = cameraDocIds.join(',');
 
   useEffect(() => {
     // Reset dulu, sinkron: tanpa ini, pindah destinasi lewat navigasi sisi-klien
-    // (id berubah, cameraDocId ikut berubah) membiarkan kamera destinasi LAMA
-    // tetap tampil sampai snapshot kamera baru datang — src diturunkan dari cam.
-    setCam(null);
-    if (!cameraDocId || !db) return;
+    // membiarkan kamera destinasi LAMA tetap tampil sampai snapshot baru datang.
+    setCams({});
+    if (!db) return;
+    const ids = idsKey ? idsKey.split(',') : [];
     // Callback error wajib: pengunjung tanpa hak MEMANG kena permission-denied
     // di sini. Tanpa penanganan, listener-nya mati dan tiap kunjungan halaman
     // destinasi publik meninggalkan error di konsol.
-    return onSnapshot(
-      doc(db, 'cameras', cameraDocId),
-      (snap) => setCam(snap.exists() ? ({ id: snap.id, ...snap.data() } as Camera) : null),
-      () => setCam(null),
+    const unsubs = ids.map((id) =>
+      onSnapshot(
+        doc(db!, 'cameras', id),
+        (snap) =>
+          setCams((prev) => ({
+            ...prev,
+            [id]: snap.exists() ? ({ id: snap.id, ...snap.data() } as Camera) : null,
+          })),
+        () => setCams((prev) => ({ ...prev, [id]: null }))
+      )
     );
-  }, [cameraDocId]);
+    return () => unsubs.forEach((u) => u());
+  }, [idsKey]);
 
+  // Urutannya mengikuti urutan yang diatur admin, bukan urutan datangnya
+  // snapshot — kalau tidak, kamera bisa lompat-lompat posisi saat dimuat.
   // Kamera yang belum disetujui server VPS tidak punya siaran untuk ditampilkan.
-  const hasCamera = !!cam && cameraStatus(cam) === 'approved';
-  const cameraName = cam?.name;
+  const visibleCams = cameraDocIds
+    .map((id) => cams[id])
+    .filter((c): c is Camera => !!c && cameraStatus(c) === 'approved');
+  const hasCamera = visibleCams.length > 0;
+  // Kamera legacy punya streamUrl sendiri dan tidak butuh alamat server.
+  const needsServerUrl = visibleCams.some((c) => !c.streamUrl);
 
   useEffect(() => {
-    if (!hasCamera || cam?.streamUrl) return; // legacy tidak butuh server URL
+    if (!needsServerUrl) return;
     return subscribeCameraServerUrl(setServerUrl);
-  }, [hasCamera, cam?.streamUrl]);
-
-  const src = !hasCamera
-    ? ''
-    : cam!.streamUrl
-      ? cam!.streamUrl
-      : serverUrl === null
-        ? null // masih memuat alamat server
-        : serverUrl === ''
-          ? '' // alamat server belum diatur
-          : `${serverUrl.replace(/\/+$/, '')}/stream/${cam!.cameraId}`;
-
-  useEffect(() => {
-    setError(false);
-    setLoaded(false);
-  }, [src]);
-
-  // "Live" hanya kalau frame beneran masuk — koneksi terbuka tanpa frame ≠ live.
-  const streaming = !!src && !error && loaded;
+  }, [needsServerUrl]);
 
   // ── Sensor ──
   const [data, setData] = useState<SensorReading | null>(null);
@@ -218,51 +399,7 @@ export default function LiveMonitorPanel({ cameraDocId, sensorPath }: Props) {
   const metricCols = bothSides ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3';
 
   const cameraBlock = hasCamera && (
-    <div className="relative w-full aspect-video rounded-md overflow-hidden bg-ink">
-      {src === null ? (
-        <div className="absolute inset-0 animate-pulse bg-white/5" />
-      ) : src === '' ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
-          <p className="text-sm">{t('camera.noServerUrl')}</p>
-          <p className="text-xs text-white/50">{t('camera.noServerUrlHintAdmin')}</p>
-        </div>
-      ) : error ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-white/70">
-          <p className="text-sm">{t('camera.noConnection')}</p>
-          <p className="text-xs text-white/50">{t('camera.noConnectionHint')}</p>
-        </div>
-      ) : (
-        <>
-          <img
-            key={src}
-            src={src}
-            alt={`Stream ${cameraName ?? 'kamera'}`}
-            className="w-full h-full object-contain"
-            onLoad={() => setLoaded(true)}
-            onError={() => setError(true)}
-          />
-          {!loaded && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 text-white/70">
-              <span className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white/80 animate-spin" />
-              <p className="text-sm">Menghubungkan ke kamera…</p>
-            </div>
-          )}
-        </>
-      )}
-
-      {streaming && (
-        <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-xs bg-teal-500 px-2.5 py-1 text-2xs font-medium text-white shadow-sm">
-          <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-          Live
-        </span>
-      )}
-
-      {cameraName && (
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 via-ink/40 to-transparent px-4 pt-10 pb-3">
-          <p className="text-sm font-medium text-white drop-shadow-sm">{cameraName}</p>
-        </div>
-      )}
-    </div>
+    <CameraCarousel cams={visibleCams} serverUrl={serverUrl} />
   );
 
   const sensorBlock = hasMonitoring && (

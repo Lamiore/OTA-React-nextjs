@@ -52,7 +52,14 @@ assert.deepEqual(
 // Kolom yang tidak boleh ikut walau suatu saat panelnya diperluas: ketiganya
 // adalah jalur pengalihan kepemilikan (managerUid) dan penyerobotan perangkat
 // milik destinasi lain (stationId, cameraId).
-for (const terlarang of ["managerUid", "stationId", "cameraId", "name", "location"]) {
+for (const terlarang of [
+  "managerUid",
+  "stationId",
+  "cameraId",
+  "cameraIds",
+  "name",
+  "location",
+]) {
   assert.ok(
     !panelKeys.includes(terlarang),
     `${terlarang} tidak boleh bisa disunting pengelola`

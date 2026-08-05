@@ -10,8 +10,8 @@ export const metadata: Metadata = {
     'Hak, kewajiban, dan ketentuan paket pemantauan bagi pengelola destinasi Nusa.',
 };
 
-/** Tanggal berlaku v1.2. Ditulis di sini karena hanya dipakai di halaman ini. */
-const BERLAKU_SEJAK = '4 Agustus 2026';
+/** Tanggal berlaku v1.3. Ditulis di sini karena hanya dipakai di halaman ini. */
+const BERLAKU_SEJAK = '5 Agustus 2026';
 
 const PASAL: { judul: string; ayat: string[] }[] = [
   {
@@ -57,7 +57,7 @@ const PASAL: { judul: string; ayat: string[] }[] = [
     judul: '5. Paket Pemantauan IoT',
     ayat: [
       'Destinasi yang dikelola wajib dilengkapi paket sensor pemantauan. Ini satu-satunya perangkat yang diwajibkan bagi Pengelola.',
-      'Paket sensor dibeli dari Platform dan dikirim ke alamat yang didaftarkan Pengelola. Pemasangannya dilakukan sendiri oleh Pengelola mengikuti panduan Platform, dengan pendampingan lewat WhatsApp. Perangkat sejenis yang dibeli sendiri di luar Platform tidak dihubungkan ke sistem Nusa.',
+      'Paket sensor dibeli dari Platform dan dikirim ke alamat yang disepakati bersama admin lewat WhatsApp setelah pengajuan disetujui. Pemasangannya dilakukan sendiri oleh Pengelola mengikuti panduan Platform, dengan pendampingan lewat WhatsApp. Perangkat sejenis yang dibeli sendiri di luar Platform tidak dihubungkan ke sistem Nusa.',
       'Setelah pembayaran lunas, paket sensor sepenuhnya menjadi hak milik Pengelola.',
       'Pembelian dan pemasangan baru dikoordinasikan setelah pengajuan menjadi Pengelola disetujui admin. Tidak ada pembayaran apa pun yang diminta sebelum pengajuan diterima.',
       'Rincian isi paket dan harganya disampaikan terpisah sebelum pembelian, mengacu pada daftar yang berlaku saat itu. Pengelola berhak membatalkan pembelian sebelum pembayaran dilakukan; dalam hal itu status Pengelola tidak dapat diaktifkan karena ayat 1 tidak terpenuhi.',

@@ -15,6 +15,7 @@ import {
   type Camera,
   type AppUser,
 } from '@/lib/firestore';
+import { destinationCameraIds } from '@/lib/destination';
 import { sanitizeStationId, stationPath } from '@/lib/realtime';
 import { parseCoords, waLink } from '@/lib/format';
 
@@ -33,7 +34,7 @@ const emptyForm: DestinationInput = {
   whatsapp: '',
   hasMonitoring: false,
   stationId: '',
-  cameraId: '',
+  cameraIds: [],
   managerUid: '',
 };
 
@@ -130,7 +131,9 @@ export default function DestinasiPanel() {
       whatsapp: d.whatsapp ?? '',
       hasMonitoring: d.hasMonitoring ?? false,
       stationId: d.stationId ?? '',
-      cameraId: d.cameraId ?? '',
+      // Lewat helper, bukan d.cameraIds langsung: destinasi lama menyimpan satu
+      // kamera di `cameraId` dan tanpa ini pilihannya hilang saat diedit.
+      cameraIds: destinationCameraIds(d),
       managerUid: d.managerUid ?? '',
     });
     setTagInput(d.tags.join(', '));
@@ -418,21 +421,48 @@ export default function DestinasiPanel() {
                 />
               </div>
 
-              {/* Hubungkan Kamera */}
+              {/* Hubungkan Kamera — boleh lebih dari satu per destinasi. */}
               <div>
-                <label className="block text-xs font-medium text-navy-soft mb-1.5">Hubungkan Kamera Pengelola</label>
-                <select aria-label="Hubungkan Kamera Pengelola"
-                  value={form.cameraId || ''}
-                  onChange={(e) => setForm({ ...form, cameraId: e.target.value })}
-                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
-                >
-                  <option value="">-- Tanpa Kamera --</option>
-                  {cameras.map((cam) => (
-                    <option key={cam.id} value={cam.id}>
-                      {cam.name} {cam.location ? `(${cam.location})` : ''} — {cam.ownerName || 'Pengelola'}
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">
+                  Hubungkan Kamera Pengelola
+                </label>
+                {cameras.length === 0 ? (
+                  <p className="text-xs text-navy-soft">Belum ada kamera terdaftar.</p>
+                ) : (
+                  <div className="max-h-56 space-y-1 overflow-y-auto rounded-md border border-shore-200 bg-surface p-2">
+                    {cameras.map((cam) => {
+                      const checked = (form.cameraIds ?? []).includes(cam.id);
+                      return (
+                        <label
+                          key={cam.id}
+                          className="flex cursor-pointer items-start gap-2.5 rounded-sm px-2 py-1.5 hover:bg-shore-50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                cameraIds: e.target.checked
+                                  ? [...(form.cameraIds ?? []), cam.id]
+                                  : (form.cameraIds ?? []).filter((id) => id !== cam.id),
+                              })
+                            }
+                            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-teal-600"
+                          />
+                          <span className="text-sm text-navy">
+                            {cam.name} {cam.location ? `(${cam.location})` : ''}{' '}
+                            <span className="text-navy-soft">— {cam.ownerName || 'Pengelola'}</span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="mt-1.5 text-2xs text-navy-soft">
+                  Boleh pilih lebih dari satu. Urutan centangnya jadi urutan tayang di
+                  halaman destinasi. Kosongkan semua kalau destinasi ini tanpa kamera.
+                </p>
               </div>
 
               {/* Pengelola — user berperan 'pengelola' yang mengelola destinasi ini. */}

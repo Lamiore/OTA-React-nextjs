@@ -6,23 +6,12 @@
  * Jalankan: node lib/verification.check.ts
  */
 import assert from 'node:assert/strict';
-import {
-  AGREEMENT,
-  LAND_RIGHTS,
-  packageRecipient,
-  validateRoleRequest,
-} from './verification.ts';
+import { AGREEMENT, LAND_RIGHTS, validateRoleRequest } from './verification.ts';
 
 const lengkap = {
   fullName: 'Budi Santoso',
   phone: '081234567890',
   organization: 'Dive Bahoi',
-} as const;
-
-/** Tambahan yang cuma diminta dari pengelola: alamat kirim paket sensor. */
-const alamat = {
-  shippingAddress: 'Jl. Raya Bahoi No. 12, Desa Bahoi, Kec. Likupang Barat',
-  postalCode: '95371',
 } as const;
 
 /** Empat kolom destinasi, wajib di semua pengajuan pengelola sejak dokumennya
@@ -62,43 +51,16 @@ assert.equal(
 
 // Belum menyetujui — form tanpa centang perjanjian selalu ditolak.
 assert.equal(
-  validateRoleRequest({ ...lengkap, ...alamat, ...destinasi, agreed: false }),
+  validateRoleRequest({ ...lengkap, ...destinasi, agreed: false }),
   'verifyForm.mustAgreePengelola',
   'form tanpa centang perjanjian harus ditolak'
 );
 
 // agreed yang tidak diisi sama sekali diperlakukan sama dengan belum dicentang.
 assert.equal(
-  validateRoleRequest({ ...lengkap, ...alamat, ...destinasi }),
+  validateRoleRequest({ ...lengkap, ...destinasi }),
   'verifyForm.mustAgreePengelola'
 );
-
-// Pengelola tanpa alamat kirim — paket sensor tidak bisa dikirim ke mana pun.
-assert.equal(
-  validateRoleRequest({
-    ...lengkap,
-    ...alamat,
-    shippingAddress: '   ',
-    ...destinasi,
-    agreed: true,
-  }),
-  'verifyForm.shippingRequired'
-);
-
-// Kode pos harus tepat lima angka: kosong, kependekan, kepanjangan, bukan angka.
-for (const postalCode of ['', '9537', '953712', '9537a', ' 95371 x']) {
-  assert.equal(
-    validateRoleRequest({
-      ...lengkap,
-      ...alamat,
-      postalCode,
-      ...destinasi,
-      agreed: true,
-    }),
-    'verifyForm.postalCodeInvalid',
-    `kode pos ${JSON.stringify(postalCode)} seharusnya ditolak`
-  );
-}
 
 // Kolom kosong dan destinasi diperiksa sebelum persetujuan: jangan suruh orang
 // menyetujui perjanjian untuk form yang belum diisi.
@@ -120,36 +82,17 @@ assert.equal(
   'verifyForm.newDestNameRequired'
 );
 
-// Lengkap dan sudah menyetujui.
+// Lengkap dan sudah menyetujui — tanpa satu pun kolom pengiriman. Ini penjaga
+// perubahan v1.3: alamat kirim tidak lagi diminta di formulir, jadi form yang
+// isinya cuma data diri + destinasi harus lolos.
 assert.equal(
   validateRoleRequest({
     ...lengkap,
-    ...alamat,
     ...destinasi,
     agreed: true,
   }),
   null
 );
-
-// Penerima paket: kosong jatuh ke pendaftar, terisi menimpanya. Yang isinya
-// cuma spasi diperlakukan kosong — bukan nama penerima yang sah.
-assert.deepEqual(packageRecipient(lengkap), {
-  name: 'Budi Santoso',
-  phone: '081234567890',
-});
-assert.deepEqual(
-  packageRecipient({ ...lengkap, recipientName: '  ', recipientPhone: '' }),
-  { name: 'Budi Santoso', phone: '081234567890' }
-);
-assert.deepEqual(
-  packageRecipient({ ...lengkap, recipientName: 'Sari', recipientPhone: '082111222333' }),
-  { name: 'Sari', phone: '082111222333' }
-);
-// Satu terisi, satu kosong: yang kosong tetap jatuh ke pendaftar.
-assert.deepEqual(packageRecipient({ ...lengkap, recipientName: 'Sari' }), {
-  name: 'Sari',
-  phone: '081234567890',
-});
 
 // --- Destinasi yang dikelola -----------------------------------------------
 
@@ -161,8 +104,6 @@ const usulan = {
   destinationDescription: 'Pantai berpasir hitam, ada gazebo dan warung, ramai akhir pekan.',
   landRights: LAND_RIGHTS[2],
 } as const;
-
-const pengaju = { ...lengkap, ...alamat } as const;
 
 // Tiap kolom usulan diperiksa satu per satu — kosong dan spasi sama-sama ditolak.
 for (const [kolom, isi, pesan] of [
@@ -177,7 +118,7 @@ for (const [kolom, isi, pesan] of [
 ] as const) {
   assert.equal(
     validateRoleRequest({
-      ...pengaju,
+      ...lengkap,
       ...usulan,
       [kolom]: isi,
       declaredRights: true,
@@ -191,35 +132,23 @@ for (const [kolom, isi, pesan] of [
 // Destinasi ditulis, bukan dipilih: nama kosong selalu minta ditulis, tidak
 // pernah menyuruh memilih dari daftar (daftarnya sudah tidak ada di form).
 assert.equal(
-  validateRoleRequest({ ...pengaju, ...usulan, destination: '', agreed: true }),
+  validateRoleRequest({ ...lengkap, ...usulan, destination: '', agreed: true }),
   'verifyForm.newDestNameRequired'
 );
 
 // Pernyataan hak wajib dicentang, dan diperiksa sebelum perjanjian.
 assert.equal(
-  validateRoleRequest({ ...pengaju, ...usulan, agreed: true }),
+  validateRoleRequest({ ...lengkap, ...usulan, agreed: true }),
   'verifyForm.declareRightsRequired'
 );
 assert.equal(
-  validateRoleRequest({ ...pengaju, ...usulan, agreed: false }),
+  validateRoleRequest({ ...lengkap, ...usulan, agreed: false }),
   'verifyForm.declareRightsRequired'
-);
-
-// Alamat kirim tetap wajib walau destinasinya usulan — paketnya tetap dikirim.
-assert.equal(
-  validateRoleRequest({
-    ...pengaju,
-    ...usulan,
-    shippingAddress: '',
-    declaredRights: true,
-    agreed: true,
-  }),
-  'verifyForm.shippingRequired'
 );
 
 // Usulan lengkap + dua centang.
 assert.equal(
-  validateRoleRequest({ ...pengaju, ...usulan, declaredRights: true, agreed: true }),
+  validateRoleRequest({ ...lengkap, ...usulan, declaredRights: true, agreed: true }),
   null
 );
 
@@ -227,7 +156,7 @@ assert.equal(
 // dokumennya saat disetujui, jadi keduanya tetap diminta.
 assert.equal(
   validateRoleRequest({
-    ...pengaju,
+    ...lengkap,
     destination: 'Bahoi',
     declaredRights: true,
     agreed: true,

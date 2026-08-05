@@ -30,10 +30,6 @@ export default function VerificationForm({ uid, initial, title, description }: P
   );
   const [landRights, setLandRights] = useState(initial?.landRights ?? '');
   const [declaredRights, setDeclaredRights] = useState(false);
-  const [shippingAddress, setShippingAddress] = useState(initial?.shippingAddress ?? '');
-  const [postalCode, setPostalCode] = useState(initial?.postalCode ?? '');
-  const [recipientName, setRecipientName] = useState(initial?.recipientName ?? '');
-  const [recipientPhone, setRecipientPhone] = useState(initial?.recipientPhone ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   // Selalu mulai false, termasuk saat ajukan ulang setelah ditolak: isi
@@ -51,8 +47,6 @@ export default function VerificationForm({ uid, initial, title, description }: P
       destinationDescription,
       landRights,
       declaredRights,
-      shippingAddress,
-      postalCode,
       agreed,
     });
     if (invalid) {
@@ -76,10 +70,6 @@ export default function VerificationForm({ uid, initial, title, description }: P
         // Disimpan, bukan cuma divalidasi: Pasal 2 ayat 4 memakai pernyataan
         // ini sebagai dasar pencabutan, jadi harus ada jejaknya.
         declaredRights: true,
-        shippingAddress: shippingAddress.trim(),
-        postalCode: postalCode.trim(),
-        recipientName: recipientName.trim(),
-        recipientPhone: recipientPhone.trim(),
       });
       // Tidak reset/pindah view di sini: PengelolaRequest berpindah ke kartu
       // status pending begitu onSnapshot dokumen user menerima perubahan.
@@ -187,64 +177,6 @@ export default function VerificationForm({ uid, initial, title, description }: P
               {t('verifyForm.landRightsHint')}
             </p>
           </div>
-        </div>
-
-        <div className="rounded-md border border-shore-200 bg-shore-50/60 p-4 space-y-4">
-          <div>
-            <h3 className="text-xs font-medium text-navy">{t('verifyForm.shipping')}</h3>
-            <p className="text-2xs text-navy-soft mt-1 leading-relaxed">
-              {t('verifyForm.shippingHint')}
-            </p>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-navy mb-1.5">{t('verifyForm.shipAddress')}</label>
-            <textarea aria-label={t('verifyForm.shipAddress')}
-              value={shippingAddress}
-              onChange={(e) => setShippingAddress(e.target.value)}
-              rows={3}
-              placeholder={t('verifyForm.shipAddressPlaceholder')}
-              className={`${inputClass} resize-y`}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-navy mb-1.5">{t('verifyForm.postalCode')}</label>
-            <input aria-label={t('verifyForm.postalCode')}
-              value={postalCode}
-              onChange={(e) => setPostalCode(e.target.value)}
-              inputMode="numeric"
-              maxLength={5}
-              placeholder="95371"
-              className={inputClass}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium text-navy mb-1.5">
-                {t('verifyForm.recipientName')} <span className="font-normal text-navy-soft">{t('verifyForm.optional')}</span>
-              </label>
-              <input aria-label={t('verifyForm.recipientName')}
-                value={recipientName}
-                onChange={(e) => setRecipientName(e.target.value)}
-                placeholder={fullName.trim() || t('verifyForm.sameAsApplicant')}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-navy mb-1.5">
-                {t('verifyForm.recipientPhone')} <span className="font-normal text-navy-soft">{t('verifyForm.optional')}</span>
-              </label>
-              <input aria-label={t('verifyForm.recipientPhone')}
-                value={recipientPhone}
-                onChange={(e) => setRecipientPhone(e.target.value)}
-                inputMode="tel"
-                placeholder={phone.trim() || t('verifyForm.sameAsApplicant')}
-                className={inputClass}
-              />
-            </div>
-          </div>
-          <p className="text-2xs text-navy-soft leading-relaxed">
-            {t('verifyForm.recipientNote')}
-          </p>
         </div>
 
         <label className="flex cursor-pointer items-start gap-3">

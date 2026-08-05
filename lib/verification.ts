@@ -17,10 +17,10 @@
  */
 export const AGREEMENT = {
   pengelola: {
-    // 1.2: destinasi tidak lagi ditetapkan admin dari daftar yang sudah ada —
-    // pengaju menuliskan sendiri destinasinya dan dokumennya dibuat otomatis
-    // saat pengajuan disetujui. Pasal 1 dan 3 ikut berubah, jadi versinya naik.
-    version: "1.2",
+    // 1.3: alamat pengiriman tidak lagi diminta di formulir — pengirimannya
+    // dikoordinasikan lewat WhatsApp setelah pengajuan disetujui. Pasal 5
+    // ayat 2 ikut berubah, jadi versinya naik.
+    version: "1.3",
     path: "/syarat-pengelola",
     label: "Perjanjian Pengelola",
   },
@@ -52,31 +52,8 @@ export interface RoleRequestInput {
   landRights?: string;
   /** Centang pernyataan berhak mengelola lokasi yang diajukan. */
   declaredRights?: boolean;
-  /** Alamat kirim paket sensor. */
-  shippingAddress?: string;
-  postalCode?: string;
-  /** Penerima paket bila bukan pendaftar sendiri; kosong = pakai pendaftar. */
-  recipientName?: string;
-  recipientPhone?: string;
   /** Centang Perjanjian Pengelola. */
   agreed?: boolean;
-}
-
-/**
- * Penerima paket yang sebenarnya. Penerima terpisah itu opsional — kalau kosong
- * paketnya jatuh ke pendaftar. Dipusatkan di sini supaya kartu status pengaju
- * dan panel admin tidak pernah menampilkan penerima yang berbeda.
- */
-export function packageRecipient(v: {
-  fullName: string;
-  phone: string;
-  recipientName?: string;
-  recipientPhone?: string;
-}) {
-  return {
-    name: v.recipientName?.trim() || v.fullName,
-    phone: v.recipientPhone?.trim() || v.phone,
-  };
 }
 
 /**
@@ -110,14 +87,6 @@ export function validateRoleRequest(input: RoleRequestInput): string | null {
   }
   if (!input.landRights) {
     return "verifyForm.landRightsRequired";
-  }
-  if (!input.shippingAddress?.trim()) {
-    return "verifyForm.shippingRequired";
-  }
-  // Ekspedisi menolak kode pos yang tidak lima angka; ditahan di sini supaya
-  // paketnya tidak gagal kirim setelah pengajuan disetujui.
-  if (!/^\d{5}$/.test(input.postalCode?.trim() ?? "")) {
-    return "verifyForm.postalCodeInvalid";
   }
   // Pernyataan hak diperiksa sebelum persetujuan perjanjian: yang satu soal
   // fakta pengaju, yang lain soal isi dokumen — jangan digabung jadi satu.

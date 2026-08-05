@@ -11,6 +11,7 @@ import {
   type Destination,
   type Review,
 } from '@/lib/firestore';
+import { destinationCameraIds } from '@/lib/destination';
 import { stationPath } from '@/lib/realtime';
 import { formatIDR, waLink } from '@/lib/format';
 import TopNav from '@/components/desktop/TopNav';
@@ -360,8 +361,11 @@ export default function DestinationDetail() {
             </section>
 
             {/* Pantau langsung — kamera (kalau di-link & boleh ditonton) + sensor IoT */}
-            {(dest.cameraId || stationPath(dest)) && (
-              <LiveMonitorPanel cameraDocId={dest.cameraId} sensorPath={stationPath(dest)} />
+            {(destinationCameraIds(dest).length > 0 || stationPath(dest)) && (
+              <LiveMonitorPanel
+                cameraDocIds={destinationCameraIds(dest)}
+                sensorPath={stationPath(dest)}
+              />
             )}
 
             {/* Ulasan pengunjung */}

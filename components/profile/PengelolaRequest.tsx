@@ -6,7 +6,8 @@ import type { User } from 'firebase/auth';
 import { db } from '@/lib/firebase';
 import type { UserRole } from '@/lib/useAuth';
 import { type RoleVerification } from '@/lib/firestore';
-import { packageRecipient } from '@/lib/verification';
+import { ADMIN_EMAIL, ADMIN_WA } from '@/lib/contact';
+import { waLink } from '@/lib/format';
 import { useLang } from '@/lib/useLang';
 import VerificationForm from '@/components/cameras/VerificationForm';
 
@@ -42,6 +43,9 @@ export default function PengelolaRequest({
   if (role === 'pengelola' || role === 'admin') return null;
 
   const pending = verification?.status === 'pending';
+  // null kalau ADMIN_WA masih kosong — kartunya jatuh ke email, bukan ke
+  // tombol WhatsApp yang tidak menuju ke mana-mana.
+  const adminWa = waLink(ADMIN_WA, t('verify.contactAdminMessage'));
 
   const wrap = (children: React.ReactNode) => (
     <div className="card overflow-hidden mb-4">
@@ -81,22 +85,27 @@ export default function PengelolaRequest({
             </p>
           )}
         </div>
-        {verification!.shippingAddress && (
-          <div className="mt-4 rounded-md border border-shore-200 bg-shore-50/60 p-4">
-            <h3 className="text-xs font-medium text-navy">{t('verify.shipTo')}</h3>
-            <p className="text-sm text-navy mt-1.5 leading-relaxed">
-              {verification!.shippingAddress}
-              {verification!.postalCode && ` ${verification!.postalCode}`}
-            </p>
-            <p className="text-2xs text-navy-soft mt-2">
-              {t('verify.recipient')} {packageRecipient(verification!).name} ·{' '}
-              {packageRecipient(verification!).phone}
-            </p>
-            <p className="text-2xs text-navy-soft mt-2 leading-relaxed">
-              {t('verify.wrongAddress')}
-            </p>
-          </div>
-        )}
+        {/* Sisa prosesnya — pembuktian hak kelola, pembelian dan pengiriman
+            paket sensor — diurus lewat WhatsApp, bukan lewat formulir. Jadi
+            nomor admin harus ada di kartu ini, bukan cuma di halaman bantuan. */}
+        <div className="mt-4 rounded-md border border-shore-200 bg-shore-50/60 p-4">
+          <h3 className="text-xs font-medium text-navy">{t('verify.contactAdmin')}</h3>
+          <p className="text-2xs text-navy-soft mt-1.5 leading-relaxed">
+            {t('verify.contactAdminHint')}
+          </p>
+          {adminWa ? (
+            <a
+              href={adminWa}
+              target="_blank"
+              rel="noopener"
+              className="btn-primary mt-3 inline-flex px-5 py-2.5 text-xs"
+            >
+              {t('verify.contactAdminCta')} · {ADMIN_WA}
+            </a>
+          ) : (
+            <p className="mt-3 text-sm text-navy">{ADMIN_EMAIL}</p>
+          )}
+        </div>
       </>
     );
   }

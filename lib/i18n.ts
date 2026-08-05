@@ -56,6 +56,10 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Destinasi selam dan pesisir pilihan.",
     en: "Curated dive and coastal destinations.",
   },
+  "footer.account": { id: "Akun", en: "Account" },
+  "footer.help": { id: "Bantuan", en: "Help" },
+  "footer.contact": { id: "Kontak", en: "Contact" },
+  "footer.becomeManager": { id: "Jadi Pengelola", en: "Become a Manager" },
 
   // ── Profil & menu ──
   "profile.title": { id: "Profil", en: "Profile" },
@@ -364,6 +368,9 @@ const DICT: Record<string, Record<Lang, string>> = {
     en: "Live camera & real-time environmental sensors",
   },
   "monitor.subtitleCamera": { id: "Kamera live destinasi", en: "Live destination camera" },
+  "monitor.prevCamera": { id: "Kamera sebelumnya", en: "Previous camera" },
+  "monitor.nextCamera": { id: "Kamera berikutnya", en: "Next camera" },
+  "monitor.goToCamera": { id: "Tampilkan kamera {n}", en: "Show camera {n}" },
   "monitor.subtitleSensor": { id: "Sensor lingkungan real-time", en: "Real-time environmental sensors" },
   "monitor.airTemp": { id: "Suhu Udara", en: "Air Temperature" },
   "monitor.humidity": { id: "Kelembapan Udara", en: "Humidity" },
@@ -429,25 +436,6 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Tidak ada berkas yang perlu diunggah di sini. Admin menghubungimu lewat WhatsApp untuk memastikannya sebelum pengajuan disetujui.",
     en: "No documents to upload here. An admin contacts you on WhatsApp to confirm before approving.",
   },
-  "verifyForm.shipping": { id: "Pengiriman Paket Sensor", en: "Sensor Package Delivery" },
-  "verifyForm.shippingHint": {
-    id: "Paket sensor dikirim ke alamatmu, tidak dipasang di tempat oleh petugas. Panduan pemasangan dan koordinasi jadwal dilakukan lewat WhatsApp ke nomor di atas.",
-    en: "The sensor package ships to your address; no technician installs it on site. Setup guidance and scheduling happen over WhatsApp on the number above.",
-  },
-  "verifyForm.shipAddress": { id: "Alamat Pengiriman", en: "Shipping Address" },
-  "verifyForm.shipAddressPlaceholder": {
-    id: "Jalan & no., RT/RW, kelurahan, kecamatan, kota/kabupaten, provinsi — sebutkan juga patokan terdekat",
-    en: "Street & number, neighbourhood, district, city/regency, province — include a nearby landmark",
-  },
-  "verifyForm.postalCode": { id: "Kode Pos", en: "Postal Code" },
-  "verifyForm.recipientName": { id: "Nama Penerima", en: "Recipient Name" },
-  "verifyForm.recipientPhone": { id: "No. HP Penerima", en: "Recipient Phone" },
-  "verifyForm.optional": { id: "(opsional)", en: "(optional)" },
-  "verifyForm.sameAsApplicant": { id: "Sama dengan pendaftar", en: "Same as applicant" },
-  "verifyForm.recipientNote": {
-    id: "Kosongkan kolom penerima kalau kamu sendiri yang menerima paketnya.",
-    en: "Leave the recipient fields empty if you're receiving the package yourself.",
-  },
   "verifyForm.declareRights": {
     id: "Saya menyatakan berhak mengelola lokasi ini atas dasar yang saya pilih di atas, data yang saya isi benar, dan saya sanggup mengurus perizinan serta keselamatan pengunjung di sana. Saya paham pengajuan bisa ditolak atau dicabut bila pernyataan ini keliru.",
     en: "I declare that I am entitled to manage this site on the basis selected above, that the details I entered are true, and that I can handle permits and visitor safety there. I understand the request may be rejected or revoked if this declaration is wrong.",
@@ -482,11 +470,6 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Pilih dasar hakmu mengelola lokasi itu.",
     en: "Choose the basis for your right to manage that site.",
   },
-  "verifyForm.shippingRequired": {
-    id: "Alamat pengiriman paket sensor wajib diisi.",
-    en: "A shipping address for the sensor package is required.",
-  },
-  "verifyForm.postalCodeInvalid": { id: "Kode pos harus 5 angka.", en: "Postal code must be 5 digits." },
   "verifyForm.declareRightsRequired": {
     id: "Kamu harus menyatakan berhak mengelola lokasi yang diusulkan.",
     en: "You must declare you're entitled to manage the proposed site.",
@@ -633,11 +616,15 @@ const DICT: Record<string, Record<Lang, string>> = {
   "verify.phoneLabel": { id: "No. HP:", en: "Phone:" },
   "verify.orgLabel": { id: "Instansi:", en: "Organisation:" },
   "verify.destLabel": { id: "Destinasi:", en: "Destination:" },
-  "verify.shipTo": { id: "Paket sensor dikirim ke", en: "Sensor package ships to" },
-  "verify.recipient": { id: "a/n", en: "Attn:" },
-  "verify.wrongAddress": {
-    id: "Alamat salah? Ajukan ulang setelah pengajuan ini selesai ditinjau, atau hubungi admin lewat WhatsApp.",
-    en: "Wrong address? Submit again once this request has been reviewed, or reach an admin on WhatsApp.",
+  "verify.contactAdmin": { id: "Hubungi admin Nusa", en: "Contact a Nusa admin" },
+  "verify.contactAdminHint": {
+    id: "Selebihnya dibicarakan lewat WhatsApp: pembuktian dasar hakmu, lalu paket sensor — isinya, harganya, dan ke mana dikirim. Hubungi admin di nomor ini supaya pengajuanmu lebih cepat ditinjau.",
+    en: "The rest happens over WhatsApp: confirming your basis for managing the site, then the sensor package — what's in it, what it costs, and where it ships. Reach an admin on this number to get your request reviewed sooner.",
+  },
+  "verify.contactAdminCta": { id: "Chat admin", en: "Chat with an admin" },
+  "verify.contactAdminMessage": {
+    id: "Halo admin Nusa, saya baru mengirim pengajuan jadi pengelola.",
+    en: "Hi Nusa admin, I've just submitted a request to become a manager.",
   },
 
   // ── Kontak dukungan ──
