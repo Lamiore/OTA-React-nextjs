@@ -107,13 +107,24 @@ service cloud.firestore {
           || request.auth.token.email in resource.data.get('viewers', [])
           || camUserRole() == 'admin'
         );
-      // Hanya pengelola/admin boleh mendaftarkan kamera miliknya sendiri, dan
-      // wajib berstatus 'pending' — validasi approve/reject hanya dari server
-      // VPS (Admin SDK, bypass rules). User tidak bisa menyetujui kameranya sendiri.
+      // Pendaftaran kamera sekarang milik admin saja, dan pemiliknya boleh orang
+      // lain: admin memilih destinasinya di form, lalu kameranya didaftarkan atas
+      // nama uid pengelola destinasi itu supaya muncul di Monitoring miliknya
+      // (panel itu query `where('ownerUid','==',uid)` — rules bukan filter, jadi
+      // kamera atas nama admin tidak akan pernah ikut terbawa ke sana).
+      //
+      // Status wajib 'pending': approve/reject eksklusif milik server VPS (Admin
+      // SDK, bypass rules), jadi tidak ada yang bisa menyetujui kameranya sendiri.
+      //
+      // ownerUid wajib string tak kosong. Tanpa itu, sekali saja klien salah
+      // mengirim '' (mis. destinasi tanpa pengelola), kameranya jadi milik
+      // siapa-siapa: tidak muncul di panel mana pun dan tidak bisa dihapus
+      // pemiliknya, karena tidak ada uid yang cocok.
       allow create: if request.auth != null
-        && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.status == 'pending'
-        && camUserRole() in ['pengelola', 'admin'];
+        && request.resource.data.ownerUid is string
+        && request.resource.data.ownerUid != ''
+        && camUserRole() == 'admin';
       allow delete: if request.auth != null
         && (resource.data.ownerUid == request.auth.uid || camUserRole() == 'admin');
       // Pemilik mengelola daftar penontonnya, dan HANYA itu. hasOnly() wajib:

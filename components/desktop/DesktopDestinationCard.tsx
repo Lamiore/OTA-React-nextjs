@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatIDR } from '@/lib/format';
 import { useLang } from '@/lib/useLang';
+import { stationPath, subscribeMonitoring, type SensorReading } from '@/lib/realtime';
 
 interface Props {
   id: string;
@@ -18,6 +20,11 @@ interface Props {
   onToggleSave?: () => void;
   /** Harga item termurah — tampil sebagai "Mulai dari Rp X". */
   priceFrom?: number;
+  /** Uid pengelola. Terisi = kartu ini dapat ringkasan sensor. */
+  managerUid?: string;
+  /** Dua field yang menentukan cabang RTDB sensor (lihat stationPath). */
+  hasMonitoring?: boolean;
+  stationId?: string;
 }
 
 function PinIcon() {
@@ -76,6 +83,68 @@ function TypographicPlate({ name, thumbColor }: { name: string; thumbColor: stri
   );
 }
 
+/**
+ * Ringkasan sensor di kartu destinasi berpengelola — tiga angka teratas dari
+ * paket sensor yang sama dengan yang dibaca LiveMonitorPanel di halaman
+ * destinasi, bukan sumber kedua yang bisa berbeda isi.
+ *
+ * Chip Live/Offline ikut umur data, bukan sekadar "langganan sudah tersambung":
+ * paket sensor yang mati membiarkan nilai terakhirnya tetap ada di RTDB, jadi
+ * tanpa cek umur kartu ini akan memajang angka dua minggu lalu seolah live.
+ */
+function SensorStrip({ path }: { path: string }) {
+  const { t } = useLang();
+  const [data, setData] = useState<SensorReading | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    setData(null);
+    return subscribeMonitoring(path, setData);
+  }, [path]);
+
+  // Tanpa detak ini, kartu yang sempat live tetap bertuliskan Live selamanya:
+  // onValue hanya menembak saat ada data baru, dan data baru justru yang berhenti.
+  useEffect(() => {
+    const i = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(i);
+  }, []);
+
+  const live = !!data?.updatedAt && now - data.updatedAt < 15000;
+  const num = (v: number | undefined) =>
+    typeof v === 'number' && !Number.isNaN(v) ? v.toFixed(1) : '--';
+
+  const items = [
+    { label: t('monitor.waterTemp'), value: num(data?.tempDS18), unit: '°C' },
+    { label: t('monitor.airTemp'), value: num(data?.tempDHT), unit: '°C' },
+    { label: t('card.weather'), value: data?.rainStatus ?? '--', unit: '' },
+  ];
+
+  return (
+    <div className="rounded-sm border border-shore-200/80 bg-shore-50 px-3.5 py-3">
+      <div className="mb-2.5 flex items-center justify-between gap-2">
+        <span className="text-2xs font-medium text-navy-soft">{t('card.sensorTitle')}</span>
+        <span className="inline-flex items-center gap-1.5 text-2xs font-medium text-navy-soft">
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${live ? 'bg-teal-500 motion-safe:animate-pulse' : 'bg-shore-300'}`}
+          />
+          {live ? 'Live' : 'Offline'}
+        </span>
+      </div>
+      <div className="tabular grid grid-cols-3 gap-2">
+        {items.map((m) => (
+          <div key={m.label} className="min-w-0">
+            <p className="truncate text-sm font-semibold leading-tight text-navy">
+              {m.value}
+              {m.unit && <span className="ml-0.5 text-2xs font-normal text-navy-soft">{m.unit}</span>}
+            </p>
+            <p className="mt-0.5 truncate text-2xs text-navy-soft">{m.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function DesktopDestinationCard({
   id,
   name,
@@ -88,9 +157,16 @@ export default function DesktopDestinationCard({
   saved,
   onToggleSave,
   priceFrom,
+  managerUid,
+  hasMonitoring,
+  stationId,
 }: Props) {
   const router = useRouter();
   const { t } = useLang();
+  // Kartu berpengelola selalu menyebut sensornya, termasuk yang stasiunnya
+  // belum terpasang — kalau baris ini hilang, kartunya masuk bagian
+  // "Destinasi Terpantau" tanpa satu pun tanda kenapa dia beda.
+  const sensorPath = managerUid ? stationPath({ hasMonitoring, stationId }) : null;
 
   return (
     <div
@@ -162,6 +238,15 @@ export default function DesktopDestinationCard({
             </span>
           ))}
         </div>
+
+        {managerUid &&
+          (sensorPath ? (
+            <SensorStrip path={sensorPath} />
+          ) : (
+            <p className="rounded-sm border border-dashed border-shore-200 px-3.5 py-2.5 text-2xs text-navy-soft">
+              {t('card.sensorNone')}
+            </p>
+          ))}
 
         {/* Footer: harga termurah + CTA */}
         <div className="mt-1 flex items-center justify-between gap-3 border-t border-shore-200 pt-4">

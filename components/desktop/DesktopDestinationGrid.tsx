@@ -21,15 +21,6 @@ const FILTER_KEYS: Record<string, string> = {
 
 const gridClass = 'grid grid-cols-1 gap-5 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 
-function SearchIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-navy-soft shrink-0">
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-  );
-}
-
 /** Harga item termurah destinasi — undefined bila belum ada daftar harga. */
 function priceFrom(dest: Destination): number | undefined {
   const prices = getPriceItems(dest)
@@ -67,15 +58,14 @@ function EmptyState() {
 }
 
 export default function DesktopDestinationGrid() {
-  // Seed dari URL (?q & ?loc) yang di-set hero search, lalu ikut berubah bila
-  // hero mencari lagi. Ketikan di kotak search grid sendiri tetap lokal.
+  // Pencarian sepenuhnya dari URL (?q) yang di-set search hero — grid tidak
+  // punya kotak search sendiri lagi. ?loc masih menyetir chip wilayah.
   const searchParams = useSearchParams();
   const qParam = searchParams.get('q') ?? '';
   const locParam = searchParams.get('loc') ?? 'Semua';
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState(locParam);
-  const [search, setSearch] = useState(qParam);
   const [ratings, setRatings] = useState<Record<string, RatingSummary>>({});
   const { user, savedIds, toggle } = useSavedDestinations();
   const { t } = useLang();
@@ -86,9 +76,8 @@ export default function DesktopDestinationGrid() {
   );
 
   useEffect(() => {
-    setSearch(qParam);
     setActiveFilter(locParam);
-  }, [qParam, locParam]);
+  }, [locParam]);
 
   // ?loc bisa menyebut wilayah yang sudah tidak ada lagi di koleksi. Dulu daftar
   // chip-nya hardcoded jadi chipnya selalu ada; sekarang filter seperti itu aktif
@@ -133,7 +122,7 @@ export default function DesktopDestinationGrid() {
     fetchDestinations(activeFilter);
   }, [activeFilter, fetchDestinations]);
 
-  const term = search.trim().toLowerCase();
+  const term = qParam.trim().toLowerCase();
   const shown = term
     ? destinations.filter((d) =>
         [d.name, d.location, ...(d.tags ?? [])].join(' ').toLowerCase().includes(term)
@@ -144,9 +133,19 @@ export default function DesktopDestinationGrid() {
   // permukaan discovery per-wilayah (Ecosystem Index).
   const hasFilter = term !== '' || activeFilter !== 'Semua';
 
-  const byLocation = useMemo(() => {
+  // Destinasi berpengelola naik ke bagiannya sendiri di atas. Sengaja truthy,
+  // bukan `!== undefined`: dokumen yang belum punya pengelola menyimpan string
+  // kosong, jadi cek keberadaan field akan mengangkat seluruh koleksi ke sana.
+  const managed = shown.filter((d) => !!d.managerUid);
+  const others = shown.filter((d) => !d.managerUid);
+
+  // Dari `others`, bukan seluruh koleksi — kalau tidak, destinasi berpengelola
+  // muncul dua kali: sekali di bagian atas, sekali lagi di bawah wilayahnya.
+  // useMemo dilepas bareng itu: `others` array baru tiap render, jadi memo-nya
+  // tidak pernah kena — dan pengelompokan tujuh dokumen tidak butuh cache.
+  const byLocation = (() => {
     const m = new Map<string, Destination[]>();
-    for (const d of destinations) {
+    for (const d of others) {
       const k = (d.location || '').trim() || t('filter.other');
       const arr = m.get(k);
       if (arr) arr.push(d);
@@ -155,7 +154,12 @@ export default function DesktopDestinationGrid() {
     return Array.from(m.entries()).sort(
       (a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0])
     );
-  }, [destinations, t]);
+  })();
+
+  // Lede menghitung yang benar-benar tampil, bukan byLocation: sejak destinasi
+  // berpengelola punya bagian sendiri, byLocation tidak lagi memuat semuanya —
+  // mencari "bahoi" akan berbunyi "di 0 wilayah" padahal kartunya ada di layar.
+  const regionCount = new Set(shown.map((d) => (d.location || '').trim())).size;
 
   const renderCard = (dest: Destination, i: number) => (
     <div key={dest.id} className="animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
@@ -173,28 +177,16 @@ export default function DesktopDestinationGrid() {
     <section id="destinasi" className="scroll-mt-16 bg-shore-50">
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-10 lg:py-20">
         {/* Kepala bagian tanpa eyebrow: judulnya sendiri yang jadi kepala. */}
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
-          <div className="max-w-xl">
-            <h2 className="section-title">{t('home.sectionTitle')}</h2>
-            <p className="section-lede">
-              {loading
-                ? t('home.loadingDest')
-                : t('home.gridLede', {
-                    count: destinations.length,
-                    regions: byLocation.length,
-                  })}
-            </p>
-          </div>
-          <div className="flex w-full items-center gap-2.5 rounded-sm border border-shore-200 bg-surface px-4 py-2.5 transition-colors duration-micro ease-out focus-within:border-teal-600 sm:w-72">
-            <SearchIcon />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('home.searchShort')}
-              aria-label={t('home.searchLabel')}
-              className="w-full min-w-0 bg-transparent text-sm text-navy placeholder:text-navy-soft outline-none"
-            />
-          </div>
+        <div className="mb-8 max-w-xl">
+          <h2 className="section-title">{t('home.sectionTitle')}</h2>
+          <p className="section-lede">
+            {loading
+              ? t('home.loadingDest')
+              : t('home.gridLede', {
+                  count: shown.length,
+                  regions: regionCount,
+                })}
+          </p>
         </div>
 
         {/* Filter chips. Wilayahnya menyusul dari Firestore, jadi selama daftar
@@ -218,6 +210,19 @@ export default function DesktopDestinationGrid() {
               ))}
         </div>
 
+        {/* Destinasi berpengelola — di atas, dengan ringkasan sensornya sendiri. */}
+        {!loading && managed.length > 0 && (
+          <div className="mb-14">
+            <div className="mb-5 border-b border-shore-200 pb-3">
+              <h3 className="font-serif text-xl font-semibold tracking-tight text-navy">
+                {t('home.managedTitle')}
+              </h3>
+              <span className="text-xs text-navy-soft">{t('home.managedLede')}</span>
+            </div>
+            <div className={gridClass}>{managed.map(renderCard)}</div>
+          </div>
+        )}
+
         {/* Body */}
         {loading ? (
           <div className={gridClass}>
@@ -225,12 +230,13 @@ export default function DesktopDestinationGrid() {
               <SkeletonCard key={i} />
             ))}
           </div>
+        ) : shown.length === 0 ? (
+          // Dikunci ke `shown`, bukan `others`: hasil pencarian yang cuma berisi
+          // destinasi berpengelola sudah tampil di bagian atas, jadi "tidak
+          // ditemukan" di bawahnya akan membantah kartu yang sedang terlihat.
+          <EmptyState />
         ) : hasFilter ? (
-          shown.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <div className={gridClass}>{shown.map(renderCard)}</div>
-          )
+          others.length > 0 && <div className={gridClass}>{others.map(renderCard)}</div>
         ) : (
           <div className="space-y-14">
             {byLocation.map(([loc, items]) => (

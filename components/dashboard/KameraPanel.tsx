@@ -85,7 +85,7 @@ export default function KameraPanel({ role, uid }: Props) {
           <div className="card p-8 text-center">
             <p className="text-sm text-navy-soft">
               {isPengelola
-                ? 'Kamu belum mendaftarkan kamera. Daftarkan lewat menu Kamera di profil.'
+                ? 'Belum ada kamera untukmu. Hubungi admin untuk mendaftarkan kamera destinasimu.'
                 : 'Belum ada kamera terdaftar.'}
             </p>
           </div>

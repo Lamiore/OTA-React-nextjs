@@ -297,6 +297,11 @@ const DICT: Record<string, Record<Lang, string>> = {
   "home.location": { id: "Lokasi", en: "Location" },
   "home.allLocations": { id: "Semua lokasi", en: "All locations" },
   "home.sectionTitle": { id: "Semua Destinasi", en: "All Destinations" },
+  "home.managedTitle": { id: "Destinasi Terpantau", en: "Monitored Destinations" },
+  "home.managedLede": {
+    id: "Dikelola pengelola setempat, kondisi lapangannya terbaca langsung dari sensor",
+    en: "Run by an on-site manager, with field conditions read straight from sensors",
+  },
   "home.popular": { id: "Destinasi Populer", en: "Popular Destinations" },
   "home.seeAllShort": { id: "Lihat Semua", en: "See All" },
   "home.loadingDest": { id: "Memuat destinasi…", en: "Loading destinations…" },
@@ -325,6 +330,13 @@ const DICT: Record<string, Record<Lang, string>> = {
   "card.save": { id: "Simpan destinasi", en: "Save destination" },
   "card.unsave": { id: "Hapus dari tersimpan", en: "Remove from saved" },
   "card.priceFrom": { id: "Mulai dari", en: "From" },
+  "card.sensorTitle": { id: "Sensor lingkungan", en: "Environmental sensors" },
+  // Bukan monitor.weather: label panjangnya terpotong di kolom sempit kartu.
+  "card.weather": { id: "Cuaca", en: "Weather" },
+  "card.sensorNone": {
+    id: "Stasiun sensor belum terpasang di destinasi ini",
+    en: "No sensor station installed at this destination yet",
+  },
 
   // ── Asisten chat ──
   "chat.title": { id: "Asisten Nusa", en: "Nusa Assistant" },
@@ -481,7 +493,15 @@ const DICT: Record<string, Record<Lang, string>> = {
 
   // ── Monitoring / kamera ──
   "camera.title": { id: "Kamera", en: "Cameras" },
-  "camera.lede": { id: "Daftarkan dan pantau kamera milikmu", en: "Register and monitor your own cameras" },
+  "camera.lede": {
+    id: "Daftarkan dan pantau semua kamera terdaftar",
+    en: "Register and monitor every registered camera",
+  },
+  "camera.owner": { id: "Pemilik: {name}", en: "Owner: {name}" },
+  "camera.loadFailed": {
+    id: "Daftar kamera gagal dimuat. Coba muat ulang halaman.",
+    en: "Couldn't load the camera list. Try reloading the page.",
+  },
   "camera.ledeViewer": {
     id: "Kamera yang boleh kamu tonton muncul di halaman destinasinya.",
     en: "Cameras you're allowed to watch appear on their destination page.",
@@ -494,6 +514,14 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Belum ada kamera. Tambahkan kamera pertamamu.",
     en: "No cameras yet. Add your first one.",
   },
+  "camera.ledeManager": {
+    id: "Pantau kamera destinasi yang kamu kelola",
+    en: "Monitor the cameras at the destination you manage",
+  },
+  "camera.emptyManager": {
+    id: "Belum ada kamera terdaftar untukmu. Hubungi admin untuk mendaftarkan kamera destinasimu.",
+    en: "No cameras registered for you yet. Contact an admin to register your destination's camera.",
+  },
   "camera.addTitle": { id: "Tambah Kamera", en: "Add Camera" },
   "camera.addHint": {
     id: "Daftarkan kamera dari sini. Admin akan memvalidasi di server, lalu QR untuk siaran dari HP muncul otomatis di daftar di atas.",
@@ -502,12 +530,16 @@ const DICT: Record<string, Record<Lang, string>> = {
   "camera.nameLabel": { id: "Nama Kamera", en: "Camera Name" },
   "camera.namePlaceholder": { id: "Misal: Kamera Dermaga Utama", en: "e.g. Main Jetty Camera" },
   "camera.nameRequired": { id: "Nama kamera wajib diisi.", en: "Camera name is required." },
-  "camera.regionLabel": { id: "Wilayah", en: "Region" },
-  "camera.regionPlaceholder": { id: "Pilih wilayah…", en: "Choose a region…" },
-  "camera.regionRequired": { id: "Pilih wilayah kamera.", en: "Choose a region for the camera." },
-  "camera.regionHint": {
-    id: "Wilayah menentukan pengelola mana yang bisa memantau kamera ini. Detail titik pasang taruh di nama kamera.",
-    en: "The region decides which manager can monitor this camera. Put the exact spot in the camera name.",
+  "camera.destLabel": { id: "Destinasi", en: "Destination" },
+  "camera.destPlaceholder": { id: "Pilih destinasi…", en: "Choose a destination…" },
+  "camera.destRequired": { id: "Pilih destinasi kamera.", en: "Choose a destination for the camera." },
+  "camera.destHint": {
+    id: "Kamera langsung masuk ke Monitoring pengelola destinasi ini dan tertaut ke halamannya. Detail titik pasang taruh di nama kamera.",
+    en: "The camera goes straight to this destination's manager Monitoring and is linked to its page. Put the exact spot in the camera name.",
+  },
+  "camera.destNoManager": {
+    id: "Destinasi ini belum punya pengelola — kameranya sementara jadi milikmu. Daftarkan ulang setelah pengelolanya ditetapkan.",
+    en: "This destination has no manager yet — the camera stays yours for now. Register it again once a manager is assigned.",
   },
   "camera.saveFailed": { id: "Gagal menyimpan kamera. Coba lagi.", en: "Couldn't save the camera. Please try again." },
   "camera.deleteTitle": { id: "Hapus Kamera?", en: "Delete Camera?" },

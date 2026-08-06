@@ -19,6 +19,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import { normalizeViewerEmail } from "./format";
+import { destinationCameraIds, type DestinationCameras } from "./destination";
 
 // ── Destinations ──
 
@@ -191,6 +192,20 @@ export function subscribeUsers(callback: (users: AppUser[]) => void) {
       snap.docs.map((d) => ({ uid: d.id, ...d.data() } as AppUser))
     );
   });
+}
+
+/**
+ * Satu dokumen pengguna, atau null kalau tidak ada. Dipakai form kamera admin
+ * untuk mengisi nama & email pemilik dari uid pengelola destinasi — sekali baca,
+ * bukan langganan seluruh koleksi users cuma untuk satu nama.
+ *
+ * Rules users/{uid} hanya mengizinkan pemilik dokumen dan admin; pemanggil di
+ * luar dua itu akan kena permission-denied, bukan dapat null.
+ */
+export async function getUser(uid: string): Promise<AppUser | null> {
+  if (!db) return null;
+  const snap = await getDoc(doc(db, "users", uid));
+  return snap.exists() ? ({ uid: snap.id, ...snap.data() } as AppUser) : null;
 }
 
 export async function updateUserRole(uid: string, role: AppUser["role"]) {
@@ -435,17 +450,37 @@ export async function removeCameraViewer(cameraDocId: string, email: string) {
  * Daftarkan kamera dari website dengan status "pending". Server VPS (admin)
  * yang memvalidasi approve/reject; QR siaran muncul di website setelah disetujui.
  * Mengembalikan cameraId yang digenerate.
+ *
+ * `dest` diisi kalau kameranya langsung ditautkan ke sebuah destinasi. Dua
+ * tulisan itu satu batch supaya tidak pernah setengah jadi — kamera yang
+ * terdaftar tapi tidak tertaut hanya bisa diperbaiki lewat panel Destinasi.
  */
-export async function addCamera(data: NewCamera): Promise<string> {
+export async function addCamera(
+  data: NewCamera,
+  dest?: DestinationCameras & { id: string }
+): Promise<string> {
   if (!db) return "";
   const cameraId = genCameraId();
-  await addDoc(collection(db, "cameras"), {
+  const camRef = doc(collection(db, "cameras"));
+  const batch = writeBatch(db);
+  batch.set(camRef, {
     ...data,
     source: data.source ?? "push",
     cameraId,
     status: "pending",
     createdAt: serverTimestamp(),
   });
+  if (dest) {
+    // Kamera lama destinasi ikut ditulis ulang, bukan cuma yang baru: destinasi
+    // bentuk lama menyimpan kameranya di `cameraId` tunggal, dan arrayUnion yang
+    // hanya berisi id baru akan membuat `cameraIds` ada tapi tanpa kamera lama —
+    // destinationCameraIds() memenangkan cameraIds, jadi kamera lamanya hilang
+    // dari halaman destinasi tanpa pesan apa pun.
+    batch.update(doc(db, "destinations", dest.id), {
+      cameraIds: arrayUnion(...destinationCameraIds(dest), camRef.id),
+    });
+  }
+  await batch.commit();
   return cameraId;
 }
 

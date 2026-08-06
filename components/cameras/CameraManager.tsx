@@ -8,7 +8,8 @@ import {
   addCamera,
   cameraStatus,
   deleteCamera,
-  distinctLocations,
+  getUser,
+  subscribeAllCameras,
   subscribeCameraServerUrl,
   subscribeDestinations,
   subscribeMyCameras,
@@ -29,16 +30,27 @@ function TrashIcon() {
   );
 }
 
-export default function CameraManager({ user }: { user: User }) {
+/**
+ * isAdmin memutuskan dua hal sekaligus, dan memang satu hal yang sama: admin
+ * melihat seluruh kamera terdaftar dan boleh mendaftarkan yang baru; pengelola
+ * hanya melihat kamera atas namanya dan tidak punya form. Perannya sendiri
+ * dibaca CameraSection, bukan di sini, supaya aturannya tidak dobel.
+ *
+ * Sejak kamera didaftarkan atas nama pengelola, daftar "milikku" tidak lagi
+ * berguna buat admin — kamera yang baru saja dia daftarkan pemiliknya orang
+ * lain, jadi halaman ini akan selalu kosong untuknya.
+ */
+export default function CameraManager({ user, isAdmin = true }: { user: User; isAdmin?: boolean }) {
   const { t } = useLang();
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
-  const [regions, setRegions] = useState<string[]>([]);
+  const [loadError, setLoadError] = useState(false);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [serverUrl, setServerUrl] = useState('');
 
-  // Form tambah kamera — cukup nama + wilayah; ID stream digenerate otomatis.
+  // Form tambah kamera — nama + destinasi; ID stream digenerate otomatis.
   const [name, setName] = useState('');
-  const [location, setLocation] = useState('');
+  const [destId, setDestId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -51,22 +63,43 @@ export default function CameraManager({ user }: { user: User }) {
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    const unsub = subscribeMyCameras(user.uid, (data) => {
+    const handle = (data: Camera[]) => {
       setCameras(data);
       setLoading(false);
-    });
+    };
+    // Callback error wajib (pola KameraPanel): tanpa ini permission-denied —
+    // mis. rules belum ke-deploy — membiarkan skeleton berputar selamanya.
+    const onError = () => {
+      setLoadError(true);
+      setLoading(false);
+    };
+    const unsub = isAdmin
+      ? subscribeAllCameras(handle, onError)
+      : subscribeMyCameras(user.uid, handle, onError);
     return () => unsub();
-  }, [user.uid]);
+  }, [isAdmin, user.uid]);
 
   useEffect(() => {
     const unsub = subscribeDestinations((data: Destination[]) =>
-      setRegions(distinctLocations(data)),
+      setDestinations([...data].sort((a, b) => a.name.localeCompare(b.name))),
     );
     return () => unsub();
   }, []);
 
   useEffect(() => subscribeCameraServerUrl(setServerUrl), []);
 
+  const dest = destinations.find((d) => d.id === destId);
+
+  /**
+   * Kamera didaftarkan atas nama pengelola destinasinya, bukan atas nama admin
+   * yang mengisi form. Itu satu-satunya yang membuatnya muncul di Monitoring
+   * pengelola: panel itu bertanya `where('ownerUid','==',uid)` — rules tidak
+   * bisa dipakai menyaring, jadi kamera milik admin tidak akan pernah ikut
+   * terbawa ke sana meski destinasinya benar.
+   *
+   * Destinasi yang belum punya pengelola tetap boleh: kameranya sementara milik
+   * admin, dan tinggal didaftarkan ulang setelah pengelolanya ditetapkan.
+   */
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     const nm = name.trim();
@@ -74,22 +107,26 @@ export default function CameraManager({ user }: { user: User }) {
       setError('camera.nameRequired');
       return;
     }
-    if (!location) {
-      setError('camera.regionRequired');
+    if (!dest) {
+      setError('camera.destRequired');
       return;
     }
     setError('');
     setSaving(true);
     try {
-      await addCamera({
-        name: nm,
-        location: location,
-        ownerUid: user.uid,
-        ownerName: user.displayName ?? '',
-        ownerEmail: user.email ?? '',
-      });
+      const manager = dest.managerUid ? await getUser(dest.managerUid) : null;
+      await addCamera(
+        {
+          name: nm,
+          location: dest.location,
+          ownerUid: manager?.uid ?? user.uid,
+          ownerName: manager?.name ?? user.displayName ?? '',
+          ownerEmail: manager?.email ?? user.email ?? '',
+        },
+        dest,
+      );
       setName('');
-      setLocation('');
+      setDestId('');
     } catch {
       setError('camera.saveFailed');
     } finally {
@@ -160,9 +197,13 @@ export default function CameraManager({ user }: { user: User }) {
               <div className="h-3 w-1/2 rounded-full bg-shore-100" />
             </div>
           ))
+        ) : loadError ? (
+          <div className="card p-8 text-center">
+            <p className="text-sm text-navy-soft">{t('camera.loadFailed')}</p>
+          </div>
         ) : cameras.length === 0 ? (
           <div className="card p-8 text-center">
-            <p className="text-sm text-navy-soft">{t('camera.empty')}</p>
+            <p className="text-sm text-navy-soft">{t(isAdmin ? 'camera.empty' : 'camera.emptyManager')}</p>
           </div>
         ) : (
           cameras.map((c) => {
@@ -178,6 +219,14 @@ export default function CameraManager({ user }: { user: User }) {
                       ID: {c.cameraId}
                       {c.location && ` — ${c.location}`}
                     </p>
+                    {/* Pemilik hanya untuk admin: daftarnya berisi kamera semua
+                        pengelola, jadi tanpa baris ini dua kamera bernama sama
+                        dari destinasi berbeda tidak bisa dibedakan. */}
+                    {isAdmin && (
+                      <p className="text-2xs text-navy-soft mt-0.5 truncate">
+                        {t('camera.owner', { name: c.ownerName || c.ownerEmail || '—' })}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {status === 'pending' && (
@@ -248,6 +297,7 @@ export default function CameraManager({ user }: { user: User }) {
       </div>
 
       {/* Form tambah kamera */}
+      {isAdmin && (
       <div className="card p-6 mt-4">
         <h2 className="font-serif text-lg font-medium text-navy">{t('camera.addTitle')}</h2>
         <p className="text-xs text-navy-soft mt-1 leading-relaxed">{t('camera.addHint')}</p>
@@ -262,18 +312,23 @@ export default function CameraManager({ user }: { user: User }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-navy mb-1.5">{t('camera.regionLabel')}</label>
+            <label className="block text-xs font-medium text-navy mb-1.5">{t('camera.destLabel')}</label>
             <select
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              value={destId}
+              onChange={(e) => setDestId(e.target.value)}
               className={inputClass}
             >
-              <option value="">{t('camera.regionPlaceholder')}</option>
-              {regions.map((r) => (
-                <option key={r} value={r}>{r}</option>
+              <option value="">{t('camera.destPlaceholder')}</option>
+              {destinations.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} — {d.location}
+                </option>
               ))}
             </select>
-            <p className="text-2xs text-navy-soft mt-1.5">{t('camera.regionHint')}</p>
+            <p className="text-2xs text-navy-soft mt-1.5">{t('camera.destHint')}</p>
+            {dest && !dest.managerUid && (
+              <p className="text-2xs text-warn mt-1.5">{t('camera.destNoManager')}</p>
+            )}
           </div>
 
           {/* `error` menyimpan kunci kamus, bukan kalimat jadi. */}
@@ -288,6 +343,7 @@ export default function CameraManager({ user }: { user: User }) {
           </button>
         </form>
       </div>
+      )}
     </>
   );
 }

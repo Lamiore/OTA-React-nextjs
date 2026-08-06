@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthState } from '@/lib/useAuth';
 import { useLang } from '@/lib/useLang';
-import { useLocations } from '@/lib/useLocations';
 
 // H6 · Photographic fold — satu foto full-bleed memikul argumen pertama halaman,
 // tipografi duduk di atasnya condong ke kiri. Tanpa parallax (butuh listener
@@ -17,19 +16,18 @@ export default function HeroBanner() {
   const { user } = useAuthState();
   const router = useRouter();
   const { t } = useLang();
-  const locations = useLocations();
   const firstName = user?.displayName?.split(' ')[0];
   const [q, setQ] = useState('');
-  const [loc, setLoc] = useState('Semua');
   const heroImageUrl =
     'https://commons.wikimedia.org/wiki/Special:FilePath/Liang%20Beach%20Bunaken.JPG';
 
-  // Cari → seed URL param (?q & ?loc) lalu scroll ke grid #destinasi yang membacanya.
+  // Cari → seed URL param (?q) lalu scroll ke grid #destinasi yang membacanya.
+  // Wilayah tidak lagi ikut dari sini; chip di grid yang mengurusnya. Grid tetap
+  // membaca ?loc — tautan lama yang sudah tersebar masih memakai param itu.
   const submitSearch = (e: FormEvent) => {
     e.preventDefault();
     const params = new URLSearchParams();
     if (q.trim()) params.set('q', q.trim());
-    if (loc !== 'Semua') params.set('loc', loc);
     const qs = params.toString();
     router.replace(qs ? `/beranda?${qs}` : '/beranda', { scroll: false });
     document
@@ -55,7 +53,7 @@ export default function HeroBanner() {
           keterbacaan teks putih identik di tema terang maupun gelap. */}
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-ink/45 to-ink/85" />
 
-      <div className="mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 sm:pb-20 sm:pt-28 lg:px-10 lg:pb-24 lg:pt-36">
+      <div className="mx-auto max-w-7xl px-4 pb-12 pt-14 sm:px-6 sm:pb-14 sm:pt-20 lg:px-10 lg:pb-16 lg:pt-24">
         <div className="max-w-2xl">
           {/* Sapaan duduk di bagian scrim yang paling terang (from-ink/45), jadi
               putih 70% di ukuran sm praktis hilang di atas foto. Putih penuh +
@@ -85,7 +83,7 @@ export default function HeroBanner() {
           </p>
 
           {/* Cari destinasi + lokasi, langsung menyetir grid #destinasi. */}
-          <form onSubmit={submitSearch} className="reveal mt-8" style={step(3)}>
+          <form onSubmit={submitSearch} className="reveal mt-6" style={step(3)}>
             <div className="flex flex-col gap-2 rounded-md border border-white/20 bg-ink/70 p-2 backdrop-blur-md sm:flex-row sm:items-center sm:gap-0">
               <div className="flex flex-1 items-center gap-2.5 px-3 py-1.5">
                 <svg className="h-[18px] w-[18px] shrink-0 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -100,28 +98,6 @@ export default function HeroBanner() {
                   className="w-full min-w-0 bg-transparent text-sm text-white placeholder:text-white/55 outline-none"
                 />
               </div>
-
-              <div className="hidden h-7 w-px bg-white/20 sm:block" />
-
-              <label className="flex items-center gap-2 px-3 py-1.5">
-                <svg className="h-[18px] w-[18px] shrink-0 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-                <span className="sr-only">{t('home.location')}</span>
-                <select
-                  value={loc}
-                  onChange={(e) => setLoc(e.target.value)}
-                  aria-label={t('home.location')}
-                  className="cursor-pointer bg-transparent text-sm font-medium text-white outline-none [&>option]:text-navy"
-                >
-                  {['Semua', ...locations].map((l) => (
-                    <option key={l} value={l}>
-                      {l === 'Semua' ? t('home.allLocations') : l}
-                    </option>
-                  ))}
-                </select>
-              </label>
 
               <button type="submit" className="btn-primary px-6 py-2.5">
                 {t('common.search')}
