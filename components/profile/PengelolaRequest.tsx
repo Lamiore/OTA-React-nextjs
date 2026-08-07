@@ -14,6 +14,10 @@ import VerificationForm from '@/components/cameras/VerificationForm';
 /**
  * Pengajuan jadi pengelola dari Pengaturan. Tersimpan di
  * users/{uid}.verification; admin menyetujui dari dashboard Pengguna.
+ *
+ * Formulirnya tidak bisa dibuka sendiri: admin yang membuka tiket pendaftaran
+ * dari panel Pengguna (status 'invited'), baru kartunya berubah jadi formulir.
+ * Sebelum itu kartu ini cuma menunjukkan cara menghubungi admin.
  */
 export default function PengelolaRequest({
   user,
@@ -25,7 +29,6 @@ export default function PengelolaRequest({
   const { t } = useLang();
   const [verification, setVerification] = useState<RoleVerification | null>(null);
   const [loading, setLoading] = useState(true);
-  const [resubmitting, setResubmitting] = useState(false);
 
   useEffect(() => {
     if (!db) {
@@ -42,10 +45,7 @@ export default function PengelolaRequest({
   // Sudah pengelola/admin — tidak ada yang perlu diajukan.
   if (role === 'pengelola' || role === 'admin') return null;
 
-  const pending = verification?.status === 'pending';
-  // null kalau ADMIN_WA masih kosong — kartunya jatuh ke email, bukan ke
-  // tombol WhatsApp yang tidak menuju ke mana-mana.
-  const adminWa = waLink(ADMIN_WA, t('verify.contactAdminMessage'));
+  const status = verification?.status;
 
   const wrap = (children: React.ReactNode) => (
     <div className="card overflow-hidden mb-4">
@@ -57,6 +57,35 @@ export default function PengelolaRequest({
     </div>
   );
 
+  /* Sisa prosesnya — pembukaan tiket, pembuktian hak kelola, pembelian dan
+     pengiriman paket sensor — diurus lewat WhatsApp, bukan lewat formulir. Jadi
+     nomor admin harus ada di kartu ini, bukan cuma di halaman bantuan. Kalimat
+     ajakan dan pesan WhatsApp-nya beda per keadaan: yang belum punya tiket
+     memintanya dibuka, yang sudah mengirim menanyakan tinjauannya. */
+  const contactCard = (hintKey: string, messageKey: string) => {
+    // null kalau ADMIN_WA masih kosong — kartunya jatuh ke email, bukan ke
+    // tombol WhatsApp yang tidak menuju ke mana-mana.
+    const adminWa = waLink(ADMIN_WA, t(messageKey));
+    return (
+      <div className="mt-4 rounded-md border border-shore-200 bg-shore-50/60 p-4">
+        <h3 className="text-xs font-medium text-navy">{t('verify.contactAdmin')}</h3>
+        <p className="text-2xs text-navy-soft mt-1.5 leading-relaxed">{t(hintKey)}</p>
+        {adminWa ? (
+          <a
+            href={adminWa}
+            target="_blank"
+            rel="noopener"
+            className="btn-primary mt-3 inline-flex px-5 py-2.5 text-xs"
+          >
+            {t('verify.contactAdminCta')} · {ADMIN_WA}
+          </a>
+        ) : (
+          <p className="mt-3 text-sm text-navy">{ADMIN_EMAIL}</p>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return wrap(
       <div className="animate-pulse space-y-3">
@@ -66,7 +95,7 @@ export default function PengelolaRequest({
     );
   }
 
-  if (pending) {
+  if (status === 'pending') {
     return wrap(
       <>
         <span className="inline-flex rounded-sm bg-warn-soft px-2.5 py-1 text-2xs font-medium text-warn">
@@ -85,58 +114,39 @@ export default function PengelolaRequest({
             </p>
           )}
         </div>
-        {/* Sisa prosesnya — pembuktian hak kelola, pembelian dan pengiriman
-            paket sensor — diurus lewat WhatsApp, bukan lewat formulir. Jadi
-            nomor admin harus ada di kartu ini, bukan cuma di halaman bantuan. */}
-        <div className="mt-4 rounded-md border border-shore-200 bg-shore-50/60 p-4">
-          <h3 className="text-xs font-medium text-navy">{t('verify.contactAdmin')}</h3>
-          <p className="text-2xs text-navy-soft mt-1.5 leading-relaxed">
-            {t('verify.contactAdminHint')}
-          </p>
-          {adminWa ? (
-            <a
-              href={adminWa}
-              target="_blank"
-              rel="noopener"
-              className="btn-primary mt-3 inline-flex px-5 py-2.5 text-xs"
-            >
-              {t('verify.contactAdminCta')} · {ADMIN_WA}
-            </a>
-          ) : (
-            <p className="mt-3 text-sm text-navy">{ADMIN_EMAIL}</p>
-          )}
-        </div>
+        {contactCard('verify.contactAdminHint', 'verify.contactAdminMessage')}
       </>
     );
   }
 
-  if (verification?.status === 'rejected' && !resubmitting) {
-    return wrap(
-      <>
+  // Tiket dibuka admin — baru di sini formulirnya muncul. Data pengajuan lama
+  // ikut mengisi ulang kolomnya kalau tiketnya dibuka setelah pernah ditolak.
+  if (status === 'invited') {
+    return (
+      <div className="mb-4">
+        <VerificationForm
+          uid={user.uid}
+          initial={verification ?? undefined}
+          title={t('manager.title')}
+          description={t('manager.formDesc')}
+        />
+      </div>
+    );
+  }
+
+  // Belum punya tiket, atau pengajuan sebelumnya ditolak. Tidak ada tombol
+  // "ajukan ulang": tiket baru dibuka admin, bukan diambil sendiri.
+  return wrap(
+    <>
+      {status === 'rejected' && (
         <span className="inline-flex rounded-sm bg-danger-soft px-2.5 py-1 text-2xs font-medium text-danger">
           {t('verify.rejected')}
         </span>
-        <p className="text-sm text-navy-soft mt-3 leading-relaxed">
-          {t('manager.rejectedNote')}
-        </p>
-        <button
-          onClick={() => setResubmitting(true)}
-          className="btn-primary w-full px-6 py-3 text-sm mt-5"
-        >
-          {t('verify.resubmit')}
-        </button>
-      </>
-    );
-  }
-
-  return (
-    <div className="mb-4">
-      <VerificationForm
-        uid={user.uid}
-        initial={verification ?? undefined}
-        title={t('manager.title')}
-        description={t('manager.formDesc')}
-      />
-    </div>
+      )}
+      <p className={`text-sm text-navy-soft leading-relaxed ${status === 'rejected' ? 'mt-3' : ''}`}>
+        {t(status === 'rejected' ? 'manager.rejectedNote' : 'manager.lockedNote')}
+      </p>
+      {contactCard('manager.lockedHint', 'manager.lockedWaMessage')}
+    </>
   );
 }

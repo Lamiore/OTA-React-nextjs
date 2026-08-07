@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { formatIDR } from '@/lib/format';
 import { useLang } from '@/lib/useLang';
 import { stationPath, subscribeMonitoring, type SensorReading } from '@/lib/realtime';
@@ -91,6 +91,10 @@ function TypographicPlate({ name, thumbColor }: { name: string; thumbColor: stri
  * Chip Live/Offline ikut umur data, bukan sekadar "langganan sudah tersambung":
  * paket sensor yang mati membiarkan nilai terakhirnya tetap ada di RTDB, jadi
  * tanpa cek umur kartu ini akan memajang angka dua minggu lalu seolah live.
+ *
+ * Dipisah dari kartu dengan hairline, bukan kotak berbingkai sendiri: kotak di
+ * dalam .card adalah card-in-card, yang dilarang design.md — dan secara visual
+ * ia membuat kartu destinasi terbaca dua lapis dalam, paling berat di grid.
  */
 function SensorStrip({ path }: { path: string }) {
   const { t } = useLang();
@@ -120,7 +124,7 @@ function SensorStrip({ path }: { path: string }) {
   ];
 
   return (
-    <div className="rounded-sm border border-shore-200/80 bg-shore-50 px-3.5 py-3">
+    <div className="border-t border-shore-200 pt-3">
       <div className="mb-2.5 flex items-center justify-between gap-2">
         <span className="text-2xs font-medium text-navy-soft">{t('card.sensorTitle')}</span>
         <span className="inline-flex items-center gap-1.5 text-2xs font-medium text-navy-soft">
@@ -161,7 +165,6 @@ export default function DesktopDestinationCard({
   hasMonitoring,
   stationId,
 }: Props) {
-  const router = useRouter();
   const { t } = useLang();
   // Kartu berpengelola selalu menyebut sensornya, termasuk yang stasiunnya
   // belum terpasang — kalau baris ini hilang, kartunya masuk bagian
@@ -169,12 +172,18 @@ export default function DesktopDestinationCard({
   const sensorPath = managerUid ? stationPath({ hasMonitoring, stationId }) : null;
 
   return (
-    <div
-      className="card group cursor-pointer overflow-hidden hover:border-teal-600"
-      onClick={() => router.push(`/destinations/${id}`)}
-    >
-      {/* Thumbnail */}
-      <div className="relative flex h-44 items-center justify-center overflow-hidden">
+    // Kartunya <article> ber-`relative`, bukan <div onClick>. Seluruh bidang
+    // tetap bisa diklik lewat overlay ::after milik tautan judul (pola stretched
+    // link), tapi sekarang ada satu target yang bisa di-Tab dan punya href —
+    // div onClick kemarin tidak terjangkau keyboard sama sekali. Tombol simpan
+    // dan Booking duduk di z-10 supaya tidak tertutup overlay itu, dan tidak
+    // bersarang di dalam tautan.
+    // `h-full` + kolom flex supaya baris footer (harga & Booking) rata di
+    // seluruh kartu satu baris, berapa pun panjang nama dan jumlah tag-nya.
+    <article className="card group relative flex h-full flex-col overflow-hidden hover:border-teal-600">
+      {/* Thumbnail — 4:3, foto memikul lebih banyak kartu daripada strip 176px
+          sebelumnya, dan tingginya ikut lebar kolom jadi barisnya rata. */}
+      <div className="relative flex aspect-[4/3] shrink-0 items-center justify-center overflow-hidden">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -196,13 +205,10 @@ export default function DesktopDestinationCard({
         )}
         {onToggleSave && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleSave();
-            }}
+            onClick={onToggleSave}
             aria-label={t(saved ? 'card.unsave' : 'card.save')}
             aria-pressed={!!saved}
-            className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur-sm transition-colors duration-micro ease-out ${saved ? 'text-danger' : 'text-ink/60 hover:text-danger'}`}
+            className={`absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur-sm transition-colors duration-micro ease-out ${saved ? 'text-danger' : 'text-ink/60 hover:text-danger'}`}
           >
             <HeartIcon filled={!!saved} />
           </button>
@@ -217,9 +223,11 @@ export default function DesktopDestinationCard({
       </div>
 
       {/* Content */}
-      <div className="flex flex-col gap-2.5 p-5">
+      <div className="flex flex-1 flex-col gap-2.5 p-5">
         <h3 className="font-serif text-lg font-semibold capitalize leading-snug text-navy transition-colors duration-micro ease-out group-hover:text-teal-600">
-          {name}
+          <Link href={`/destinations/${id}`} className="after:absolute after:inset-0 after:content-['']">
+            {name}
+          </Link>
         </h3>
 
         <div className="flex items-center gap-1.5">
@@ -227,9 +235,11 @@ export default function DesktopDestinationCard({
           <span className="text-xs text-navy-soft capitalize">{location}</span>
         </div>
 
-        {/* Tags */}
+        {/* Tags — dipotong tiga. Destinasi bertag banyak dulu menumbuhkan blok
+            ini sampai dua baris dan menggeser harga tiap kartu ke tinggi yang
+            berbeda; grid marketplace butuh baris yang rata. */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {tags.map((tag) => (
+          {tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
               className="rounded-xs bg-shore-100 px-2.5 py-1 text-2xs font-medium text-navy-soft"
@@ -243,13 +253,16 @@ export default function DesktopDestinationCard({
           (sensorPath ? (
             <SensorStrip path={sensorPath} />
           ) : (
-            <p className="rounded-sm border border-dashed border-shore-200 px-3.5 py-2.5 text-2xs text-navy-soft">
+            <p className="border-t border-shore-200 pt-3 text-2xs text-navy-soft">
               {t('card.sensorNone')}
             </p>
           ))}
 
-        {/* Footer: harga termurah + CTA */}
-        <div className="mt-1 flex items-center justify-between gap-3 border-t border-shore-200 pt-4">
+        {/* Footer: harga termurah + CTA.
+            Tombolnya kini menuju /booking?dest=<id> — sebelumnya ini <button>
+            tanpa onClick yang cuma menggelembung ke onClick kartu, jadi label
+            "Booking" mengantar ke halaman destinasi, bukan ke booking. */}
+        <div className="mt-auto flex items-center justify-between gap-3 border-t border-shore-200 pt-4">
           {priceFrom ? (
             <div className="tabular min-w-0 leading-tight">
               <span className="block text-2xs text-navy-soft">{t('card.priceFrom')}</span>
@@ -260,12 +273,12 @@ export default function DesktopDestinationCard({
           ) : (
             <span />
           )}
-          <button className="btn-primary shrink-0 px-4 py-2">
-            Booking
+          <Link href={`/booking?dest=${id}`} className="btn-primary relative z-10 shrink-0 px-4 py-2">
+            {t('nav.booking')}
             <ArrowIcon />
-          </button>
+          </Link>
         </div>
       </div>
-    </div>
+    </article>
   );
 }

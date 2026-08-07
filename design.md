@@ -115,6 +115,13 @@ Section rhythm varies deliberately: marketing sections breathe (`py-20`/`py-24`)
 app panels are tight (`py-8`/`py-10`), content columns sit between. Every section
 padded identically is its own tell.
 
+**Asymmetric where a section follows a photograph.** A full-bleed hero has
+already given the eye its rest, so the section under it opens tight (`pt-8`
+/`lg:pt-12`) and still closes lapang (`pb-14`/`lg:pb-20`). Symmetric `py-20`
+there reads as a gap, not as breathing — the heading floats loose from the image
+that set it up. Applies to `/beranda`'s discovery band; sections that follow
+another section keep the symmetric rhythm above.
+
 ## Radius
 
 One radius per role, not one radius for everything. Seventy-four `rounded-full`

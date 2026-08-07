@@ -313,6 +313,11 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "{count} destinasi di {regions} wilayah — cari, atau telusuri per wilayah di bawah.",
     en: "{count} destinations across {regions} regions — search, or browse by region below.",
   },
+  // Hitungan kartu di bawah judul wilayah. Dua kunci karena bahasa Inggris
+  // menandai jamak dan wilayah berisi satu destinasi itu kasus nyata; sisi id
+  // keduanya sama — bahasa Indonesia tidak menandainya.
+  "home.regionCount": { id: "{count} destinasi", en: "{count} destinations" },
+  "home.regionCountOne": { id: "{count} destinasi", en: "{count} destination" },
   "home.heroTitle": { id: "Laut dalam menanti.", en: "The deep waters await." },
   "home.heroLede": {
     id: "Spot selam, pantai tersembunyi, dan pengalaman laut — lengkap dengan pantauan kondisi perairan secara langsung.",
@@ -629,21 +634,32 @@ const DICT: Record<string, Record<Lang, string>> = {
     en: "Manage destinations, bookings & cameras in your area",
   },
   "manager.formDesc": {
-    id: "Pengelola mengurus destinasi yang ditetapkan admin — data destinasi, booking, dan kamera di wilayahnya. Isi data di bawah; pengajuan ditinjau admin dulu.",
-    en: "A manager looks after the destinations an admin assigns — destination data, bookings, and cameras in their area. Fill in the details below; an admin reviews the request first.",
+    id: "Admin sudah membuka tiket pendaftaranmu. Lengkapi data diri dan destinasi di bawah — pengelola mengurus destinasi yang ditetapkan admin: data destinasi, booking, dan kamera di wilayahnya. Setelah dikirim, isinya ditinjau admin dulu.",
+    en: "An admin has opened your registration ticket. Fill in your details and the destination below — a manager looks after the destinations an admin assigns: destination data, bookings, and cameras in their area. Once sent, an admin reviews it first.",
+  },
+  "manager.lockedNote": {
+    id: "Pendaftaran jadi pengelola dibuka admin, bukan diisi sendiri. Hubungi admin untuk minta tiket pendaftaran dibuka; begitu dibuka, formulir data diri dan destinasi muncul di halaman ini.",
+    en: "Manager registration is opened by an admin, not started on your own. Contact an admin to have a registration ticket opened; once it is, the form for your details and destination appears on this page.",
+  },
+  "manager.lockedHint": {
+    id: "Sebutkan destinasi yang ingin kamu kelola dan dasar hakmu atas lokasinya. Admin membuka tiket pendaftaranmu dari sana, lalu formulirnya bisa kamu isi di halaman ini.",
+    en: "Tell them which destination you want to manage and your basis for managing the site. The admin opens your registration ticket from there, then you can fill in the form on this page.",
+  },
+  "manager.lockedWaMessage": {
+    id: "Halo admin Nusa, saya mau mendaftar jadi pengelola destinasi. Tolong dibukakan tiket pendaftarannya.",
+    en: "Hi Nusa admin, I'd like to register as a destination manager. Could you open a registration ticket for me?",
   },
   "manager.pendingNote": {
     id: "Pengajuanmu sedang ditinjau admin. Kalau disetujui, role akunmu naik jadi pengelola dan menu Dashboard muncul di profil.",
     en: "An admin is reviewing your request. Once approved, your account becomes a manager and the Dashboard menu appears in your profile.",
   },
   "manager.rejectedNote": {
-    id: "Pengajuanmu jadi pengelola ditolak admin. Periksa kembali datamu lalu ajukan ulang.",
-    en: "An admin rejected your manager request. Check your details and submit again.",
+    id: "Pengajuanmu jadi pengelola ditolak admin. Hubungi admin untuk membicarakan alasannya dan minta tiket pendaftaran dibuka lagi — datamu yang lama tetap tersimpan.",
+    en: "An admin rejected your manager request. Contact an admin to talk it through and ask for a new registration ticket — your earlier details are kept.",
   },
 
   "verify.awaitingApproval": { id: "Menunggu Persetujuan", en: "Awaiting Approval" },
   "verify.rejected": { id: "Pengajuan Ditolak", en: "Request Rejected" },
-  "verify.resubmit": { id: "Ajukan Ulang", en: "Submit Again" },
   "verify.nameLabel": { id: "Nama:", en: "Name:" },
   "verify.phoneLabel": { id: "No. HP:", en: "Phone:" },
   "verify.orgLabel": { id: "Instansi:", en: "Organisation:" },
@@ -759,8 +775,8 @@ const DICT: Record<string, Record<Lang, string>> = {
     en: "How do I become a destination manager?",
   },
   "faq.becomeManager.a": {
-    id: "Buka Profil › Pengaturan › Jadi Pengelola, lalu isi nama lengkap, nomor HP, instansi, dan destinasi yang dikelola. Pengajuan ditinjau admin; statusnya (menunggu, disetujui, ditolak) muncul di kartu yang sama.",
-    en: "Go to Profile › Settings › Become a Manager, then fill in your full name, phone, organisation, and the destination you manage. An admin reviews the request; its status (pending, approved, rejected) appears on the same card.",
+    id: "Hubungi admin lebih dulu — tombol chat-nya ada di Profil › Pengaturan › Jadi Pengelola. Admin yang membuka tiket pendaftaranmu; setelah dibuka, formulir nama lengkap, nomor HP, instansi, dan destinasi yang dikelola muncul di kartu itu. Pengajuan yang kamu kirim ditinjau admin, dan statusnya (menunggu, disetujui, ditolak) muncul di kartu yang sama.",
+    en: "Contact an admin first — the chat button is under Profile › Settings › Become a Manager. The admin opens your registration ticket; once it is open, the form for your full name, phone, organisation, and the destination you manage appears on that card. The request you send is reviewed by an admin, and its status (pending, approved, rejected) shows on the same card.",
   },
   "faq.cameraPending.q": {
     id: 'Kenapa kamera saya berstatus "Menunggu admin"?',

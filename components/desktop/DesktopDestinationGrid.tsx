@@ -19,7 +19,7 @@ const FILTER_KEYS: Record<string, string> = {
   Terdekat: 'filter.nearest',
 };
 
-const gridClass = 'grid grid-cols-1 gap-5 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+const gridClass = 'grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 
 /** Harga item termurah destinasi — undefined bila belum ada daftar harga. */
 function priceFrom(dest: Destination): number | undefined {
@@ -162,7 +162,7 @@ export default function DesktopDestinationGrid() {
   const regionCount = new Set(shown.map((d) => (d.location || '').trim())).size;
 
   const renderCard = (dest: Destination, i: number) => (
-    <div key={dest.id} className="animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
+    <div key={dest.id} className="h-full animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
       <DesktopDestinationCard
         {...dest}
         rating={ratings[dest.id]}
@@ -175,9 +175,13 @@ export default function DesktopDestinationGrid() {
 
   return (
     <section id="destinasi" className="scroll-mt-16 bg-shore-50">
-      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-10 lg:py-20">
+      {/* Padding atas jauh lebih rapat dari bawah. Yang di atas cuma jarak ke
+          foto hero yang baru saja selesai bicara — 80px di sana membuat judul
+          seksi terbaca seperti halaman lain. Yang di bawah masih lapang: itu
+          jarak ke footer, dan grid yang menempel footer terasa terpotong. */}
+      <div className="mx-auto max-w-7xl px-4 pb-14 pt-8 sm:px-6 lg:px-10 lg:pb-20 lg:pt-12">
         {/* Kepala bagian tanpa eyebrow: judulnya sendiri yang jadi kepala. */}
-        <div className="mb-8 max-w-xl">
+        <div className="mb-6 max-w-xl">
           <h2 className="section-title">{t('home.sectionTitle')}</h2>
           <p className="section-lede">
             {loading
@@ -191,11 +195,16 @@ export default function DesktopDestinationGrid() {
 
         {/* Filter chips. Wilayahnya menyusul dari Firestore, jadi selama daftar
             masih kosong tampilkan pil kosong — bukan 'Semua · Terdekat' yang
-            sekejap berubah jadi lima chip di depan mata pengguna. */}
-        <div className="mb-10 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            sekejap berubah jadi lima chip di depan mata pengguna.
+            Sticky: halaman ini panjang (satu blok per wilayah), dan filter yang
+            hilang di atas layar memaksa scroll balik ke puncak untuk ganti
+            wilayah. `top-16` menyamai tinggi TopNav; di mobile TopNav tidak
+            dirender sama sekali (hidden md:block) jadi baris ini menempel di 0.
+            -mx/px menutup celah supaya kartu tidak terlihat lewat di sisinya. */}
+        <div className="sticky top-0 z-30 -mx-4 mb-8 flex gap-2 overflow-x-auto bg-shore-50/95 px-4 py-3 backdrop-blur-sm scrollbar-hide sm:-mx-6 sm:px-6 md:top-16 lg:-mx-10 lg:px-10">
           {locations.length === 0
             ? Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="chip w-24 animate-pulse bg-shore-100 text-transparent">
+                <div key={i} className="chip w-24 shrink-0 animate-pulse bg-shore-100 text-transparent">
                   &nbsp;
                 </div>
               ))
@@ -203,7 +212,10 @@ export default function DesktopDestinationGrid() {
                 <button
                   key={f}
                   onClick={() => setActiveFilter(f)}
-                  className={clsx('chip', activeFilter === f && 'chip-active')}
+                  // shrink-0: tanpa ini nama wilayah panjang ("Maluku Utara")
+                  // diperas oleh flex sampai membungkus dua baris, dan satu
+                  // chip lebih tinggi menaikkan seluruh barisnya.
+                  className={clsx('chip shrink-0 whitespace-nowrap', activeFilter === f && 'chip-active')}
                 >
                   {FILTER_KEYS[f] ? t(FILTER_KEYS[f]) : f}
                 </button>
@@ -212,8 +224,8 @@ export default function DesktopDestinationGrid() {
 
         {/* Destinasi berpengelola — di atas, dengan ringkasan sensornya sendiri. */}
         {!loading && managed.length > 0 && (
-          <div className="mb-14">
-            <div className="mb-5 border-b border-shore-200 pb-3">
+          <div className="mb-10">
+            <div className="mb-4 border-b border-shore-200 pb-2.5">
               <h3 className="font-serif text-xl font-semibold tracking-tight text-navy">
                 {t('home.managedTitle')}
               </h3>
@@ -238,21 +250,25 @@ export default function DesktopDestinationGrid() {
         ) : hasFilter ? (
           others.length > 0 && <div className={gridClass}>{others.map(renderCard)}</div>
         ) : (
-          <div className="space-y-14">
+          <div className="space-y-10">
             {byLocation.map(([loc, items]) => (
               <div key={loc}>
-                <div className="mb-5 flex items-end justify-between gap-4 border-b border-shore-200 pb-3">
+                <div className="mb-4 flex items-end justify-between gap-4 border-b border-shore-200 pb-2.5">
                   <div>
                     <h3 className="font-serif text-xl font-semibold capitalize tracking-tight text-navy">
                       {loc}
                     </h3>
-                    <span className="text-xs text-navy-soft">{items.length} destinasi</span>
+                    <span className="text-xs text-navy-soft">
+                      {t(items.length === 1 ? 'home.regionCountOne' : 'home.regionCount', {
+                        count: items.length,
+                      })}
+                    </span>
                   </div>
                   <button
                     onClick={() => setActiveFilter(loc)}
                     className="btn-text shrink-0"
                   >
-                    Lihat semua
+                    {t('home.seeAllShort')}
                   </button>
                 </div>
                 <div className={gridClass}>{items.map(renderCard)}</div>

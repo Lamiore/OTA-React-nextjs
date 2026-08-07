@@ -25,12 +25,41 @@ service cloud.firestore {
 
       // Update: admin bebas (termasuk ubah role, wilayah pengelola, approve/tolak pengajuan pengelola);
       // pemilik boleh update dokumennya sendiri HANYA jika role tidak berubah.
+      //
+      // `verification` dikecualikan dari kebebasan itu. Tanpa syarat di bawah,
+      // gerbang "pendaftaran pengelola dibuka admin" cuma hidup di antarmuka:
+      // siapa pun yang sudah login bisa menulis verification.status 'pending'
+      // sendiri lewat SDK dari console browser, dan kartu pengajuannya tetap
+      // muncul di panel Pengguna — antrean tinjauan admin bisa dibanjiri tanpa
+      // satu tombol pun ditekan. Yang diizinkan hanya SATU perpindahan:
+      // 'invited' (tiketnya dibukakan admin) menjadi 'pending' (formulirnya
+      // dikirim). Membuka tiket sendiri, meluluskan diri sendiri, dan menyunting
+      // jejak persetujuan sesudah terkirim sama-sama ditolak server.
+      //
+      // Yang dijaga di sini KAPAN boleh menulis, bukan APA yang ditulis: isi
+      // formulirnya (nama, instansi, versi perjanjian) tetap datang dari klien
+      // dan dipercaya apa adanya. Kalau isinya juga mau dijamin, pengirimannya
+      // harus pindah ke route server yang memakai Admin SDK.
       allow update: if request.auth != null
         && (
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
           || (
             request.auth.uid == userId
             && request.resource.data.role == resource.data.role
+            && (
+              // Update biasa — nama, no. HP, wishlist. Tidak menyentuh verification.
+              !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verification'])
+              // Atau: kirim formulir dari tiket yang memang dibukakan admin.
+              // .get() dengan jalur list dipakai, bukan akses langsung: dokumen
+              // pengguna yang belum pernah punya pengajuan tidak punya field
+              // `verification` sama sekali, dan akses langsung ke situ error
+              // (yang berarti tolak) — di sini defaultnya memang harus tolak,
+              // tapi lewat perbandingan yang jelas, bukan lewat error.
+              || (
+                resource.data.get(['verification', 'status'], '') == 'invited'
+                && request.resource.data.verification.status == 'pending'
+              )
+            )
           )
         );
     }

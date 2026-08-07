@@ -82,11 +82,17 @@ export default function HeroBanner() {
             {t('home.heroLede')}
           </p>
 
-          {/* Cari destinasi + lokasi, langsung menyetir grid #destinasi. */}
-          <form onSubmit={submitSearch} className="reveal mt-6" style={step(3)}>
-            <div className="flex flex-col gap-2 rounded-md border border-white/20 bg-ink/70 p-2 backdrop-blur-md sm:flex-row sm:items-center sm:gap-0">
-              <div className="flex flex-1 items-center gap-2.5 px-3 py-1.5">
-                <svg className="h-[18px] w-[18px] shrink-0 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          {/* Cari destinasi, langsung menyetir grid #destinasi.
+              Panelnya duduk di `surface`, bukan ink transparan seperti sebelumnya:
+              input gelap di atas scrim gelap membuat aksi utama halaman jadi
+              elemen paling redup di layar. Pola OTA yang sudah terbukti — panel
+              cari solid memotong foto — dipakai untuk strukturnya saja;
+              permukaannya tetap hairline-on-paper sesuai design.md, tanpa
+              bayangan dan tanpa radius pil. */}
+          <form onSubmit={submitSearch} className="reveal mt-7" style={step(3)}>
+            <div className="flex flex-col gap-2 rounded-md border border-shore-200 bg-surface p-2 sm:flex-row sm:items-center">
+              <div className="flex flex-1 items-center gap-2.5 px-3">
+                <svg className="h-[18px] w-[18px] shrink-0 text-navy-soft" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8" />
                   <path d="m21 21-4.3-4.3" />
                 </svg>
@@ -95,7 +101,7 @@ export default function HeroBanner() {
                   onChange={(e) => setQ(e.target.value)}
                   placeholder={t('home.searchHero')}
                   aria-label={t('home.searchLabel')}
-                  className="w-full min-w-0 bg-transparent text-sm text-white placeholder:text-white/55 outline-none"
+                  className="w-full min-w-0 bg-transparent py-2 text-sm text-navy placeholder:text-navy-soft outline-none"
                 />
               </div>
 

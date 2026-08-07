@@ -1,4 +1,4 @@
-/* Hallmark · genre: atmospheric · macrostructure: Ecosystem Index · theme: Nusa (preserved) · nav: N5 floating-pill · footer: Ft5 statement · 2026-07-20 */
+/* Hallmark · genre: editorial · macrostructure: Photographic (hero) + Ecosystem Index (grid) · theme: Nusa (preserved) · nav: TopNav pill · footer: Ft1 mast-headed · 2026-08-06 */
 import { Suspense } from 'react';
 import TopNav from '@/components/desktop/TopNav';
 import HeroBanner from '@/components/desktop/HeroBanner';

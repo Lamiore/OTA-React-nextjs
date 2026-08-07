@@ -170,7 +170,7 @@ halaman (`useAuth`, `useLocations`, `useSaved`, `useTheme`, `useLang`).
 > Efeknya: satu user secara **struktural** tidak mungkin punya dua ulasan untuk
 > destinasi yang sama. Ini bukan validasi yang bisa di-bypass, tapi konsekuensi
 > dari desain kunci. Aturan keamanannya menegakkan hal yang sama di sisi server
-> (`firestore.rules:85`).
+> (`firestore.rules:176-181`).
 
 ### Realtime Database
 
@@ -315,7 +315,7 @@ Ini contoh bagus untuk pertanyaan "kesulitan apa yang Anda temui?".
    ├─ Google          → signInWithPopup
    └─ Setelah berhasil: setDoc(users/{uid}, { role: 'user', ... })
       ★ role dipaksa 'user' — dan aturan Firestore juga memaksanya
-        (firestore.rules:14-16)
+        (firestore.rules:22-24)
 
 2. Verifikasi email
    lib/sendVerification.ts:4-11 → POST /api/send-verification
@@ -391,9 +391,11 @@ Ini bagian yang paling "teknik" dan paling menarik bagi penguji.
 
 3. Admin menyetujui di halaman server (dilindungi Basic Auth)
    → status jadi 'approved' lewat Admin SDK
-   ★ Aturan Firestore melarang SEMUA update dari klien (firestore.rules:75
-     `allow update: if false`). Jadi user TIDAK BISA menyetujui kameranya sendiri.
-     Approve hanya mungkin dari server yang memegang service account.
+   ★ Aturan Firestore membatasi update dari klien ke SATU kolom saja
+     (firestore.rules:165-168, `hasOnly(['viewers'])` — pemilik cuma boleh
+     mengatur daftar penontonnya). `status` tidak termasuk, jadi user TIDAK
+     BISA menyetujui kameranya sendiri. Approve hanya mungkin dari server yang
+     memegang service account.
 
 4. QR siaran muncul di web → mitra scan pakai HP
    components/cameras/CameraManager.tsx:215-236
@@ -510,20 +512,26 @@ langsung dari console browser. Penguji yang paham akan menekan di sini.
 
 | Koleksi | Aturan | Baris |
 |---|---|---|
-| `users` read | pemilik sendiri **atau** admin | 7-11 |
-| `users` create | hanya dokumen sendiri **dan** `role == 'user'` | 14-16 |
-| `users` update | admin bebas; pemilik boleh **asal role tidak berubah** | 20-27 |
-| `destinations` | baca publik; tulis hanya admin/pengelola | 30-34 |
-| `cameras` create | wajib `ownerUid == uid` **dan** `status == 'pending'` | 68-71 |
-| `cameras` update | **`if false`** — approve hanya dari server (Admin SDK) | 75 |
-| `reviews` | id dokumen wajib `<destId>_<uid>`, rating wajib int 1..5 | 83-88 |
-| `settings/cameraServer` | baca publik (stream memang publik), tulis mitra ke atas | 100-103 |
+| `loginCodes` | `if false` — kode login 6 digit, hanya Admin SDK | 9-11 |
+| `users` read | pemilik sendiri **atau** admin | 15-19 |
+| `users` create | hanya dokumen sendiri **dan** `role == 'user'` | 22-24 |
+| `users` update | admin bebas; pemilik boleh **asal role tidak berubah** — dan `verification` hanya boleh berpindah `invited → pending` | 43-64 |
+| `destinations` create/delete | hanya admin | 76 |
+| `destinations` update | pengelola hanya destinasi kelolaannya (`managerUid == uid`) **dan** hanya 7 kolom yang dijanjikan Pasal 3 (`hasOnly`) | 85-94 |
+| `cameras` create | wajib admin, `ownerUid` string tak kosong, `status == 'pending'` | 152-156 |
+| `cameras` update | pemilik **hanya** boleh menyunting `viewers` (`hasOnly`) — approve tetap mustahil dari klien | 165-168 |
+| `reviews` | id dokumen wajib `<destId>_<uid>`, rating wajib int 1..5 | 176-181 |
+| `settings/cameraServer` | baca butuh login, tulis pengelola ke atas | 197-200 |
 
-**Prinsip yang bisa kamu sebut:** *privilege escalation prevention*. Tiga
+**Prinsip yang bisa kamu sebut:** *privilege escalation prevention*. Empat
 lapisannya:
-1. User tidak bisa menaikkan role-nya sendiri (baris 25).
-2. User tidak bisa menyetujui kameranya sendiri (baris 75).
-3. Operasi yang butuh hak istimewa (hapus akun, kirim email persetujuan) lewat
+1. User tidak bisa menaikkan role-nya sendiri (baris 48).
+2. User tidak bisa menyetujui kameranya sendiri — `hasOnly(['viewers'])`
+   membuat `status` tidak ikut bisa ditulis (baris 167).
+3. User tidak bisa mengantre sendiri jadi pengelola: pendaftarannya harus
+   dibuka admin dulu (`invited`), dan itu satu-satunya keadaan awal yang
+   diterima (baris 59-60).
+4. Operasi yang butuh hak istimewa (hapus akun, kirim email persetujuan) lewat
    API route yang **memverifikasi ID token dan mengecek role di server**.
 
 ### 6.2 API route — pengecekan yang benar
@@ -776,7 +784,7 @@ menyebutnya, posisinya jauh lebih buruk.
 
 ### B. Aturan koleksi `bookings` terlalu longgar
 
-`firestore.rules:40-48`:
+`firestore.rules:101-109`:
 
 ```
 allow create: if request.auth != null;   // tidak cek userId == uid
@@ -798,13 +806,27 @@ allow read:   if resource.data.userId == request.auth.uid
               || userRole() in ['admin','pengelola'];
 ```
 
-### C. Pengelola belum dibatasi ke wilayahnya di level aturan
+### C. ~~Pengelola belum dibatasi ke wilayahnya di level aturan~~ — SUDAH DITUTUP
 
-`firestore.rules:30-34` — tulis ke `destinations` diizinkan untuk **semua**
-pengelola, tanpa cek `managerUid`. Pembatasan wilayah sudah ada di UI
-(`KameraPanel.tsx:34`) dan sudah tegas di aturan `cameras` (baris 62-63), tapi
-belum di `destinations`. **Ini inkonsistensi yang nyata** — sebutkan sebagai
-pekerjaan lanjutan.
+**Jangan sebut ini sebagai keterbatasan lagi.** Dulu `destinations` bisa ditulis
+**semua** pengelola tanpa cek `managerUid`; sekarang `firestore.rules:85-94`
+mensyaratkan `resource.data.managerUid == request.auth.uid` **dan**
+`hasOnly([...])` atas tujuh kolom yang dijanjikan Pasal 3 Perjanjian Pengelola.
+
+Kalau ditanya, ini justru jawaban yang kuat: *"Pembatasan wilayah tidak hanya di
+antarmuka. `hasOnly()` di aturannya juga mencegah pengelola menulis ulang
+`managerUid` untuk mengalihkan destinasi ke orang lain."*
+
+Pola yang sama dipakai di dua tempat lain — `cameras` (baris 165-168, pemilik
+hanya boleh menyunting `viewers`) dan `users.verification` (baris 43-64,
+pendaftaran pengelola hanya boleh berpindah `invited → pending`). Sebut ketiganya
+kalau penguji menekan soal "apakah pembatasan Anda cuma di UI?".
+
+Yang **masih** benar untuk disebut: aturannya menjaga *kapan* dan *kolom mana*
+yang boleh ditulis, bukan *isi* yang ditulis. Nilai yang dikirim formulir masih
+dipercaya apa adanya karena formulirnya jalan dari klien. Menjamin isinya butuh
+pengiriman lewat route server ber-Admin SDK — itu pekerjaan lanjutan yang sah
+disebut.
 
 ### D. Stream kamera tidak diautentikasi (disengaja)
 
@@ -954,10 +976,16 @@ bookings masih terlalu longgar untuk read: saat ini semua pengguna terautentikas
 bisa membacanya. Perbaikannya…"*
 
 **"Kalau saya ubah role saya sendiri jadi admin lewat console browser, bisa?"**
-→ Tidak. `firestore.rules:25` mensyaratkan `request.resource.data.role ==
+→ Tidak. `firestore.rules:48` mensyaratkan `request.resource.data.role ==
 resource.data.role` untuk update oleh pemilik. Menaikkan role hanya bisa
 dilakukan akun ber-role admin. Dan aturan create memaksa `role == 'user'`
-(baris 16), jadi tidak bisa juga mendaftar langsung sebagai admin.
+(baris 22-24), jadi tidak bisa juga mendaftar langsung sebagai admin.
+
+Susulan yang mungkin: *"Kalau begitu saya daftarkan diri jadi pengelola saja?"*
+→ Juga tidak. Sejak pendaftaran pengelola dijadikan tiket, `firestore.rules:59-60`
+cuma menerima perpindahan `verification.status` dari `'invited'` ke `'pending'`,
+dan `'invited'` hanya bisa ditulis admin. Tanpa admin membuka tiketnya duluan,
+pengajuannya tidak pernah masuk antrean tinjauan.
 
 **"Kunci API Firebase Anda kelihatan di source browser."**
 → Betul, dan itu memang desainnya. Kunci API Firebase bukan kredensial rahasia —

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   approveRoleRequest,
   deleteUserAccount,
+  openRoleRequest,
   rejectRoleRequest,
   subscribeUsers,
   updateUserRole,
@@ -26,6 +27,8 @@ export default function PenggunaPanel() {
   // Hapus butuh klik dua kali: klik pertama menandai baris, klik kedua eksekusi.
   const [confirmUid, setConfirmUid] = useState<string | null>(null);
   const [deletingUid, setDeletingUid] = useState<string | null>(null);
+  const [openingUid, setOpeningUid] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     const unsub = subscribeUsers(setUsers);
@@ -55,6 +58,20 @@ export default function PenggunaPanel() {
     }
   };
 
+  // Tiket pendaftaran pengelola. Formulirnya baru muncul di Pengaturan Akun
+  // orang itu setelah ini diklik — pendaftaran tidak bisa dimulai sendiri.
+  const handleOpenTicket = async (uid: string) => {
+    setOpeningUid(uid);
+    setMailWarn(null);
+    try {
+      await openRoleRequest(uid);
+    } catch {
+      setMailWarn('Gagal membuka tiket pendaftaran. Coba lagi.');
+    } finally {
+      setOpeningUid(null);
+    }
+  };
+
   const handleReview = async (u: AppUser, approve: boolean) => {
     setReviewingUid(u.uid);
     setMailWarn(null);
@@ -78,22 +95,40 @@ export default function PenggunaPanel() {
     }
   };
 
+  const keyword = query.trim().toLowerCase();
+  const shown = keyword
+    ? users.filter((u) => [u.name, u.email].join(' ').toLowerCase().includes(keyword))
+    : users;
+
   return (
     <div className="animate-fade-in">
       <h1 className="font-serif text-2xl font-medium text-navy">Pengguna</h1>
-      <p className="mt-1 text-sm text-navy-soft">{users.length} pengguna terdaftar</p>
+      <p className="mt-1 text-sm text-navy-soft">
+        {keyword ? `${shown.length} dari ${users.length} pengguna` : `${users.length} pengguna terdaftar`}
+      </p>
+
+      <input
+        type="search"
+        aria-label="Cari pengguna"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Cari nama atau email"
+        className="mt-4 w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+      />
 
       {mailWarn && (
         <p className="mt-4 rounded-md bg-warn-soft px-4 py-2.5 text-xs text-warn">{mailWarn}</p>
       )}
 
       <div className="mt-6 space-y-3">
-        {users.length === 0 && (
+        {shown.length === 0 && (
           <div className="card p-8 text-center">
-            <p className="text-sm text-navy-soft">Belum ada pengguna terdaftar.</p>
+            <p className="text-sm text-navy-soft">
+              {keyword ? `Tidak ada pengguna cocok "${query.trim()}".` : 'Belum ada pengguna terdaftar.'}
+            </p>
           </div>
         )}
-        {users.map((u) => (
+        {shown.map((u) => (
           <div key={u.uid} className="card px-5 py-4">
             <div className="flex items-center gap-4">
               {/* Avatar */}
@@ -129,6 +164,25 @@ export default function PenggunaPanel() {
                 <option value="pengelola">Pengelola</option>
                 <option value="admin">Admin</option>
               </select>
+
+              {/* Tiket pendaftaran pengelola. Hanya untuk yang masih user:
+                  pengelola/admin tidak perlu mendaftar lagi. Saat pengajuannya
+                  sedang ditinjau, kartunya di bawah yang bicara. */}
+              {u.role === 'user' && u.verification?.status !== 'pending' && (
+                u.verification?.status === 'invited' ? (
+                  <span className="shrink-0 rounded-sm bg-warn-soft px-3 py-1.5 text-xs font-medium text-warn">
+                    Tiket terbuka
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => handleOpenTicket(u.uid)}
+                    disabled={openingUid === u.uid}
+                    className="shrink-0 rounded-sm border border-shore-200 px-3 py-1.5 text-xs font-medium text-navy-soft transition-colors hover:border-teal-400 hover:text-teal-700 disabled:opacity-50"
+                  >
+                    Buka tiket pengelola
+                  </button>
+                )
+              )}
 
               {/* Hapus akun — Auth + dokumen Firestore sekaligus */}
               <button

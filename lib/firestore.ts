@@ -144,10 +144,15 @@ export async function deleteDestination(id: string) {
 // ── Users ──
 
 export interface RoleVerification {
+  /** Ketiga kolom di bawah baru terisi saat pengaju mengirim formulirnya. Pada
+   *  tiket yang baru dibuka admin (status 'invited') isinya belum ada — jangan
+   *  ditampilkan di luar cabang status yang sudah lewat 'pending'. */
   fullName: string; // nama lengkap penanggung jawab
   phone: string; // no. HP/WhatsApp aktif
   organization: string; // instansi/organisasi (operator dive, resort, ...)
-  status: "pending" | "approved" | "rejected";
+  /** 'invited' = admin sudah membuka tiket pendaftaran, formulirnya belum
+   *  diisi. Pendaftaran pengelola tidak bisa dimulai sendiri oleh pengguna. */
+  status: "invited" | "pending" | "approved" | "rejected";
   /** Nama destinasi yang diketik pengaju. Dokumennya dibuat otomatis oleh
    *  approveRoleRequest saat admin menyetujui — admin tidak membuatnya manual. */
   destination?: string;
@@ -166,6 +171,9 @@ export interface RoleVerification {
   agreementVersion?: string;
   /** Waktu checkbox persetujuan dicentang. unknown mengikuti submittedAt. */
   agreedAt?: unknown;
+  /** Waktu admin membuka tiket pendaftaran. Hilang begitu formulirnya dikirim —
+   *  submitRoleRequest menulis ulang seluruh objek verification. */
+  invitedAt?: unknown;
   submittedAt: unknown;
   reviewedAt?: unknown;
 }
@@ -255,6 +263,27 @@ export async function toggleSavedDestination(
   if (!db) return;
   await updateDoc(doc(db, "users", uid), {
     saved: isSaved ? arrayRemove(destinationId) : arrayUnion(destinationId),
+  });
+}
+
+/**
+ * Admin membuka tiket pendaftaran pengelola untuk satu pengguna dari panel
+ * Pengguna. Formulirnya baru muncul di Pengaturan Akun orang itu setelah tiket
+ * dibuka — sejalan dengan pendaftaran kamera yang juga dimulai admin.
+ *
+ * Ditulis lewat jalur bertitik, bukan menimpa seluruh `verification`: data
+ * pengajuan lama (mis. yang pernah ditolak) tetap ada dan mengisi ulang
+ * formulirnya, jadi pengaju tidak mengetik dari nol.
+ *
+ * Gerbangnya tidak cuma di antarmuka: firestore.rules hanya mengizinkan pemilik
+ * dokumen memindahkan verification.status dari 'invited' ke 'pending', jadi
+ * status 'invited' di sini benar-benar hanya bisa datang dari admin.
+ */
+export async function openRoleRequest(uid: string) {
+  if (!db) return;
+  await updateDoc(doc(db, "users", uid), {
+    "verification.status": "invited",
+    "verification.invitedAt": serverTimestamp(),
   });
 }
 
