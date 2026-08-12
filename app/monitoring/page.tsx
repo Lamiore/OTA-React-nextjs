@@ -26,13 +26,16 @@ import Footer from '@/components/desktop/Footer';
 import BottomNav from '@/components/mobile/BottomNav';
 
 /**
- * Isi halaman ini: tiap destinasi yang punya stasiun sensor dan/atau kamera yang
- * boleh ditonton akun ini.
+ * Isi halaman ini: tiap destinasi yang punya kamera yang boleh ditonton akun ini,
+ * berikut sensor stasiunnya.
  *
- * Sensornya tidak digerbang sama sekali — angka RTDB yang sama sudah tayang di
- * hero beranda untuk pengunjung yang belum masuk, jadi menyembunyikannya di
- * halaman yang justru bernama Monitoring cuma membuat dua layar saling
- * membantah. Yang digerbang tetap kameranya saja, lewat rules.
+ * Sensornya menempel pada kamera, bukan berdiri sendiri: paket monitoring yang
+ * dibuka pengelola itu satu barang — siaran DAN angka lingkungannya. Destinasi
+ * yang kameranya tidak boleh ditonton akun ini tidak muncul sama sekali, walau
+ * stasiunnya hidup. Ini keputusan tampilan, bukan gerbang data: angka RTDB yang
+ * sama tetap tayang di hero beranda dan di halaman destinasinya masing-masing,
+ * dan memang tidak bisa ditutup dari sini — RTDB-lah yang menentukan siapa boleh
+ * membacanya, bukan komponen ini.
  *
  * Daftarnya tidak diambil lewat query koleksi `cameras`. Rules bukan filter:
  * cabang yang mengizinkan penonton berbunyi `email in resource.data.viewers`,
@@ -105,13 +108,17 @@ function useMonitorGroups() {
         ),
       sensorPath: stationPath(dest),
     }))
+    // Disaring sebelum dedupe, bukan sesudah: destinasi tanpa kamera yang boleh
+    // ditonton akun ini tidak boleh sempat memegang stasiunnya. Kalau tidak,
+    // destinasi berkamera yang berbagi `monitoring/latest` dengannya kehilangan
+    // sensor yang justru jadi haknya.
+    .filter((g) => g.cams.length > 0)
     .sort((a, b) => a.dest.name.localeCompare(b.dest.name))
     .map((g) => {
       if (!g.sensorPath || seen.has(g.sensorPath)) return { ...g, sensorPath: null };
       seen.add(g.sensorPath);
       return g;
-    })
-    .filter((g) => g.cams.length > 0 || g.sensorPath);
+    });
 
   return { groups, settled };
 }
@@ -142,7 +149,9 @@ export default function MonitoringPage() {
   const { t } = useLang();
   const { groups, settled } = useMonitorGroups();
   const [serverUrl, setServerUrl] = useState<string | null>(null);
-  const hasCamera = groups.some((g) => g.cams.length > 0);
+  // Satu kelompok = satu destinasi yang kameranya boleh ditonton; daftar kosong
+  // berarti akun ini memang belum dapat kamera apa pun.
+  const hasCamera = groups.length > 0;
 
   // Satu langganan alamat server untuk seluruh halaman: semua siaran menunjuk
   // server kamera yang sama, jadi tiap kelompok tidak perlu berlangganan sendiri.
@@ -176,9 +185,10 @@ export default function MonitoringPage() {
             </div>
           ))}
 
-          {/* Ajakan soal kamera turun ke bawah daftar, bukan menggantikannya:
-              sensor tetap tayang untuk pengunjung yang belum masuk maupun yang
-              belum didaftarkan sebagai penonton. */}
+          {/* Tanpa kamera, daftarnya memang kosong — jadi kotak ini praktis
+              selalu berdiri sendiri. Tetap ditaruh di bawah daftar, bukan
+              menggantikannya: kelompok yang sudah tayang tidak boleh hilang
+              selagi kamera destinasi lain masih ditunggu jawabannya. */}
           {loading ? null : !user ? (
             <EmptyState
               title={t('monitorPage.signInTitle')}

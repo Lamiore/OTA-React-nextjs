@@ -251,8 +251,8 @@ const DICT: Record<string, Record<Lang, string>> = {
   // ── Halaman Monitoring (penonton) ──
   "monitorPage.title": { id: "Monitoring", en: "Monitoring" },
   "monitorPage.lede": {
-    id: "Sensor lingkungan dari tiap stasiun destinasi — terbuka untuk siapa saja — plus kamera khusus yang emailmu didaftarkan pengelolanya. Kamera publik ada di halaman destinasinya masing-masing.",
-    en: "Environmental sensors from every destination station — open to everyone — plus the private cameras whose manager has registered your email. Public cameras live on each destination's own page.",
+    id: "Kamera khusus yang emailmu didaftarkan pengelolanya, berikut sensor lingkungan stasiunnya. Kamera publik ada di halaman destinasinya masing-masing.",
+    en: "The private cameras whose manager has registered your email, together with their station's environmental sensors. Public cameras live on each destination's own page.",
   },
   "monitorPage.signInTitle": { id: "Masuk dulu untuk melihat kameramu", en: "Sign in to see your cameras" },
   "monitorPage.signInBody": {
