@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import {
+  addChildDestination,
+  deleteDestination,
   subscribeDestinations,
   updateDestination,
   getPriceItems,
@@ -64,6 +66,9 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  /** Id destinasi yang sedang dibukakan kolom "tambah destinasi di dalam". */
+  const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [newName, setNewName] = useState('');
 
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
@@ -136,6 +141,41 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
     }
   };
 
+  const handleAddChild = async (parent: Destination) => {
+    const name = newName.trim();
+    if (!name) return;
+    setError('');
+    setSaving(true);
+    try {
+      await addChildDestination(parent, name);
+      setAddingTo(null);
+      setNewName('');
+    } catch {
+      setError(
+        'Gagal menambah destinasi. Kalau ini berulang, hubungi admin — kemungkinan izin destinasi induknya sudah dipindahkan.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteChild = async (d: Destination) => {
+    // Anak dari anak tidak bisa dibuat lewat panel ini, tapi bisa lewat SDK.
+    // Kalau induknya dihapus, isinya jadi dokumen tanpa jalan masuk: tidak
+    // tampil di beranda (bukan tingkat atas) dan tidak di halaman mana pun.
+    if (destinations.some((x) => x.parentId === d.id)) {
+      setError(`"${d.name}" masih berisi destinasi lain. Hapus isinya dulu.`);
+      return;
+    }
+    if (!confirm(`Hapus "${d.name}"? Deskripsi, foto, dan daftar harganya ikut hilang.`)) return;
+    setError('');
+    try {
+      await deleteDestination(d.id);
+    } catch {
+      setError('Gagal menghapus. Kalau ini berulang, hubungi admin.');
+    }
+  };
+
   const inputClass =
     'w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors';
 
@@ -158,12 +198,26 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
 
   const editing = destinations.find((d) => d.id === editingId);
 
+  // Yang berdiri di tingkat atas daftar ini: destinasi tanpa induk, DAN
+  // destinasi yang induknya tidak ada di daftar (induknya terhapus, atau
+  // dipindah ke pengelola lain). Tanpa cabang kedua, dokumen seperti itu tidak
+  // tampil di baris mana pun — pengelola tidak punya cara menyuntingnya lagi,
+  // padahal halaman publiknya masih hidup.
+  const ownedIds = new Set(destinations.map((d) => d.id));
+  const roots = destinations.filter((d) => !d.parentId || !ownedIds.has(d.parentId));
+  const childrenOf = (parentId: string) =>
+    destinations
+      .filter((d) => d.parentId === parentId)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
   return (
     <div>
       <h1 className="font-serif text-2xl font-medium text-navy">Destinasi</h1>
       <p className="text-sm text-navy-soft mt-1.5 leading-relaxed">
         Kamu bisa mengubah deskripsi, foto, titik lokasi, daftar harga, dan kontak
         WhatsApp. Nama dan wilayah ditetapkan admin — hubungi admin bila perlu diubah.
+        Kalau kawasanmu berisi beberapa tempat, tambahkan masing-masing sebagai
+        destinasi di dalamnya: tiap tempat dapat halaman, harga, dan ulasannya sendiri.
       </p>
 
       {saved && !editing && (
@@ -172,21 +226,112 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
         </p>
       )}
 
+      {!editing && error && (
+        <p className="mt-4 text-xs text-danger leading-relaxed">{error}</p>
+      )}
+
       {!editing && (
-        <div className="mt-6 space-y-3">
-          {destinations.map((d) => (
-            <div key={d.id} className="card flex items-center justify-between gap-4 p-4">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-navy capitalize">{d.name}</p>
-                <p className="text-xs text-navy-soft mt-0.5">
-                  {d.location} — {getPriceItems(d).length} item harga
-                </p>
+        <div className="mt-6 space-y-6">
+          {roots.map((parent) => {
+            const inside = childrenOf(parent.id);
+            return (
+              <div key={parent.id} className="space-y-2">
+                <div className="card flex items-center justify-between gap-4 p-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-navy capitalize">{parent.name}</p>
+                    <p className="text-xs text-navy-soft mt-0.5">
+                      {parent.location} — {getPriceItems(parent).length} item harga
+                      {inside.length > 0 && ` · ${inside.length} destinasi di dalam`}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => startEdit(parent)}
+                    className="btn-ghost shrink-0 px-4 py-2 text-sm"
+                  >
+                    Edit
+                  </button>
+                </div>
+
+                {/* Isi destinasi ini. Menjorok ke kanan dengan garis di kiri:
+                    hubungannya induk–anak, dan daftar rata yang cuma diberi
+                    label tidak menunjukkan mana milik siapa saat pengelola
+                    memegang lebih dari satu kawasan. */}
+                <div className="ml-4 space-y-2 border-l border-shore-200 pl-4">
+                  {inside.map((child) => (
+                    <div key={child.id} className="card flex items-center justify-between gap-3 p-3.5">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-navy capitalize">{child.name}</p>
+                        <p className="text-xs text-navy-soft mt-0.5">
+                          {getPriceItems(child).length} item harga
+                          {!child.description && ' · belum ada deskripsi'}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <button
+                          onClick={() => startEdit(child)}
+                          className="btn-ghost px-4 py-2 text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteChild(child)}
+                          aria-label={`Hapus ${child.name}`}
+                          className="h-8 w-8 rounded-sm border border-shore-200 flex items-center justify-center text-navy-soft hover:text-danger hover:border-danger-rule transition-colors"
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {addingTo === parent.id ? (
+                    <div className="card space-y-2.5 p-3.5">
+                      <input
+                        aria-label="Nama destinasi di dalam"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        // Enter mengirim: kolomnya cuma satu, dan menambah lima
+                        // spot berturut-turut lewat mouse saja itu lima kali
+                        // perjalanan ke tombol.
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddChild(parent)}
+                        autoFocus
+                        placeholder="Nama tempatnya (mis. Pulau Bangka)"
+                        className={inputClass}
+                      />
+                      <p className="text-2xs text-navy-soft">
+                        Wilayahnya ikut {parent.location}. Deskripsi, foto, dan daftar
+                        harganya diisi lewat Edit setelah ini dibuat.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleAddChild(parent)}
+                          disabled={saving || newName.trim() === ''}
+                          className="btn-primary px-5 py-2 text-sm disabled:opacity-50"
+                        >
+                          {saving ? 'Menambah…' : 'Tambah'}
+                        </button>
+                        <button
+                          onClick={() => { setAddingTo(null); setNewName(''); setError(''); }}
+                          disabled={saving}
+                          className="btn-ghost px-5 py-2 text-sm disabled:opacity-50"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setAddingTo(parent.id); setNewName(''); setError(''); }}
+                      className="btn-ghost w-full px-4 py-2.5 text-sm"
+                    >
+                      <PlusIcon />
+                      Tambah destinasi di dalam
+                    </button>
+                  )}
+                </div>
               </div>
-              <button onClick={() => startEdit(d)} className="btn-ghost shrink-0 px-4 py-2 text-sm">
-                Edit
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -194,7 +339,12 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
         <div className="card mt-6 p-6 space-y-5">
           <div>
             <p className="text-sm font-medium text-navy capitalize">{editing.name}</p>
-            <p className="text-xs text-navy-soft mt-0.5">{editing.location}</p>
+            <p className="text-xs text-navy-soft mt-0.5">
+              {editing.location}
+              {editing.parentId && (
+                <> — di dalam {destinations.find((d) => d.id === editing.parentId)?.name}</>
+              )}
+            </p>
           </div>
 
           <div>
@@ -316,6 +466,26 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
                     placeholder="Deskripsi singkat (opsional) — mis. Sudah termasuk pemandu & alat"
                     className="w-full rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                   />
+                  <div className="flex items-center gap-2">
+                    <input
+                      aria-label="URL foto item"
+                      value={item.image ?? ''}
+                      onChange={(e) => updateItem(i, { image: e.target.value })}
+                      placeholder="URL foto (opsional) — item berfoto tampil sebagai kartu bergambar"
+                      className="min-w-0 flex-1 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+                    />
+                    {/* Pratinjau sekecil ini bukan hiasan: URL foto paling sering
+                        salah tempel, dan tanpa ini pengelola baru tahu setelah
+                        menyimpan lalu membuka halaman publiknya. */}
+                    {item.image?.trim() && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.image}
+                        alt=""
+                        className="h-10 w-10 shrink-0 rounded-sm border border-shore-200 object-cover"
+                      />
+                    )}
+                  </div>
                 </div>
               ))}
               <button type="button" onClick={addItem} className="btn-ghost w-full px-4 py-2.5 text-sm">

@@ -19,7 +19,12 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import { normalizeViewerEmail } from "./format";
-import { destinationCameraIds, type DestinationCameras } from "./destination";
+import {
+  descendantIds,
+  destinationCameraIds,
+  isTopLevel,
+  type DestinationCameras,
+} from "./destination";
 
 // ── Destinations ──
 
@@ -29,6 +34,12 @@ export interface PriceItem {
   description?: string; // penjelasan singkat item, tampil di kartu daftar harga
   price: number; // rupiah, >= 0
   unit: string; // "/pax", "/malam", "/set" — teks bebas
+  /**
+   * URL foto item. Terisi = kartunya tampil bergambar seperti kartu destinasi;
+   * kosong = kartu teks yang rapat. Opsional per item, jadi satu daftar harga
+   * boleh campur — homestay berfoto di sebelah tiket masuk tanpa foto.
+   */
+  image?: string;
 }
 
 export interface Destination {
@@ -65,6 +76,14 @@ export interface Destination {
   stationId?: string;
   /** Uid pengelola yang mengelola destinasi ini (ditetapkan admin). Kosong = belum ada pengelola. */
   managerUid?: string;
+  /**
+   * Id destinasi induk — terisi hanya pada spot yang ditambahkan pengelola ke
+   * dalam destinasi kelolaannya (mis. tiap pulau di dalam satu provinsi).
+   * Dokumennya destinasi biasa: halaman detail, booking, ulasan, dan kamera
+   * dipakai ulang apa adanya. Jangan dibaca langsung untuk memutuskan "tampil
+   * di beranda atau tidak" — pakai isTopLevel() di lib/destination.
+   */
+  parentId?: string;
   /** Tautan ke kamera pengelola — id dokumen koleksi 'cameras', bukan id
    *  stream. Aman ada di dokumen publik: tidak bisa dipakai menyusun URL
    *  siaran, dan dokumen kameranya sendiri dijaga rules.
@@ -94,6 +113,29 @@ export function getPriceItems(dest: Destination): PriceItem[] {
   return [];
 }
 
+/**
+ * Harga item termurah destinasi — sumber "Mulai dari Rp X" di kartu. undefined
+ * bila destinasinya memang belum punya daftar harga.
+ *
+ * Di sini, bukan di komponen kartunya: kartu yang sama dipakai grid beranda dan
+ * daftar "destinasi di dalam" pada halaman detail, dan dua salinan rumus ini
+ * pernah cukup untuk membuat harga di dua permukaan itu berbeda.
+ */
+export function priceFrom(
+  dest: Destination,
+  all?: Destination[]
+): number | undefined {
+  // `all` diberikan → harga tempat-tempat di dalamnya ikut dihitung. Sebuah
+  // kawasan (provinsi, pulau) memang tidak menjual apa-apa sendiri: daftar
+  // harganya kosong, dan tanpa rangkuman ini kartunya jadi satu-satunya kartu
+  // di beranda yang tidak menyebut harga sama sekali — seolah gratis.
+  const inside = all ? new Set(descendantIds(all, dest.id)) : null;
+  const prices = [dest, ...(inside ? all!.filter((d) => inside.has(d.id)) : [])]
+    .flatMap((d) => getPriceItems(d).map((p) => p.price))
+    .filter((n) => n > 0);
+  return prices.length ? Math.min(...prices) : undefined;
+}
+
 export async function getDestinations(filter?: string): Promise<Destination[]> {
   if (!db) return [];
   const ref = collection(db, "destinations");
@@ -116,11 +158,75 @@ export function subscribeDestinations(
   });
 }
 
-/** Daftar wilayah unik (non-kosong, terurut) dari destinasi — sumber pilihan wilayah pengelola & kamera. */
+/**
+ * Daftar wilayah unik (non-kosong, terurut) dari destinasi — sumber chip filter
+ * beranda dan pilihan wilayah pengelola & kamera.
+ *
+ * Destinasi di dalam destinasi dibuang: wilayahnya diwarisi dari induk, jadi
+ * memasukkannya tidak menambah wilayah baru — tapi spot yang wilayahnya sempat
+ * disunting admin akan mencetak chip filter yang, begitu diklik, memfilter
+ * beranda jadi kosong (beranda hanya memuat destinasi tingkat atas).
+ */
 export function distinctLocations(destinations: Destination[]): string[] {
   return Array.from(
-    new Set(destinations.map((d) => d.location).filter(Boolean))
+    new Set(destinations.filter(isTopLevel).map((d) => d.location).filter(Boolean))
   ).sort();
+}
+
+/**
+ * Destinasi yang ada di dalam satu destinasi, terurut nama.
+ *
+ * Diurutkan di klien, bukan lewat orderBy: pasangan where+orderBy menuntut
+ * indeks komposit yang harus dibuat manual di Console, dan jumlah spot per
+ * destinasi tidak sebanding dengan ongkos itu.
+ */
+export function subscribeChildDestinations(
+  parentId: string,
+  callback: (destinations: Destination[]) => void
+) {
+  if (!db) return () => {};
+  const q = query(collection(db, "destinations"), where("parentId", "==", parentId));
+  return onSnapshot(q, (snap) => {
+    callback(
+      snap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as Destination))
+        .sort((a, b) => a.name.localeCompare(b.name))
+    );
+  });
+}
+
+/**
+ * Spot baru di dalam destinasi kelolaan pengelola.
+ *
+ * Bukan addDestination() yang diberi parentId: rule create untuk pengelola
+ * memakai keys().hasOnly(), jadi satu saja field bawaan form admin ikut terkirim
+ * (hasMonitoring, stationId, cameraIds) dan seluruh penyimpanan ditolak
+ * permission-denied. Daftar field di bawah harus sama persis dengan daftar di
+ * firestore.rules.
+ */
+export async function addChildDestination(parent: Destination, name: string) {
+  if (!db) return;
+  await addDoc(collection(db, "destinations"), {
+    name: name.trim(),
+    // Wilayah & warna diwarisi induk: keduanya ditetapkan admin di dokumen
+    // induk, dan pengelola memang tidak berhak menentukannya sendiri.
+    location: parent.location,
+    thumbColor: parent.thumbColor,
+    parentId: parent.id,
+    // Dari dokumen induk, bukan dari uid pemanggil: rules mengharuskan keduanya
+    // sama, dan menurunkannya dari induk membuat sumbernya cuma satu.
+    managerUid: parent.managerUid ?? "",
+    emoji: "",
+    tags: [],
+    description: "",
+    image: "",
+    images: [],
+    lat: null,
+    lng: null,
+    whatsapp: "",
+    priceItems: [],
+    createdAt: serverTimestamp(),
+  });
 }
 
 export async function addDestination(data: DestinationInput) {
@@ -425,6 +531,10 @@ export interface Camera {
    *  Ditulis pemilik lewat panel Kamera di dashboard; dicocokkan rules dengan
    *  `request.auth.token.email`. Kosong/absen = hanya pemilik & admin. */
   viewers?: string[];
+  /** True = semua pengguna yang sudah masuk boleh menonton, tanpa perlu ada di
+   *  `viewers`. Diputuskan pemilik lewat panel Kamera. Absen/false = tertutup;
+   *  itulah default dokumen lama, jadi tidak ada kamera yang mendadak terbuka. */
+  isPublic?: boolean;
   createdAt: unknown;
 }
 
@@ -465,6 +575,22 @@ export async function addCameraViewer(cameraDocId: string, email: string) {
   await updateDoc(doc(db, "cameras", cameraDocId), {
     viewers: arrayUnion(normalizeViewerEmail(email)),
   });
+}
+
+/**
+ * Buka/tutup kamera untuk umum.
+ *
+ * "Umum" di sini berarti semua pengguna yang sudah masuk — bukan pengunjung
+ * anonim. Alamat server kamera sendiri baru bisa dibaca akun yang sudah masuk
+ * (rules `settings/cameraServer`), jadi membuka dokumen kameranya ke anonim
+ * hanya memberi kotak hitam tanpa siaran.
+ *
+ * `viewers` tidak dihapus saat dipublikkan: kalau pemiliknya menutup lagi,
+ * daftar penonton berbayarnya harus kembali utuh, bukan hilang diam-diam.
+ */
+export async function setCameraPublic(cameraDocId: string, isPublic: boolean) {
+  if (!db) return;
+  await updateDoc(doc(db, "cameras", cameraDocId), { isPublic });
 }
 
 /** Cabut hak menonton satu email. */

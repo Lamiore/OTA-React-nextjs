@@ -4,17 +4,20 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import clsx from 'clsx';
 import { useAuthState } from '@/lib/useAuth';
-import { useCameraAccess } from '@/lib/useCameraAccess';
 import { useLang } from '@/lib/useLang';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
+// Monitoring di sini adalah halaman penonton (/monitoring): kamera yang emailnya
+// didaftarkan pengelola. Bukan panel Kamera pengelola/admin (/kamera) — yang itu
+// tetap satu pintu di menu profil, sama untuk desktop dan mobile.
+//
+// Tampil untuk semua, termasuk yang belum masuk: halaman itu sendiri yang
+// menjelaskan keadaannya (belum masuk / belum didaftarkan), dan menyembunyikan
+// tombolnya justru membuat paket monitoring tidak pernah terlihat ada.
 const navLinks = [
   { labelKey: 'nav.home', href: '/beranda' },
+  { labelKey: 'nav.monitoring', href: '/monitoring' },
   { labelKey: 'nav.booking', href: '/booking' },
-  // Di mobile Monitoring masih diakses lewat menu profil — BottomNav tidak
-  // punya slot keempat. Disembunyikan sampai orangnya punya kamera untuk
-  // dilihat; lihat useCameraAccess.
-  { labelKey: 'nav.monitoring', href: '/kamera', needsCamera: true },
   { labelKey: 'nav.profile', href: '/profile' },
 ];
 
@@ -28,7 +31,6 @@ const navLinks = [
 export default function TopNav({ compact = false }: { compact?: boolean }) {
   const pathname = usePathname();
   const { user } = useAuthState();
-  const { allowed: canSeeCameras } = useCameraAccess();
   const { t } = useLang();
   // Akun yang masuk lewat kode email lahir tanpa nama sampai diisi di
   // Pengaturan, jadi huruf awal email yang jadi cadangan — bukan inisial merek.
@@ -64,8 +66,7 @@ export default function TopNav({ compact = false }: { compact?: boolean }) {
         <div className="flex items-center gap-1">
           <nav aria-label="Utama">
             <ul className="flex items-center gap-1">
-              {navLinks.map(({ labelKey, href, needsCamera }) => {
-                if (needsCamera && !canSeeCameras) return null;
+              {navLinks.map(({ labelKey, href }) => {
                 const isActive = pathname === href;
                 return (
                   <li key={href}>

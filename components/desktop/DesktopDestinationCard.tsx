@@ -20,6 +20,12 @@ interface Props {
   onToggleSave?: () => void;
   /** Harga item termurah — tampil sebagai "Mulai dari Rp X". */
   priceFrom?: number;
+  /**
+   * False = destinasi ini tidak menjual apa-apa sendiri (kawasan yang harganya
+   * dirangkum dari tempat-tempat di dalamnya). CTA-nya mengantar ke halaman
+   * destinasi, bukan ke /booking yang hanya akan berkata "belum ada harga".
+   */
+  bookable?: boolean;
   /** Uid pengelola. Terisi = kartu ini dapat ringkasan sensor. */
   managerUid?: string;
   /** Dua field yang menentukan cabang RTDB sensor (lihat stationPath). */
@@ -161,6 +167,7 @@ export default function DesktopDestinationCard({
   saved,
   onToggleSave,
   priceFrom,
+  bookable,
   managerUid,
   hasMonitoring,
   stationId,
@@ -273,8 +280,11 @@ export default function DesktopDestinationCard({
           ) : (
             <span />
           )}
-          <Link href={`/booking?dest=${id}`} className="btn-primary relative z-10 shrink-0 px-4 py-2">
-            {t('nav.booking')}
+          <Link
+            href={bookable === false ? `/destinations/${id}` : `/booking?dest=${id}`}
+            className="btn-primary relative z-10 shrink-0 px-4 py-2"
+          >
+            {bookable === false ? t('card.seeInside') : t('nav.booking')}
             <ArrowIcon />
           </Link>
         </div>

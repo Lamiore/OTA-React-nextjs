@@ -15,7 +15,7 @@ import {
   type Camera,
   type AppUser,
 } from '@/lib/firestore';
-import { destinationCameraIds } from '@/lib/destination';
+import { destinationCameraIds, parentOptions } from '@/lib/destination';
 import { sanitizeStationId, stationPath } from '@/lib/realtime';
 import { parseCoords, waLink } from '@/lib/format';
 
@@ -36,6 +36,7 @@ const emptyForm: DestinationInput = {
   stationId: '',
   cameraIds: [],
   managerUid: '',
+  parentId: '',
 };
 
 function PlusIcon() {
@@ -135,6 +136,7 @@ export default function DestinasiPanel() {
       // kamera di `cameraId` dan tanpa ini pilihannya hilang saat diedit.
       cameraIds: destinationCameraIds(d),
       managerUid: d.managerUid ?? '',
+      parentId: d.parentId ?? '',
     });
     setTagInput(d.tags.join(', '));
     setCoordInput(
@@ -195,9 +197,21 @@ export default function DestinasiPanel() {
     closeForm();
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (d: Destination) => {
+    // Menghapus induk lebih dulu membuat isinya jadi dokumen tanpa jalan masuk:
+    // bukan tingkat atas jadi tidak muncul di beranda, dan halaman induk yang
+    // dulu memajangnya sudah tidak ada. Dokumennya hidup terus tanpa terlihat
+    // siapa pun — termasuk pengelolanya, yang butuh induk untuk mengurusnya.
+    const inside = destinations.filter((x) => x.parentId === d.id);
+    if (inside.length > 0) {
+      alert(
+        `"${d.name}" masih berisi ${inside.length} destinasi di dalamnya ` +
+          `(${inside.map((x) => x.name).join(', ')}). Hapus atau pindahkan isinya dulu.`,
+      );
+      return;
+    }
     if (!confirm('Hapus destinasi ini?')) return;
-    await deleteDestination(id);
+    await deleteDestination(d.id);
   };
 
   return (
@@ -247,6 +261,43 @@ export default function DestinasiPanel() {
                   placeholder="Kota/Kabupaten"
                   className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                 />
+              </div>
+
+              {/* Induk — kolom yang memutuskan destinasi ini jadi "toko" di
+                  beranda atau isi dari toko lain. Sebuah pilihan, bukan tombol
+                  "tambah di dalam" seperti panel pengelola: admin juga perlu
+                  memindahkan destinasi yang terlanjur salah tempat, dan satu
+                  kolom di form yang sudah ada mengerjakan keduanya. */}
+              <div>
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Di Dalam Destinasi</label>
+                <select aria-label="Di Dalam Destinasi"
+                  value={form.parentId ?? ''}
+                  onChange={(e) => {
+                    const parent = destinations.find((d) => d.id === e.target.value);
+                    setForm({
+                      ...form,
+                      parentId: e.target.value,
+                      // Wilayah ikut induk kalau masih kosong — sama seperti spot
+                      // buatan pengelola, yang selalu mewarisi lokasi induknya.
+                      // Yang sudah diisi tidak ditimpa: admin boleh saja punya
+                      // alasan menaruh spot lintas kabupaten.
+                      location: form.location.trim() === '' && parent ? parent.location : form.location,
+                    });
+                  }}
+                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+                >
+                  <option value="">-- Destinasi utama (tampil di beranda) --</option>
+                  {parentOptions(destinations, editingId).map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} — {d.location}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-2xs text-navy-soft">
+                  Pilih induk untuk menjadikannya spot di dalam destinasi lain: tidak
+                  tampil di beranda, melainkan di halaman induknya. Pilihan tidak memuat
+                  destinasi ini sendiri maupun isinya.
+                </p>
               </div>
 
               {/* Koordinat — satu kolom, bukan dua, karena Google Maps menyalin
@@ -362,6 +413,23 @@ export default function DestinasiPanel() {
                         placeholder="Deskripsi singkat (opsional) — mis. Sudah termasuk pemandu & alat"
                         className="w-full rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                       />
+                      <div className="flex items-center gap-2">
+                        <input
+                          aria-label="URL foto item"
+                          value={item.image ?? ''}
+                          onChange={(e) => updateItem(i, { image: e.target.value })}
+                          placeholder="URL foto (opsional) — item berfoto tampil sebagai kartu bergambar"
+                          className="min-w-0 flex-1 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+                        />
+                        {item.image?.trim() && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.image}
+                            alt=""
+                            className="h-10 w-10 shrink-0 rounded-sm border border-shore-200 object-cover"
+                          />
+                        )}
+                      </div>
                     </div>
                   ))}
                   <button type="button" onClick={addItem} className="btn-ghost w-full px-4 py-2.5 text-sm">
@@ -572,6 +640,14 @@ export default function DestinasiPanel() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-navy truncate">{d.name}</p>
               <p className="text-xs text-navy-soft mt-0.5">{d.location} — {getPriceItems(d).length} item harga</p>
+              {/* Spot di dalam kawasan lain: dibuat pengelola sendiri, dan tidak
+                  pernah tampil di beranda. Tanpa baris ini daftar admin terbaca
+                  seperti destinasi yang hilang dari beranda tanpa sebab. */}
+              {d.parentId && (
+                <p className="text-2xs text-navy-soft mt-0.5 truncate">
+                  Di dalam: {destinations.find((p) => p.id === d.parentId)?.name ?? 'induk terhapus'}
+                </p>
+              )}
               <p className="text-2xs text-navy-soft mt-0.5 truncate">
                 Pengelola: {d.managerUid
                   ? pengelola.find((p) => p.uid === d.managerUid)?.name || 'Tanpa Nama'
@@ -594,7 +670,7 @@ export default function DestinasiPanel() {
                 <EditIcon />
               </button>
               <button
-                onClick={() => handleDelete(d.id)}
+                onClick={() => handleDelete(d)}
                 aria-label={`Hapus `}
                 className="h-8 w-8 rounded-sm border border-shore-200 flex items-center justify-center text-navy-soft hover:text-danger hover:border-danger-rule transition-colors"
               >

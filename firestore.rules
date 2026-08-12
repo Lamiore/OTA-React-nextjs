@@ -70,10 +70,76 @@ service cloud.firestore {
       }
       allow read: if true;
 
-      // Membuat & menghapus destinasi tetap admin. Dokumen destinasi pengelola
-      // dibuat otomatis oleh approveRoleRequest — yang jalan sebagai admin saat
-      // menyetujui pengajuan, jadi tetap lewat cabang ini.
-      allow create, delete: if request.auth != null && destUserRole() == 'admin';
+      /** Dokumen destinasi yang diklaim sebagai induk oleh dokumen yang mau dibuat. */
+      function claimedParent() {
+        return get(/databases/$(database)/documents/destinations/$(request.resource.data.parentId)).data;
+      }
+
+      // Destinasi tingkat atas tetap milik admin: yang itu muncul di beranda dan
+      // membawa nama, wilayah, stasiun sensor, serta kameranya. Dokumen destinasi
+      // pengelola dibuat otomatis oleh approveRoleRequest — yang jalan sebagai
+      // admin saat menyetujui pengajuan, jadi tetap lewat cabang pertama.
+      //
+      // Cabang kedua membuka satu hal saja: pengelola menambah destinasi DI DALAM
+      // destinasi yang sudah jadi miliknya (tiap pulau/spot di bawah satu
+      // provinsi). Tiga syaratnya saling menopang dan tidak boleh dilepas satu
+      // pun:
+      //
+      // - managerUid == uid pemanggil, supaya spot baru tidak bisa dititipkan
+      //   atas nama pengelola lain;
+      // - induknya dibaca dari server dan managerUid-nya harus si pemanggil juga
+      //   — tanpa ini pengelola mana pun bisa menyisipkan spot ke dalam destinasi
+      //   orang lain, dan spot itu tayang di halaman publik destinasi tersebut;
+      // - hasOnly() mengunci daftar kolomnya. Ini yang menahan eskalasi: tanpa
+      //   dia, dokumen baru boleh membawa `stationId` atau `cameraIds` milik
+      //   perangkat orang lain, dan halaman spot itu jadi menayangkan siaran
+      //   yang bukan haknya. Daftar ini harus sama persis dengan yang ditulis
+      //   addChildDestination() di lib/firestore.ts.
+      //
+      // Kedalamannya sengaja tidak dibatasi. Bagi pengelola lingkaran induk–anak
+      // memang tidak mungkin terbentuk: parentId tidak ada di daftar kolom yang
+      // boleh di-update, jadi induk sebuah dokumen tidak bisa dipindah setelah
+      // dibuat. Admin bisa memindahkannya (cabang pertama tidak dibatasi kolom),
+      // jadi bagi admin yang menahan lingkaran itu antarmuka, bukan rules:
+      // parentOptions() di lib/destination membuang diri sendiri berikut seluruh
+      // isinya dari pilihan induk di panel admin.
+      allow create: if request.auth != null
+        && (
+          destUserRole() == 'admin'
+          || (
+            destUserRole() == 'pengelola'
+            && request.resource.data.managerUid == request.auth.uid
+            && request.resource.data.parentId is string
+            && request.resource.data.parentId != ''
+            && claimedParent().managerUid == request.auth.uid
+            // hasOnly() melarang kolom asing, tapi tidak mewajibkan satu pun ada.
+            // Nama dijaga di sini, bukan cukup di panel: kartu & judul halaman
+            // memanggil name.trim(), jadi satu dokumen tanpa nama yang ditulis
+            // lewat SDK mentah membuat halaman kawasan induknya melempar error
+            // untuk semua pengunjung, bukan cuma bagi yang menulisnya.
+            && request.resource.data.name is string
+            && request.resource.data.name != ''
+            && request.resource.data.keys().hasOnly([
+                 'name', 'location', 'thumbColor', 'parentId', 'managerUid', 'emoji',
+                 'tags', 'description', 'image', 'images', 'lat', 'lng', 'whatsapp',
+                 'priceItems', 'createdAt'
+               ])
+          )
+        );
+
+      // Hapus: admin bebas. Pengelola hanya boleh menghapus spot di DALAM
+      // destinasinya — `parentId` yang wajib terisi itulah yang menahan dia
+      // menghapus destinasi kelolaannya sendiri, satu-satunya jalan pulih dari
+      // itu adalah admin membuatkannya lagi dari nol.
+      allow delete: if request.auth != null
+        && (
+          destUserRole() == 'admin'
+          || (
+            destUserRole() == 'pengelola'
+            && resource.data.managerUid == request.auth.uid
+            && resource.data.get('parentId', '') != ''
+          )
+        );
 
       // Pengelola hanya boleh menyunting destinasi kelolaannya sendiri, dan
       // hanya kolom yang dijanjikan Pasal 3 Perjanjian Pengelola. hasOnly()
@@ -112,7 +178,14 @@ service cloud.firestore {
       function camUserRole() {
         return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
       }
-      // Baca: pemilik, admin, atau email yang dimasukkan pemilik ke `viewers`.
+      // Baca: kamera yang dipublikkan pemiliknya, pemilik sendiri, admin, atau
+      // email yang dimasukkan pemilik ke `viewers`.
+      //
+      // isPublic dicek paling depan: cabangnya cuma membaca dokumen kamera itu
+      // sendiri (gratis) dan kamera publik adalah kasus yang paling sering
+      // lolos. `request.auth != null` tetap berlaku untuknya — "publik" di sini
+      // berarti semua pengguna yang sudah masuk, sejalan dengan rule
+      // settings/cameraServer yang juga menuntut akun.
       //
       // Urutan sengaja: dua cek pertama cuma baca dokumen kamera itu sendiri
       // (gratis). camUserRole() ditaruh paling akhir karena isinya get() ke
@@ -132,7 +205,8 @@ service cloud.firestore {
       // lama tidak punya field itu dan akses langsung jadi error, bukan false.
       allow read: if request.auth != null
         && (
-          resource.data.ownerUid == request.auth.uid
+          resource.data.get('isPublic', false) == true
+          || resource.data.ownerUid == request.auth.uid
           || request.auth.token.email in resource.data.get('viewers', [])
           || camUserRole() == 'admin'
         );
@@ -156,16 +230,24 @@ service cloud.firestore {
         && camUserRole() == 'admin';
       allow delete: if request.auth != null
         && (resource.data.ownerUid == request.auth.uid || camUserRole() == 'admin');
-      // Pemilik mengelola daftar penontonnya, dan HANYA itu. hasOnly() wajib:
-      // tanpanya pemilik bisa menyetujui kameranya sendiri lewat jalur ini,
-      // padahal approve/reject eksklusif milik server VPS.
-      // `viewers is list` wajib juga: tanpanya SDK mentah bisa menulis viewers
-      // bukan-list (mis. string), lalu `email in viewers` di rule baca error dan
-      // kamera itu terkunci dari semua pembaca sampai field-nya dibetulkan lagi.
+      // Pemilik mengelola daftar penontonnya dan tombol publik/khusus, dan HANYA
+      // itu. hasOnly() wajib: tanpanya pemilik bisa menyetujui kameranya sendiri
+      // lewat jalur ini, padahal approve/reject eksklusif milik server VPS.
+      //
+      // Cek tipenya wajib juga: tanpa `viewers is list`, SDK mentah bisa menulis
+      // viewers bukan-list (mis. string), lalu `email in viewers` di rule baca
+      // error dan kamera itu terkunci dari semua pembaca sampai field-nya
+      // dibetulkan lagi. isPublic sama — bukan-bool membuat cabang pertama rule
+      // baca membandingkan tipe yang salah.
+      //
+      // get(...) dengan default, bukan akses langsung: menyalakan tombol publik
+      // pada kamera lama yang belum punya field `viewers` tidak boleh ditolak
+      // hanya karena field yang tidak disentuh itu memang tidak ada.
       allow update: if request.auth != null
         && resource.data.ownerUid == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewers'])
-        && request.resource.data.viewers is list;
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewers', 'isPublic'])
+        && request.resource.data.get('viewers', []) is list
+        && request.resource.data.get('isPublic', false) is bool;
     }
 
     match /reviews/{reviewId} {

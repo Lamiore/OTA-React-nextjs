@@ -1,12 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import { addCameraViewer, removeCameraViewer, type Camera } from '@/lib/firestore';
+import {
+  addCameraViewer,
+  removeCameraViewer,
+  setCameraPublic,
+  type Camera,
+} from '@/lib/firestore';
 
 /**
- * Daftar email yang boleh menonton satu kamera. Pengelola menambahkannya
- * setelah pembeli paket membayar — pemberian akses sengaja manual, bukan
- * otomatis dari booking, supaya pengelola yang memutuskan.
+ * Siapa yang boleh menonton satu kamera: publik, atau daftar email tertentu.
+ *
+ * Mode publik membuka kamera untuk semua pengguna yang sudah masuk — dipakai
+ * untuk kamera pemandangan yang memang jadi daya tarik destinasi. Mode khusus
+ * memakai daftar email; pengelola menambahkannya setelah pembeli paket membayar
+ * — pemberian akses sengaja manual, bukan otomatis dari booking, supaya
+ * pengelola yang memutuskan.
+ *
+ * Daftar emailnya tetap tersimpan selama mode publik menyala, jadi menutup
+ * kamera lagi mengembalikan penonton berbayarnya utuh.
  *
  * `editable` false untuk admin: rule tulisnya bertumpu pada kepemilikan
  * (`ownerUid`), jadi tombolnya cuma akan menghasilkan permission-denied.
@@ -23,6 +35,20 @@ export default function CameraViewers({
   const [error, setError] = useState('');
 
   const viewers = camera.viewers ?? [];
+  const isPublic = camera.isPublic === true;
+
+  const handleMode = async (next: boolean) => {
+    if (next === isPublic) return;
+    setBusy(true);
+    setError('');
+    try {
+      await setCameraPublic(camera.id, next);
+    } catch {
+      setError('Gagal mengubah akses. Coba lagi.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,10 +85,40 @@ export default function CameraViewers({
 
   return (
     <div className="mt-4 rounded-md border border-shore-200 bg-shore-50/60 p-4">
-      <p className="text-2xs font-medium text-navy">Penonton kamera</p>
-      <p className="text-2xs text-navy-soft mt-1 leading-relaxed">
-        Email di daftar ini bisa melihat siaran langsung kamera di halaman
-        destinasinya. Tambahkan setelah pembeli paket membayar.
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-2xs font-medium text-navy">Siapa yang boleh menonton</p>
+        {editable ? (
+          // Dua tombol, bukan satu sakelar: mode yang sedang berlaku kelihatan
+          // langsung tanpa harus menerjemahkan posisi sakelar jadi arti.
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => handleMode(false)}
+              disabled={busy}
+              aria-pressed={!isPublic}
+              className={`chip ${!isPublic ? 'chip-active' : ''} disabled:opacity-50`}
+            >
+              Khusus penonton
+            </button>
+            <button
+              type="button"
+              onClick={() => handleMode(true)}
+              disabled={busy}
+              aria-pressed={isPublic}
+              className={`chip ${isPublic ? 'chip-active' : ''} disabled:opacity-50`}
+            >
+              Publik
+            </button>
+          </div>
+        ) : (
+          <span className="chip">{isPublic ? 'Publik' : 'Khusus penonton'}</span>
+        )}
+      </div>
+
+      <p className="text-2xs text-navy-soft mt-1.5 leading-relaxed">
+        {isPublic
+          ? 'Siarannya tayang di halaman destinasi untuk semua pengguna yang sudah masuk. Daftar email di bawah tersimpan, tapi tidak dipakai selama mode publik menyala.'
+          : 'Hanya email di daftar ini yang bisa menonton, dan siarannya muncul di halaman Monitoring milik mereka — bukan di halaman destinasi yang dilihat umum.'}
       </p>
 
       {viewers.length === 0 ? (

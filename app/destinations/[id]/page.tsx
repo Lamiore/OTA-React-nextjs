@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
   getPriceItems,
+  priceFrom,
+  subscribeChildDestinations,
   subscribeReviews,
   reviewStats,
   type Destination,
@@ -15,6 +18,7 @@ import { destinationCameraIds } from '@/lib/destination';
 import { stationPath } from '@/lib/realtime';
 import { formatIDR, waLink } from '@/lib/format';
 import TopNav from '@/components/desktop/TopNav';
+import DesktopDestinationCard from '@/components/desktop/DesktopDestinationCard';
 import Footer from '@/components/desktop/Footer';
 import BottomNav from '@/components/mobile/BottomNav';
 import LiveMonitorPanel from '@/components/destinations/LiveMonitorPanel';
@@ -65,6 +69,7 @@ export default function DestinationDetail() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [children, setChildren] = useState<Destination[]>([]);
   const initedForId = useRef<string | null>(null);
 
   useEffect(() => {
@@ -86,6 +91,14 @@ export default function DestinationDetail() {
   useEffect(() => {
     if (!id) return;
     return subscribeReviews(id, setReviews);
+  }, [id]);
+
+  // Query terpisah, bukan turunan dari koleksi penuh: halaman ini sudah hanya
+  // berlangganan satu dokumen, dan menarik seluruh destinasi cuma untuk mencari
+  // anaknya membalik itu jadi pembacaan sekoleksi tiap kali halaman dibuka.
+  useEffect(() => {
+    if (!id) return;
+    return subscribeChildDestinations(id, setChildren);
   }, [id]);
 
   // Pra-pilih item pertama (biasanya tiket masuk) sekali per destinasi saat
@@ -130,7 +143,22 @@ export default function DestinationDetail() {
   }
 
   const priceItems = getPriceItems(dest);
+  // Satu item berfoto sudah cukup untuk memberi slot foto ke semua item — itu
+  // yang menyamakan tinggi kartunya. Nol foto berarti tidak ada slot sama sekali.
+  const anyItemImage = priceItems.some((i) => !!i.image);
   const { avg, count } = reviewStats(reviews);
+
+  /**
+   * Destinasi ini menjual sesuatu sendiri, bukan cuma menaungi destinasi lain.
+   *
+   * Kawasan seluas provinsi biasanya berbentuk begitu: harganya menempel di tiap
+   * spot, dokumen induknya sendiri tanpa item. Tanpa cabang ini seksi daftar
+   * harga tetap dirender untuk mereka — "belum ada daftar harga" berdiri persis
+   * di atas tombol Booking yang justru AKTIF (syarat disabled-nya minta
+   * priceItems tidak kosong), dan tombol itu mengantar ke /booking tanpa satu
+   * item pun. Ajakan bookingnya sudah dipikul tiap kartu spot di atas.
+   */
+  const sellsDirectly = priceItems.length > 0 || children.length === 0;
 
   // Tautan keluar, bukan peta tertanam: pengunjung sudah punya aplikasi peta
   // pilihannya sendiri, dan halaman ini tidak perlu menanggung bundel peta.
@@ -231,6 +259,22 @@ export default function DestinationDetail() {
           <div className="space-y-10">
             {/* Aksi cepat — rute & kontak pengelola. Keduanya opsional per
                 destinasi; barisnya hilang sendiri kalau dua-duanya kosong. */}
+            {/* Jalan naik ke kawasan induk. Wajib ada, bukan pemanis: spot di
+                dalam kawasan tidak muncul di beranda maupun pencariannya, jadi
+                pengunjung yang tiba dari tautan yang dibagikan tidak punya cara
+                lain menemukan kawasannya. Teksnya sengaja umum — nama induknya
+                butuh satu pembacaan dokumen lagi, dan tautan ini tidak sepadan
+                dengan itu. */}
+            {dest.parentId && (
+              <Link
+                href={`/destinations/${dest.parentId}`}
+                className="btn-text -mt-2 inline-flex items-center gap-1.5"
+              >
+                <ArrowLeftIcon />
+                {t('dest.openParent')}
+              </Link>
+            )}
+
             {(mapsHref || waHref) && (
               <div className="flex flex-wrap gap-3">
                 {mapsHref && (
@@ -300,11 +344,88 @@ export default function DestinationDetail() {
               </section>
             )}
 
-            {/* Daftar harga + booking — tiap item berdiri sendiri. */}
-            <section className="space-y-4">
-              <h2 className="section-title">{t('dest.priceList')}</h2>
+            {/* Pantau langsung — kamera (kalau di-link & boleh ditonton) + sensor
+                IoT. Di atas item, bukan di bawahnya: kondisi laut hari ini yang
+                menentukan pengunjung jadi memesan atau tidak, jadi dia harus
+                sudah terbaca sebelum daftar yang dijual. */}
+            {(destinationCameraIds(dest).length > 0 || stationPath(dest)) && (
+              <LiveMonitorPanel
+                cameraDocIds={destinationCameraIds(dest)}
+                sensorPath={stationPath(dest)}
+              />
+            )}
+
+            {/* Satu bagian untuk semua yang ditawarkan destinasi ini: tempat di
+                dalamnya yang bisa dibuka lagi, lalu item yang langsung dibeli.
+                Dulu dua bagian bersebelahan, dan judul besar kedua memecah satu
+                pilihan ("mau apa di sini?") jadi dua keputusan terpisah.
+
+                Judulnya ikut isi: destinasi biasa — yang mayoritas — tetap
+                berkepala "Daftar harga" seperti sebelumnya, judul gabungan hanya
+                muncul saat kawasan ini memang berisi tempat lain. */}
+            {(children.length > 0 || sellsDirectly) && (
+            <section>
+              <h2 className="section-title">
+                {t(children.length > 0 ? 'dest.offeringsTitle' : 'dest.priceList')}
+              </h2>
+
+              {children.length > 0 && (
+                <>
+                  <p className="section-lede">
+                    {t(children.length === 1 ? 'dest.insideLedeOne' : 'dest.insideLede', {
+                      count: children.length,
+                    })}
+                  </p>
+                  {/* Tiga kolom, bukan dua. Kartunya sama persis dengan beranda,
+                      tapi kolom halaman ini max-w-4xl sementara beranda max-w-7xl:
+                      dua kolom di sini melebarkan tiap kartu ke ~410px, setengah
+                      kali lebih besar daripada kartu yang sama di beranda. Angka
+                      kolomnya beda supaya ukuran kartunya yang sama. */}
+                  <div className="mt-4 grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 lg:grid-cols-3">
+                    {children.map((child) => (
+                      <div key={child.id} className="h-full">
+                        {/* Kartu yang sama persis dengan beranda — sebuah spot di
+                            dalam kawasan tetap destinasi utuh, bukan baris daftar.
+                            managerUid hanya diteruskan bila spot ini benar-benar
+                            punya stasiun: kartu memakainya sebagai penanda "layak
+                            dapat ringkasan sensor", dan tiap spot mewarisi
+                            managerUid induknya — tanpa saringan ini seluruh grid
+                            berisi catatan "stasiun sensor belum terpasang" yang
+                            sama, di bawah panel sensor kawasan yang baru saja
+                            menayangkan angkanya. */}
+                        <DesktopDestinationCard
+                          {...child}
+                          managerUid={stationPath(child) ? child.managerUid : undefined}
+                          priceFrom={priceFrom(child, children)}
+                          bookable={getPriceItems(child).length > 0}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Blok harga tetap satu kelompok tersendiri di dalam bagian ini.
+                  Tombol Booking di bawah hanya berlaku untuk item di atasnya,
+                  bukan untuk kartu tempat — tanpa jarak dan sub-judul ini,
+                  "Pilih item dulu" terbaca seolah menunggu salah satu kartu
+                  destinasi dipilih, padahal kartu itu memang tidak bisa dipilih. */}
+              {sellsDirectly && (
+              <div className={children.length > 0 ? 'mt-8 space-y-4' : 'mt-4 space-y-4'}>
+                {children.length > 0 && (
+                  <h3 className="font-serif text-lg font-semibold text-navy">
+                    {t('dest.priceList')}
+                  </h3>
+                )}
               {priceItems.length > 0 ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                // Satu bentuk untuk semua item: baris rapat dengan thumbnail
+                // persegi di kiri. Sebelumnya item berfoto jadi kartu bergambar
+                // 4:3 sementara tetangganya kartu teks setinggi sepertiganya —
+                // satu baris grid berisi dua tinggi yang jauh berbeda, dan yang
+                // pendek meninggalkan lubang di bawahnya. Thumbnail berukuran
+                // tetap membuat tinggi tiap kartu ditentukan hal yang sama,
+                // berfoto atau tidak.
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                   {priceItems.map((item) => {
                     const isSelected = selectedIds.includes(item.id);
                     return (
@@ -313,31 +434,57 @@ export default function DestinationDetail() {
                         type="button"
                         onClick={() => toggleItem(item.id)}
                         aria-pressed={isSelected}
-                        className={`flex flex-col rounded-md border p-4 text-left transition-colors duration-micro ease-out ${
+                        className={`flex items-center gap-3 rounded-md border p-2.5 text-left transition-colors duration-micro ease-out ${
                           isSelected
                             ? 'border-teal-600 bg-teal-50'
                             : 'border-shore-200 bg-surface hover:border-shore-300'
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="text-sm font-semibold capitalize leading-snug text-navy">{item.label}</h3>
-                          <span
-                            className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-xs border transition-colors duration-micro ease-out ${
-                              isSelected ? 'border-teal-600 bg-teal-600 text-white' : 'border-shore-300 bg-surface'
-                            }`}
-                          >
-                            {isSelected && <CheckIcon />}
+                        {/* Slotnya muncul untuk SEMUA item begitu ada satu saja
+                            yang berfoto — itu yang membuat tinggi kartunya sama
+                            dan teksnya mulai di garis yang sama. Kalau tidak ada
+                            satu pun foto di daftar ini, slotnya tidak dirender:
+                            sebaris kotak kosong tidak menyeragamkan apa pun,
+                            cuma menyisakan ruang mati di kiri tiap kartu. */}
+                        {anyItemImage && (
+                          <span className="h-14 w-14 shrink-0 overflow-hidden rounded-sm bg-shore-100">
+                            {item.image && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={item.image}
+                                alt={item.label}
+                                loading="lazy"
+                                decoding="async"
+                                className="h-full w-full object-cover"
+                              />
+                            )}
                           </span>
-                        </div>
-                        {item.description && (
-                          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-navy-soft">
-                            {item.description}
-                          </p>
                         )}
-                        <p className="tabular mt-auto pt-3 text-base font-semibold text-navy">
-                          {formatIDR(item.price)}
-                          <span className="text-xs font-normal text-navy-soft"> {item.unit}</span>
-                        </p>
+
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold capitalize leading-snug text-navy">
+                            {item.label}
+                          </span>
+                          {item.description && (
+                            // Satu baris, dipotong: dua baris membuat kartu yang
+                            // punya keterangan lebih tinggi daripada yang tidak.
+                            <span className="mt-0.5 block truncate text-xs text-navy-soft">
+                              {item.description}
+                            </span>
+                          )}
+                          <span className="tabular mt-0.5 block text-sm font-semibold text-navy">
+                            {formatIDR(item.price)}
+                            <span className="text-xs font-normal text-navy-soft"> {item.unit}</span>
+                          </span>
+                        </span>
+
+                        <span
+                          className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-xs border transition-colors duration-micro ease-out ${
+                            isSelected ? 'border-teal-600 bg-teal-600 text-white' : 'border-shore-300 bg-surface'
+                          }`}
+                        >
+                          {isSelected && <CheckIcon />}
+                        </span>
                       </button>
                     );
                   })}
@@ -358,14 +505,9 @@ export default function DestinationDetail() {
                     : 'Pilih item dulu'
                   : 'Booking'}
               </button>
+              </div>
+              )}
             </section>
-
-            {/* Pantau langsung — kamera (kalau di-link & boleh ditonton) + sensor IoT */}
-            {(destinationCameraIds(dest).length > 0 || stationPath(dest)) && (
-              <LiveMonitorPanel
-                cameraDocIds={destinationCameraIds(dest)}
-                sensorPath={stationPath(dest)}
-              />
             )}
 
             {/* Ulasan pengunjung */}

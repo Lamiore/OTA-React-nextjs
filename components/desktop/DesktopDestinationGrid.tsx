@@ -2,9 +2,16 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { fetchRatingSummaries, getPriceItems, type Destination, type RatingSummary } from '@/lib/firestore';
+import {
+  fetchRatingSummaries,
+  getPriceItems,
+  priceFrom,
+  type Destination,
+  type RatingSummary,
+} from '@/lib/firestore';
+import { isTopLevel } from '@/lib/destination';
 import { useSavedDestinations } from '@/lib/useSaved';
 import { useLang } from '@/lib/useLang';
 import { useLocations } from '@/lib/useLocations';
@@ -20,14 +27,6 @@ const FILTER_KEYS: Record<string, string> = {
 };
 
 const gridClass = 'grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
-
-/** Harga item termurah destinasi — undefined bila belum ada daftar harga. */
-function priceFrom(dest: Destination): number | undefined {
-  const prices = getPriceItems(dest)
-    .map((p) => p.price)
-    .filter((n) => n > 0);
-  return prices.length ? Math.min(...prices) : undefined;
-}
 
 function SkeletonCard() {
   return (
@@ -63,7 +62,9 @@ export default function DesktopDestinationGrid() {
   const searchParams = useSearchParams();
   const qParam = searchParams.get('q') ?? '';
   const locParam = searchParams.get('loc') ?? 'Semua';
-  const [destinations, setDestinations] = useState<Destination[]>([]);
+  // Seluruh koleksi apa adanya, termasuk isi kawasan: `destinations` (yang
+  // tampil) diturunkan darinya, dan rangkuman harga kartu kawasan membacanya.
+  const [all, setAll] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState(locParam);
   const [ratings, setRatings] = useState<Record<string, RatingSummary>>({});
@@ -94,33 +95,44 @@ export default function DesktopDestinationGrid() {
     fetchRatingSummaries().then(setRatings);
   }, []);
 
-  const fetchDestinations = useCallback(async (filter: string) => {
+  // Seluruh koleksi, tanpa where('location'): kartu kawasan merangkum harga
+  // termurah dari tempat-tempat DI DALAMNYA, dan isi sebuah provinsi hampir
+  // selalu punya `location` yang berbeda dari provinsinya. Query berwilayah
+  // membuang justru dokumen yang dipakai menghitung harga itu, jadi kartu yang
+  // sama akan menyebut harga di chip "Semua" dan diam di chip wilayahnya.
+  // Wilayahnya disaring di klien; koleksinya puluhan dokumen, bukan ribuan.
+  const fetchDestinations = useCallback(async () => {
     if (!db) {
-      setDestinations([]);
+      setAll([]);
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      const ref = collection(db, 'destinations');
-      const q =
-        filter && filter !== 'Semua'
-          ? query(ref, where('location', '==', filter))
-          : ref;
-      const snap = await getDocs(q);
-      setDestinations(
-        snap.docs.map((d) => ({ id: d.id, ...d.data() } as Destination))
-      );
+      const snap = await getDocs(collection(db, 'destinations'));
+      setAll(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Destination)));
     } catch {
-      setDestinations([]);
+      setAll([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchDestinations(activeFilter);
-  }, [activeFilter, fetchDestinations]);
+    fetchDestinations();
+  }, [fetchDestinations]);
+
+  // Disaring di sini, sekali, bukan di tiap turunannya: `managed`/`others`,
+  // pengelompokan wilayah, hitungan lede, dan pencarian semuanya diturunkan
+  // dari nilai ini. Menyaring belakangan berarti empat tempat yang harus ingat —
+  // dan yang terlewat akan memajang isi toko sebagai toko.
+  const destinations = useMemo(
+    () =>
+      all
+        .filter(isTopLevel)
+        .filter((d) => activeFilter === 'Semua' || d.location === activeFilter),
+    [all, activeFilter]
+  );
 
   const term = qParam.trim().toLowerCase();
   const shown = term
@@ -168,7 +180,10 @@ export default function DesktopDestinationGrid() {
         rating={ratings[dest.id]}
         saved={savedIds.includes(dest.id)}
         onToggleSave={user ? () => toggle(dest.id) : undefined}
-        priceFrom={priceFrom(dest)}
+        priceFrom={priceFrom(dest, all)}
+        // Kawasan tanpa daftar harga sendiri: harganya milik tempat di
+        // dalamnya, jadi yang bisa dibooking juga tempat itu, bukan kawasannya.
+        bookable={getPriceItems(dest).length > 0}
       />
     </div>
   );
@@ -181,7 +196,7 @@ export default function DesktopDestinationGrid() {
           jarak ke footer, dan grid yang menempel footer terasa terpotong. */}
       <div className="mx-auto max-w-7xl px-4 pb-14 pt-8 sm:px-6 lg:px-10 lg:pb-20 lg:pt-12">
         {/* Kepala bagian tanpa eyebrow: judulnya sendiri yang jadi kepala. */}
-        <div className="mb-6 max-w-xl">
+        <div className="mb-3 max-w-xl">
           <h2 className="section-title">{t('home.sectionTitle')}</h2>
           <p className="section-lede">
             {loading
@@ -201,7 +216,7 @@ export default function DesktopDestinationGrid() {
             wilayah. `top-16` menyamai tinggi TopNav; di mobile TopNav tidak
             dirender sama sekali (hidden md:block) jadi baris ini menempel di 0.
             -mx/px menutup celah supaya kartu tidak terlihat lewat di sisinya. */}
-        <div className="sticky top-0 z-30 -mx-4 mb-8 flex gap-2 overflow-x-auto bg-shore-50/95 px-4 py-3 backdrop-blur-sm scrollbar-hide sm:-mx-6 sm:px-6 md:top-16 lg:-mx-10 lg:px-10">
+        <div className="sticky top-0 z-30 -mx-4 mb-4 flex gap-2 overflow-x-auto bg-shore-50/95 px-4 py-3 backdrop-blur-sm scrollbar-hide sm:-mx-6 sm:px-6 md:top-16 lg:-mx-10 lg:px-10">
           {locations.length === 0
             ? Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="chip w-24 shrink-0 animate-pulse bg-shore-100 text-transparent">
@@ -225,7 +240,7 @@ export default function DesktopDestinationGrid() {
         {/* Destinasi berpengelola — di atas, dengan ringkasan sensornya sendiri. */}
         {!loading && managed.length > 0 && (
           <div className="mb-10">
-            <div className="mb-4 border-b border-shore-200 pb-2.5">
+            <div className="mb-2.5 border-b border-shore-200 pb-2">
               <h3 className="font-serif text-xl font-semibold tracking-tight text-navy">
                 {t('home.managedTitle')}
               </h3>
@@ -253,7 +268,7 @@ export default function DesktopDestinationGrid() {
           <div className="space-y-10">
             {byLocation.map(([loc, items]) => (
               <div key={loc}>
-                <div className="mb-4 flex items-end justify-between gap-4 border-b border-shore-200 pb-2.5">
+                <div className="mb-2.5 flex items-end justify-between gap-4 border-b border-shore-200 pb-2">
                   <div>
                     <h3 className="font-serif text-xl font-semibold capitalize tracking-tight text-navy">
                       {loc}

@@ -37,8 +37,23 @@ function ProfileIcon({ active }: { active: boolean }) {
 }
 
 
+function MonitoringIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={active ? 'text-teal-600' : 'text-navy-soft'}>
+      <path d="M15 8h.01" />
+      <rect width="16" height="12" x="4" y="6" rx="2" />
+      <path d="m4 15 4-4a2 3 0 0 1 3 0l5 5" />
+      <path d="m14 14 1-1a2 3 0 0 1 3 0l2 2" />
+    </svg>
+  );
+}
+
+// Monitoring ada di bar ini, bukan cuma di TopNav: di mobile bar inilah satu-
+// satunya navigasi yang ada, jadi menaruhnya di TopNav saja membuat halamannya
+// mustahil dijangkau dari ponsel — perangkat yang justru dipakai menonton.
 const navItems = [
   { labelKey: 'nav.home', href: '/beranda', Icon: HomeIcon },
+  { labelKey: 'nav.monitoring', href: '/monitoring', Icon: MonitoringIcon },
   { labelKey: 'nav.booking', href: '/booking', Icon: CalendarIcon, center: true },
   { labelKey: 'nav.profile', href: '/profile', Icon: ProfileIcon },
 ];

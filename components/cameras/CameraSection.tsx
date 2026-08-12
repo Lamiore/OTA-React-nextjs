@@ -13,9 +13,10 @@ interface Props {
 
 /**
  * View Kamera di halaman /kamera. Pengelola & admin mendaftarkan dan memantau
- * kameranya di sini. Pengguna biasa tidak punya kamera sendiri — kamera yang
- * boleh ditontonnya muncul di halaman destinasi begitu pengelola menambahkan
- * emailnya, jadi di sini cukup keterangan ke mana harus melihat.
+ * kameranya di sini. Pengguna biasa tidak punya kamera sendiri — kamera publik
+ * tayang di halaman destinasinya, dan kamera khusus penonton di halaman
+ * Monitoring begitu pengelola menambahkan emailnya, jadi di sini cukup
+ * keterangan ke mana harus melihat.
  */
 export default function CameraSection({ user, role }: Props) {
   const { t } = useLang();

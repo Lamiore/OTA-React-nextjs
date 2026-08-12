@@ -230,12 +230,41 @@ const DICT: Record<string, Record<Lang, string>> = {
   "dest.from": { id: "mulai", en: "from" },
   "dest.notFound": { id: "Destinasi tidak ditemukan.", en: "Destination not found." },
   "dest.about": { id: "Tentang", en: "About" },
+  "dest.insideTitle": { id: "Destinasi di Dalam", en: "Places Inside" },
+  "dest.openParent": { id: "Lihat kawasan tempat ini berada", en: "View the area this place belongs to" },
+  "dest.insideLede": {
+    id: "{count} tempat di kawasan ini, masing-masing punya harga & pantauannya sendiri.",
+    en: "{count} places in this area, each with its own prices and monitoring.",
+  },
+  "dest.insideLedeOne": {
+    id: "{count} tempat di kawasan ini, dengan harga & pantauannya sendiri.",
+    en: "{count} place in this area, with its own prices and monitoring.",
+  },
+  "dest.offeringsTitle": { id: "Yang Ada di Sini", en: "What's Here" },
   "dest.gallery": { id: "Galeri", en: "Gallery" },
   "dest.reviewPlaceholder": {
     id: "Ceritakan pengalamanmu di sini… (opsional)",
     en: "Tell us about your experience… (optional)",
   },
   "dest.beFirstReview": { id: "Belum ada ulasan. Jadilah yang pertama!", en: "No reviews yet. Be the first!" },
+
+  // ── Halaman Monitoring (penonton) ──
+  "monitorPage.title": { id: "Monitoring", en: "Monitoring" },
+  "monitorPage.lede": {
+    id: "Sensor lingkungan dari tiap stasiun destinasi — terbuka untuk siapa saja — plus kamera khusus yang emailmu didaftarkan pengelolanya. Kamera publik ada di halaman destinasinya masing-masing.",
+    en: "Environmental sensors from every destination station — open to everyone — plus the private cameras whose manager has registered your email. Public cameras live on each destination's own page.",
+  },
+  "monitorPage.signInTitle": { id: "Masuk dulu untuk melihat kameramu", en: "Sign in to see your cameras" },
+  "monitorPage.signInBody": {
+    id: "Hak menonton menempel pada email akunmu, jadi kami perlu tahu kamu masuk sebagai siapa.",
+    en: "Viewing rights are tied to your account email, so we need to know who you're signed in as.",
+  },
+  "monitorPage.emptyTitle": { id: "Belum ada kamera untuk akunmu", en: "No cameras for your account yet" },
+  "monitorPage.emptyBody": {
+    id: "Pantauan kamera dibuka pengelola destinasi untuk tamu yang mengambil paket monitoring. Hubungi pengelola destinasi yang kamu tuju, lalu minta emailmu — {email} — didaftarkan sebagai penonton. Setelah itu kameranya muncul di halaman ini.",
+    en: "Camera access is opened by each destination's manager for guests on a monitoring package. Contact the manager of the destination you have in mind and ask them to register your email — {email} — as a viewer. After that the cameras appear on this page.",
+  },
+  "monitorPage.openDest": { id: "Buka halaman destinasi", en: "Open destination page" },
 
   // ── Akun ──
   "auth.fullName": { id: "Nama Lengkap", en: "Full Name" },
@@ -318,6 +347,9 @@ const DICT: Record<string, Record<Lang, string>> = {
   // keduanya sama — bahasa Indonesia tidak menandainya.
   "home.regionCount": { id: "{count} destinasi", en: "{count} destinations" },
   "home.regionCountOne": { id: "{count} destinasi", en: "{count} destination" },
+  // Bukan "Sensor aktif": daftarnya memuat stasiun yang terpasang, termasuk
+  // yang barisnya sedang Offline — judul itu akan membantah barisnya sendiri.
+  "home.sensorPanelTitle": { id: "Stasiun sensor", en: "Sensor stations" },
   "home.heroTitle": { id: "Laut dalam menanti.", en: "The deep waters await." },
   "home.heroLede": {
     id: "Spot selam, pantai tersembunyi, dan pengalaman laut — lengkap dengan pantauan kondisi perairan secara langsung.",
@@ -335,6 +367,7 @@ const DICT: Record<string, Record<Lang, string>> = {
   "card.save": { id: "Simpan destinasi", en: "Save destination" },
   "card.unsave": { id: "Hapus dari tersimpan", en: "Remove from saved" },
   "card.priceFrom": { id: "Mulai dari", en: "From" },
+  "card.seeInside": { id: "Lihat Tempat", en: "See Places" },
   "card.sensorTitle": { id: "Sensor lingkungan", en: "Environmental sensors" },
   // Bukan monitor.weather: label panjangnya terpotong di kolom sempit kartu.
   "card.weather": { id: "Cuaca", en: "Weather" },
@@ -401,6 +434,15 @@ const DICT: Record<string, Record<Lang, string>> = {
   "monitor.minsAgo": { id: "{n} menit lalu", en: "{n}m ago" },
   "monitor.hoursAgo": { id: "{n} jam lalu", en: "{n}h ago" },
   "monitor.daysAgo": { id: "{n} hari lalu", en: "{n}d ago" },
+  "monitor.sensorsTitle": { id: "Sensor Lingkungan", en: "Environmental Sensors" },
+  "monitor.connecting": { id: "Menghubungkan…", en: "Connecting…" },
+  "monitor.gpsTitle": { id: "Lokasi Stasiun (GPS)", en: "Station Location (GPS)" },
+  "monitor.gpsSearching": { id: "Mencari sinyal satelit…", en: "Searching for satellites…" },
+  "monitor.gpsVisible": { id: "{n} terlihat", en: "{n} visible" },
+  "monitor.openMap": { id: "Buka di Peta", en: "Open in Maps" },
+  "monitor.satellites": { id: "Satelit", en: "Satellites" },
+  "monitor.altitude": { id: "Ketinggian", en: "Altitude" },
+  "monitor.speed": { id: "Kecepatan", en: "Speed" },
 
   // ── Ulasan & tersimpan ──
   "review.write": { id: "Tulis ulasan", en: "Write a review" },
@@ -508,12 +550,12 @@ const DICT: Record<string, Record<Lang, string>> = {
     en: "Couldn't load the camera list. Try reloading the page.",
   },
   "camera.ledeViewer": {
-    id: "Kamera yang boleh kamu tonton muncul di halaman destinasinya.",
-    en: "Cameras you're allowed to watch appear on their destination page.",
+    id: "Kamera yang boleh kamu tonton muncul di halaman Monitoring.",
+    en: "Cameras you're allowed to watch appear on the Monitoring page.",
   },
   "camera.viewerNote": {
-    id: "Kamera dipasang dan dikelola pengelola destinasi. Setelah kamu membeli paket dan pengelola menambahkan emailmu, siaran langsungnya muncul di halaman destinasi tersebut.",
-    en: "Cameras are installed and managed by the destination's manager. Once you buy a package and the manager adds your email, the live feed appears on that destination's page.",
+    id: "Kamera dipasang dan dikelola pengelola destinasi. Kamera publik tayang langsung di halaman destinasinya. Untuk kamera khusus, setelah kamu membeli paket dan pengelola menambahkan emailmu, siaran langsungnya muncul di halaman Monitoring.",
+    en: "Cameras are installed and managed by the destination's manager. Public cameras play right on the destination's page. For private ones, the live feed appears on your Monitoring page once you buy a package and the manager adds your email.",
   },
   "camera.empty": {
     id: "Belum ada kamera. Tambahkan kamera pertamamu.",

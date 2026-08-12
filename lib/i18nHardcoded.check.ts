@@ -29,6 +29,7 @@ const SCAN_DIRS = [
   "components/cameras",
   "components/destinations",
   "components/chat",
+  "app/monitoring",
 ];
 
 /**

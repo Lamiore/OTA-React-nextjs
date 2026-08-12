@@ -142,7 +142,7 @@ function ChevronIcon({ dir }: { dir: 'left' | 'right' }) {
  * begitu geser-jari di ponsel jalan sendiri tanpa kode tambahan, dan tombol
  * panah cukup memanggil scrollTo.
  */
-function CameraCarousel({ cams, serverUrl }: { cams: Camera[]; serverUrl: string | null }) {
+export function CameraCarousel({ cams, serverUrl }: { cams: Camera[]; serverUrl: string | null }) {
   const { t } = useLang();
   const trackRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
@@ -215,72 +215,12 @@ function CameraCarousel({ cams, serverUrl }: { cams: Camera[]; serverUrl: string
 }
 
 /**
- * Panel "Pantau Langsung" gabungan: stream kamera + sensor IoT dalam satu card.
+ * Langganan satu paket sensor + detak umur datanya.
  *
- * Kameranya dibaca langsung dari dokumen `cameras/{docId}`, bukan dari field
- * yang didenormalisasi ke dokumen destinasi. Itu disengaja: dokumen destinasi
- * dibaca publik, jadi id stream yang menempel di sana bisa dipakai siapa pun
- * merakit URL siaran sendiri. Sekarang rules yang jadi satu-satunya gerbang —
- * pembaca tanpa hak kena permission-denied dan blok kameranya tidak dirender.
- * Tidak ada pengecekan role di komponen ini.
- *
- * Sensor dibaca dari cabang RTDB milik paket sensor destinasi ini (sensorPath).
+ * Detaknya perlu karena RTDB menyimpan nilai terakhir walau paketnya mati:
+ * tanpa jam yang jalan, stasiun yang sempat live akan bertuliskan Live selamanya.
  */
-export default function LiveMonitorPanel({ cameraDocIds, sensorPath }: Props) {
-  const { t } = useLang();
-  const hasMonitoring = !!sensorPath;
-
-  // ── Kamera ──
-  // Satu langganan per kamera, hasilnya dikumpulkan per id. Kamera yang ditolak
-  // rules (pengunjung tanpa hak) jatuh jadi null dan tidak ikut dirender —
-  // itulah sebabnya daftar yang tayang diturunkan dari isi map ini, bukan dari
-  // panjang cameraDocIds.
-  const [cams, setCams] = useState<Record<string, Camera | null>>({});
-  const [serverUrl, setServerUrl] = useState<string | null>(null); // null = loading
-
-  // Dibekukan jadi string supaya array literal baru tiap render tidak memicu
-  // langganan ulang setiap kali komponen induk render.
-  const idsKey = cameraDocIds.join(',');
-
-  useEffect(() => {
-    // Reset dulu, sinkron: tanpa ini, pindah destinasi lewat navigasi sisi-klien
-    // membiarkan kamera destinasi LAMA tetap tampil sampai snapshot baru datang.
-    setCams({});
-    if (!db) return;
-    const ids = idsKey ? idsKey.split(',') : [];
-    // Callback error wajib: pengunjung tanpa hak MEMANG kena permission-denied
-    // di sini. Tanpa penanganan, listener-nya mati dan tiap kunjungan halaman
-    // destinasi publik meninggalkan error di konsol.
-    const unsubs = ids.map((id) =>
-      onSnapshot(
-        doc(db!, 'cameras', id),
-        (snap) =>
-          setCams((prev) => ({
-            ...prev,
-            [id]: snap.exists() ? ({ id: snap.id, ...snap.data() } as Camera) : null,
-          })),
-        () => setCams((prev) => ({ ...prev, [id]: null }))
-      )
-    );
-    return () => unsubs.forEach((u) => u());
-  }, [idsKey]);
-
-  // Urutannya mengikuti urutan yang diatur admin, bukan urutan datangnya
-  // snapshot — kalau tidak, kamera bisa lompat-lompat posisi saat dimuat.
-  // Kamera yang belum disetujui server VPS tidak punya siaran untuk ditampilkan.
-  const visibleCams = cameraDocIds
-    .map((id) => cams[id])
-    .filter((c): c is Camera => !!c && cameraStatus(c) === 'approved');
-  const hasCamera = visibleCams.length > 0;
-  // Kamera legacy punya streamUrl sendiri dan tidak butuh alamat server.
-  const needsServerUrl = visibleCams.some((c) => !c.streamUrl);
-
-  useEffect(() => {
-    if (!needsServerUrl) return;
-    return subscribeCameraServerUrl(setServerUrl);
-  }, [needsServerUrl]);
-
-  // ── Sensor ──
+export function useSensorReading(sensorPath: string | null) {
   const [data, setData] = useState<SensorReading | null>(null);
   const [ready, setReady] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -289,39 +229,35 @@ export default function LiveMonitorPanel({ cameraDocIds, sensorPath }: Props) {
     if (!sensorPath) return;
     setData(null);
     setReady(false);
-    const unsub = subscribeMonitoring(sensorPath, (d) => {
+    return subscribeMonitoring(sensorPath, (d) => {
       setData(d);
       setReady(true);
     });
-    return () => unsub();
   }, [sensorPath]);
 
   useEffect(() => {
-    if (!hasMonitoring) return;
+    if (!sensorPath) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [hasMonitoring]);
-
-  if (!hasCamera && !hasMonitoring) return null;
+  }, [sensorPath]);
 
   const ageSec = data?.updatedAt ? Math.max(0, Math.round((now - data.updatedAt) / 1000)) : null;
-  const isLive = ageSec !== null && ageSec < 15;
+  return { data, ready, ageSec, isLive: ageSec !== null && ageSec < 15 };
+}
 
-  const lat = data?.latitude;
-  const lng = data?.longitude;
-  const hasFix =
-    !!data?.gpsValid &&
-    typeof lat === 'number' &&
-    typeof lng === 'number' &&
-    (lat !== 0 || lng !== 0);
-  const mapsUrl = hasFix ? `https://www.google.com/maps?q=${lat},${lng}` : null;
-
-  const subtitle =
-    hasCamera && hasMonitoring
-      ? t('monitor.subtitleBoth')
-      : hasCamera
-        ? t('monitor.subtitleCamera')
-        : t('monitor.subtitleSensor');
+/** Enam kotak metrik + status Live/Offline. `cols` biar kolom sempit tidak sesak. */
+export function SensorGrid({
+  data,
+  ready,
+  isLive,
+  cols = 'grid-cols-2 sm:grid-cols-3',
+}: {
+  data: SensorReading | null;
+  ready: boolean;
+  isLive: boolean;
+  cols?: string;
+}) {
+  const { t } = useLang();
 
   const metrics: Metric[] = [
     {
@@ -395,24 +331,17 @@ export default function LiveMonitorPanel({ cameraDocIds, sensorPath }: Props) {
     },
   ];
 
-  const bothSides = hasCamera && hasMonitoring;
-  const metricCols = bothSides ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3';
-
-  const cameraBlock = hasCamera && (
-    <CameraCarousel cams={visibleCams} serverUrl={serverUrl} />
-  );
-
-  const sensorBlock = hasMonitoring && (
+  return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold text-navy">Sensor Lingkungan</p>
+        <p className="text-sm font-semibold text-navy">{t('monitor.sensorsTitle')}</p>
         <span className={`chip ${isLive ? 'chip-active' : ''}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-white animate-pulse' : 'bg-navy-soft'}`} />
-          {!ready ? 'Menghubungkan…' : isLive ? 'Live' : 'Offline'}
+          {!ready ? t('monitor.connecting') : isLive ? 'Live' : 'Offline'}
         </span>
       </div>
 
-      <div className={`grid ${metricCols} gap-3`}>
+      <div className={`grid ${cols} gap-3`}>
         {metrics.map((m) => (
           <div key={m.label} className="rounded-md border border-shore-200/80 bg-surface p-3.5 transition-colors hover:border-teal-200">
             <div className={`h-9 w-9 rounded-sm bg-shore-100 text-navy-soft flex items-center justify-center mb-2.5`}>
@@ -426,11 +355,22 @@ export default function LiveMonitorPanel({ cameraDocIds, sensorPath }: Props) {
           </div>
         ))}
       </div>
-
     </div>
   );
+}
 
-  const gpsBlock = hasMonitoring && (
+/** Koordinat stasiun + tautan peta; sebelum fix satelit jadi baris "mencari". */
+export function GpsCard({ data }: { data: SensorReading | null }) {
+  const { t } = useLang();
+  const lat = data?.latitude;
+  const lng = data?.longitude;
+  const hasFix =
+    !!data?.gpsValid &&
+    typeof lat === 'number' &&
+    typeof lng === 'number' &&
+    (lat !== 0 || lng !== 0);
+
+  return (
     <div className="rounded-md border border-shore-200/80 bg-surface p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -441,36 +381,147 @@ export default function LiveMonitorPanel({ cameraDocIds, sensorPath }: Props) {
             </svg>
           </div>
           <div>
-            <p className="text-2xs text-navy-soft">Lokasi Stasiun (GPS)</p>
+            <p className="text-2xs text-navy-soft">{t('monitor.gpsTitle')}</p>
             {hasFix ? (
               <p className="text-base font-semibold text-navy leading-tight">
                 {lat!.toFixed(6)}, {lng!.toFixed(6)}
               </p>
             ) : (
               <p className="text-sm font-medium text-navy-soft">
-                Mencari sinyal satelit…
+                {t('monitor.gpsSearching')}
                 {typeof data?.satellites === 'number' && data.satellites > 0
-                  ? ` (${data.satellites} terlihat)`
+                  ? ` (${t('monitor.gpsVisible', { n: data.satellites })})`
                   : ''}
               </p>
             )}
           </div>
         </div>
         {hasFix && (
-          <a href={mapsUrl!} target="_blank" rel="noopener noreferrer" className="chip whitespace-nowrap">
-            Buka di Peta
+          <a
+            href={`https://www.google.com/maps?q=${lat},${lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="chip whitespace-nowrap"
+          >
+            {t('monitor.openMap')}
           </a>
         )}
       </div>
       {hasFix && (
         <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1 text-2xs text-navy-soft">
-          <span>Satelit: {data?.satellites ?? '--'}</span>
-          {typeof data?.altitude === 'number' && <span>Ketinggian: {data.altitude.toFixed(0)} m</span>}
-          {typeof data?.speed === 'number' && <span>Kecepatan: {data.speed.toFixed(1)} km/h</span>}
+          <span>{t('monitor.satellites')}: {data?.satellites ?? '--'}</span>
+          {typeof data?.altitude === 'number' && (
+            <span>{t('monitor.altitude')}: {data.altitude.toFixed(0)} m</span>
+          )}
+          {typeof data?.speed === 'number' && (
+            <span>{t('monitor.speed')}: {data.speed.toFixed(1)} km/h</span>
+          )}
         </div>
       )}
     </div>
   );
+}
+
+/**
+ * Panel "Pantau Langsung" gabungan: stream kamera + sensor IoT dalam satu card.
+ *
+ * Kameranya dibaca langsung dari dokumen `cameras/{docId}`, bukan dari field
+ * yang didenormalisasi ke dokumen destinasi. Itu disengaja: dokumen destinasi
+ * dibaca publik, jadi id stream yang menempel di sana bisa dipakai siapa pun
+ * merakit URL siaran sendiri. Sekarang rules yang jadi satu-satunya gerbang —
+ * pembaca tanpa hak kena permission-denied dan blok kameranya tidak dirender.
+ * Tidak ada pengecekan role di komponen ini.
+ *
+ * Sensor dibaca dari cabang RTDB milik paket sensor destinasi ini (sensorPath).
+ */
+export default function LiveMonitorPanel({ cameraDocIds, sensorPath }: Props) {
+  const { t } = useLang();
+  const hasMonitoring = !!sensorPath;
+
+  // ── Kamera ──
+  // Satu langganan per kamera, hasilnya dikumpulkan per id. Kamera yang ditolak
+  // rules (pengunjung tanpa hak) jatuh jadi null dan tidak ikut dirender —
+  // itulah sebabnya daftar yang tayang diturunkan dari isi map ini, bukan dari
+  // panjang cameraDocIds.
+  const [cams, setCams] = useState<Record<string, Camera | null>>({});
+  const [serverUrl, setServerUrl] = useState<string | null>(null); // null = loading
+
+  // Dibekukan jadi string supaya array literal baru tiap render tidak memicu
+  // langganan ulang setiap kali komponen induk render.
+  const idsKey = cameraDocIds.join(',');
+
+  useEffect(() => {
+    // Reset dulu, sinkron: tanpa ini, pindah destinasi lewat navigasi sisi-klien
+    // membiarkan kamera destinasi LAMA tetap tampil sampai snapshot baru datang.
+    setCams({});
+    if (!db) return;
+    const ids = idsKey ? idsKey.split(',') : [];
+    // Callback error wajib: pengunjung tanpa hak MEMANG kena permission-denied
+    // di sini. Tanpa penanganan, listener-nya mati dan tiap kunjungan halaman
+    // destinasi publik meninggalkan error di konsol.
+    const unsubs = ids.map((id) =>
+      onSnapshot(
+        doc(db!, 'cameras', id),
+        (snap) =>
+          setCams((prev) => ({
+            ...prev,
+            [id]: snap.exists() ? ({ id: snap.id, ...snap.data() } as Camera) : null,
+          })),
+        () => setCams((prev) => ({ ...prev, [id]: null }))
+      )
+    );
+    return () => unsubs.forEach((u) => u());
+  }, [idsKey]);
+
+  // Urutannya mengikuti urutan yang diatur admin, bukan urutan datangnya
+  // snapshot — kalau tidak, kamera bisa lompat-lompat posisi saat dimuat.
+  // Kamera yang belum disetujui server VPS tidak punya siaran untuk ditampilkan.
+  //
+  // Halaman destinasi memajang kamera publik saja. Kamera khusus penonton tetap
+  // terbaca akun yang berhak (rules tidak berubah), tapi tempatnya di halaman
+  // Monitoring: di sini isinya sama untuk semua pengunjung, jadi tidak ada
+  // pengunjung yang melihat kotak siaran yang orang di sebelahnya tidak lihat.
+  const visibleCams = cameraDocIds
+    .map((id) => cams[id])
+    .filter((c): c is Camera => !!c && cameraStatus(c) === 'approved' && c.isPublic === true);
+  const hasCamera = visibleCams.length > 0;
+  // Kamera legacy punya streamUrl sendiri dan tidak butuh alamat server.
+  const needsServerUrl = visibleCams.some((c) => !c.streamUrl);
+
+  useEffect(() => {
+    if (!needsServerUrl) return;
+    return subscribeCameraServerUrl(setServerUrl);
+  }, [needsServerUrl]);
+
+  // ── Sensor ──
+  const { data, ready, ageSec, isLive } = useSensorReading(sensorPath);
+
+  if (!hasCamera && !hasMonitoring) return null;
+
+  const subtitle =
+    hasCamera && hasMonitoring
+      ? t('monitor.subtitleBoth')
+      : hasCamera
+        ? t('monitor.subtitleCamera')
+        : t('monitor.subtitleSensor');
+
+  const bothSides = hasCamera && hasMonitoring;
+
+  const cameraBlock = hasCamera && (
+    <CameraCarousel cams={visibleCams} serverUrl={serverUrl} />
+  );
+
+  const sensorBlock = hasMonitoring && (
+    <SensorGrid
+      data={data}
+      ready={ready}
+      isLive={isLive}
+      // Dua kolom saja saat sensor berdampingan dengan kamera: kolomnya sempit.
+      cols={bothSides ? 'grid-cols-2' : undefined}
+    />
+  );
+
+  const gpsBlock = hasMonitoring && <GpsCard data={data} />;
 
   return (
     // Bagian, bukan kartu: blok kamera / GPS / sensor di dalamnya sudah punya

@@ -542,10 +542,10 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
           <button
             key={item.key}
             onClick={menuActions[item.key]}
-            className={`w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-shore-50 ${
-              // Kamera sudah punya tombol sendiri di TopNav desktop.
-              item.key === 'camera' ? 'flex md:hidden' : 'flex'
-            }`}
+            // Monitoring dulu `md:hidden` di sini karena TopNav desktop memuat
+            // tombolnya sendiri. Tombol itu sudah dicabut, jadi baris ini satu-
+            // satunya pintu ke sana — di lebar layar mana pun.
+            className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-shore-50"
           >
             <div className="h-10 w-10 rounded-md bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">
               {item.icon}

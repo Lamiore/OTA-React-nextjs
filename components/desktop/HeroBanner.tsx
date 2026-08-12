@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthState } from '@/lib/useAuth';
 import { useLang } from '@/lib/useLang';
+import HeroSensorLinks from './HeroSensorLinks';
 
 // H6 · Photographic fold — satu foto full-bleed memikul argumen pertama halaman,
 // tipografi duduk di atasnya condong ke kiri. Tanpa parallax (butuh listener
@@ -53,7 +54,9 @@ export default function HeroBanner() {
           keterbacaan teks putih identik di tema terang maupun gelap. */}
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-ink/45 to-ink/85" />
 
-      <div className="mx-auto max-w-7xl px-4 pb-12 pt-14 sm:px-6 sm:pb-14 sm:pt-20 lg:px-10 lg:pb-16 lg:pt-24">
+      {/* Kolom teks + panel sensor. Baru berdampingan di lg — di bawah itu
+          panelnya turun ke bawah kotak cari, bukan memeras inputnya. */}
+      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 pb-8 pt-10 sm:px-6 sm:pb-10 sm:pt-12 lg:flex-row lg:items-center lg:justify-between lg:gap-12 lg:px-10 lg:pb-12 lg:pt-14">
         <div className="max-w-2xl">
           {/* Sapaan duduk di bagian scrim yang paling terang (from-ink/45), jadi
               putih 70% di ukuran sm praktis hilang di atas foto. Putih penuh +
@@ -76,7 +79,7 @@ export default function HeroBanner() {
           </h1>
 
           <p
-            className="reveal mt-5 max-w-[52ch] text-base leading-relaxed text-white/75"
+            className="reveal mt-3 max-w-[52ch] text-base leading-relaxed text-white/75"
             style={step(2)}
           >
             {t('home.heroLede')}
@@ -89,7 +92,7 @@ export default function HeroBanner() {
               cari solid memotong foto — dipakai untuk strukturnya saja;
               permukaannya tetap hairline-on-paper sesuai design.md, tanpa
               bayangan dan tanpa radius pil. */}
-          <form onSubmit={submitSearch} className="reveal mt-7" style={step(3)}>
+          <form onSubmit={submitSearch} className="reveal mt-5" style={step(3)}>
             <div className="flex flex-col gap-2 rounded-md border border-shore-200 bg-surface p-2 sm:flex-row sm:items-center">
               <div className="flex flex-1 items-center gap-2.5 px-3">
                 <svg className="h-[18px] w-[18px] shrink-0 text-navy-soft" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -111,7 +114,7 @@ export default function HeroBanner() {
             </div>
           </form>
 
-          <p className="reveal mt-5 text-sm" style={step(4)}>
+          <p className="reveal mt-4 text-sm" style={step(4)}>
             <Link
               href="#destinasi"
               className="whitespace-nowrap border-b border-white/40 pb-0.5 font-medium text-white transition-colors duration-micro ease-out hover:border-white"
@@ -120,6 +123,8 @@ export default function HeroBanner() {
             </Link>
           </p>
         </div>
+
+        <HeroSensorLinks />
       </div>
     </section>
   );
