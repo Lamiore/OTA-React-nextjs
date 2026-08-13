@@ -29,7 +29,10 @@ const web = initializeApp({
   authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
 });
-const API = 'http://localhost:3111/api/bookings';
+// Default localhost; arahkan ke produksi dengan:
+//   PROBE_BASE=https://<domain> node bookings.probe.mjs
+const BASE = process.env.PROBE_BASE || 'http://localhost:3111';
+const API = `${BASE}/api/bookings`;
 
 let pass = 0, fail = 0;
 function check(name, ok, detail = '') {
