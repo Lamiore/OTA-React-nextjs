@@ -7,9 +7,16 @@
  */
 import assert from 'node:assert/strict';
 import {
+  availability,
+  bookedPerItem,
+  bookingLines,
+  bookingTotal,
   descendantIds,
   destinationCameraIds,
+  getPriceItems,
   isTopLevel,
+  MAX_QTY,
+  overStock,
   parentOptions,
 } from './destination.ts';
 
@@ -95,5 +102,119 @@ assert.deepEqual(descendantIds(pohon, 'tidak-ada'), []);
 
 // Melingkar: berhenti, bukan menggantung render kartu.
 assert.deepEqual(descendantIds(melingkar, 'a'), ['b'], 'lingkaran berhenti setelah satu putaran');
+
+// ── Harga & total booking ──
+//
+// Jalur uang. Rumus ini dipakai DUA kali: sekali di ringkasan halaman booking,
+// sekali lagi di /api/bookings untuk menghitung tagihan sebenarnya. Selama
+// keduanya memanggil fungsi yang sama, angkanya tidak bisa berbeda — cek ini
+// yang menjaga fungsinya tetap satu dan perilakunya tidak diam-diam berubah.
+
+const daftar = [
+  { id: 'tiket', label: 'Tiket Masuk', price: 25000, unit: '/pax' },
+  { id: 'kapal', label: 'Sewa Kapal', price: 300000, unit: '/trip' },
+];
+
+assert.deepEqual(bookingLines(daftar, { tiket: 2 }), [
+  { id: 'tiket', label: 'Tiket Masuk', price: 25000, qty: 2 },
+]);
+assert.equal(bookingTotal(bookingLines(daftar, { tiket: 2, kapal: 1 })), 350000);
+
+// Batas kepercayaan. Body permintaan datang mentah dari jaringan, dan tiap
+// baris di bawah ini pernah bisa jadi tagihan kalau tidak disaring: harga
+// negatif yang mengurangi total, pecahan yang bikin rupiah berkoma, dan
+// jumlah raksasa yang bikin total meledak.
+assert.deepEqual(bookingLines(daftar, { tiket: -5 }), [], 'jumlah negatif digugurkan');
+assert.deepEqual(bookingLines(daftar, { tiket: 0 }), [], 'nol bukan pesanan');
+assert.deepEqual(bookingLines(daftar, { tiket: 'abc' }), [], 'bukan angka digugurkan');
+assert.deepEqual(bookingLines(daftar, { tiket: Infinity }), [], 'Infinity digugurkan');
+assert.equal(bookingLines(daftar, { tiket: 2.9 })[0].qty, 2, 'pecahan dibulatkan ke bawah');
+assert.equal(bookingLines(daftar, { tiket: 1e9 })[0].qty, MAX_QTY, 'jumlah dibatasi');
+
+// Item yang tidak ada di daftar harga destinasi diabaikan — bukan diterima
+// dengan harga karangan, bukan pula error. Kalau ini rusak, siapa pun bisa
+// menyelipkan id item palsu ke dalam permintaan.
+assert.deepEqual(bookingLines(daftar, { palsu: 3 }), [], 'id item asing diabaikan');
+
+// Harga rusak di dokumen destinasi (mis. tersimpan sebagai teks) tidak boleh
+// menjalar jadi total NaN.
+const rusak = [{ id: 'x', label: 'X', price: 'gratis' as unknown as number, unit: '/pax' }];
+assert.deepEqual(bookingLines(rusak, { x: 1 }), [], 'harga bukan angka digugurkan');
+assert.equal(bookingTotal(bookingLines(rusak, { x: 1 })), 0);
+
+// Fallback dokumen legacy: masih bisa dipesan tanpa migrasi manual.
+assert.equal(getPriceItems({ priceStart: 15000 })[0].price, 15000);
+assert.deepEqual(getPriceItems({ priceItems: [] }), [], 'daftar kosong = sengaja tanpa harga');
+
+// ── Stok per item ──
+//
+// Yang dijaga di sini bukan aritmetikanya (itu penjumlahan biasa), melainkan
+// SIAPA yang menghabiskan stok. Salah satu baris di bawah ini bergeser dan
+// akibatnya tidak terlihat sebagai error: kursi terjual dua kali, atau kursi
+// mati padahal bookingnya sudah dibatalkan berbulan-bulan lalu.
+
+const lunas = (id: string, qty: number, extra: Record<string, unknown> = {}) => ({
+  paymentStatus: 'paid',
+  items: [{ id, label: id, price: 1, qty }],
+  ...extra,
+});
+
+// Yang lunas dihitung; yang belum bayar TIDAK menahan stok.
+assert.deepEqual(bookedPerItem([lunas('kapal', 2)]), { kapal: 2 });
+assert.deepEqual(
+  bookedPerItem([{ paymentStatus: 'unpaid', items: [{ id: 'kapal', label: 'K', price: 1, qty: 5 }] }]),
+  {},
+  'booking belum dibayar tidak menahan stok',
+);
+
+// Dibatalkan setelah lunas mengembalikan stoknya.
+assert.deepEqual(
+  bookedPerItem([lunas('kapal', 2, { status: 'cancelled' })]),
+  {},
+  'pembatalan melepas kursi',
+);
+
+// Sudah dipakai masuk tetap menghabiskan stok — orangnya memang sudah di sana.
+assert.deepEqual(bookedPerItem([lunas('kapal', 1, { status: 'used' })]), { kapal: 1 });
+
+// Booking lama tanpa id item tidak diatribusikan ke item mana pun.
+assert.deepEqual(
+  bookedPerItem([{ paymentStatus: 'paid', items: [{ label: 'Tiket', price: 1, qty: 9 }] }]),
+  {},
+  'baris tanpa id diabaikan, bukan ditebak dari label',
+);
+
+// Inti sentinel stok: undefined = tanpa batas, 0 = habis. Membalik keduanya
+// menjual habis-habisan item yang justru sedang ditutup.
+const stokItems = [
+  { id: 'bebas', label: 'Tiket', price: 1, unit: '/pax' }, // stock undefined
+  { id: 'tutup', label: 'Kapal', price: 1, unit: '/trip', stock: 0 },
+  { id: 'batas', label: 'Kamar', price: 1, unit: '/malam', stock: 3 },
+];
+const av = availability(stokItems, { batas: 1 });
+assert.equal(av[0].remaining, null, 'stock undefined = tanpa batas');
+assert.equal(av[1].remaining, 0, 'stock 0 = habis, BUKAN tanpa batas');
+assert.equal(av[2].remaining, 2, '3 stok - 1 terjual = sisa 2');
+
+// overStock: yang muat lolos, yang lewat disebut namanya.
+assert.deepEqual(overStock([{ id: 'batas', label: 'Kamar', price: 1, qty: 2 }], stokItems, { batas: 1 }), []);
+assert.deepEqual(
+  overStock([{ id: 'batas', label: 'Kamar', price: 1, qty: 3 }], stokItems, { batas: 1 }),
+  ['Kamar'],
+  'minta 3 padahal sisa 2 ditolak',
+);
+assert.deepEqual(
+  overStock([{ id: 'tutup', label: 'Kapal', price: 1, qty: 1 }], stokItems, {}),
+  ['Kapal'],
+  'item berstok 0 tidak bisa dipesan sama sekali',
+);
+assert.deepEqual(
+  overStock([{ id: 'bebas', label: 'Tiket', price: 1, qty: 999 }], stokItems, {}),
+  [],
+  'item tanpa batas tidak pernah penuh',
+);
+
+// bookingLines sekarang membawa id — tanpa ini stok tidak bisa dihitung sama sekali.
+assert.equal(bookingLines(daftar, { tiket: 1 })[0].id, 'tiket');
 
 console.log('destination.ts OK');

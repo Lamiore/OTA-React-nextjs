@@ -10,6 +10,7 @@ import {
   type Destination,
   type PriceItem,
 } from '@/lib/firestore';
+import { cleanPriceItems } from '@/lib/destination';
 import { parseCoords, waLink } from '@/lib/format';
 
 /**
@@ -130,7 +131,7 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
         lng: coords?.lng ?? null,
         whatsapp: whatsapp.trim(),
         // Item tanpa nama dibuang — barisnya kosong dan tidak berguna di kartu.
-        priceItems: priceItems.filter((it) => it.label.trim() !== ''),
+        priceItems: cleanPriceItems(priceItems),
       });
       setSaved(true);
       setEditingId(null);
@@ -448,6 +449,22 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
                       value={item.unit}
                       onChange={(e) => updateItem(i, { unit: e.target.value })}
                       placeholder="/pax"
+                      className="w-20 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+                    />
+                    {/* Stok/hari. Kosong ≠ 0: kosong berarti tanpa batas,
+                        0 berarti item ini tutup. Lihat PriceItem.stock. */}
+                    <input
+                      type="number"
+                      min={0}
+                      aria-label={`Stok per hari ${item.label || 'item'}`}
+                      value={item.stock ?? ''}
+                      onChange={(e) =>
+                        updateItem(i, {
+                          stock: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)),
+                        })
+                      }
+                      placeholder="∞"
+                      title="Stok per hari — kosongkan untuk tanpa batas"
                       className="w-20 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                     />
                     <button

@@ -10,7 +10,6 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
-  runTransaction,
   writeBatch,
   serverTimestamp,
   arrayUnion,
@@ -22,25 +21,20 @@ import { normalizeViewerEmail } from "./format";
 import {
   descendantIds,
   destinationCameraIds,
+  getPriceItems,
   isTopLevel,
   type DestinationCameras,
+  type PriceItem,
 } from "./destination";
 
 // ── Destinations ──
 
-export interface PriceItem {
-  id: string; // key React & edit admin — crypto.randomUUID()
-  label: string; // "Tiket Masuk", "Penginapan", "Sewa Alat Diving", ...
-  description?: string; // penjelasan singkat item, tampil di kartu daftar harga
-  price: number; // rupiah, >= 0
-  unit: string; // "/pax", "/malam", "/set" — teks bebas
-  /**
-   * URL foto item. Terisi = kartunya tampil bergambar seperti kartu destinasi;
-   * kosong = kartu teks yang rapat. Opsional per item, jadi satu daftar harga
-   * boleh campur — homestay berfoto di sebelah tiket masuk tanpa foto.
-   */
-  image?: string;
-}
+// PriceItem & getPriceItems tinggal di lib/destination (modul tanpa import),
+// supaya route server bisa memakai rumus harga yang persis sama tanpa ikut
+// menarik SDK Firebase sisi klien. Di-export ulang di sini agar pemanggil lama
+// tidak perlu diubah.
+export type { PriceItem, BookingLine } from "./destination";
+export { getPriceItems, bookingLines, bookingTotal, MAX_QTY } from "./destination";
 
 export interface Destination {
   id: string;
@@ -98,20 +92,6 @@ export interface Destination {
 }
 
 export type DestinationInput = Omit<Destination, "id">;
-
-/**
- * Sumber kebenaran daftar harga. priceItems yang sudah ada dikembalikan apa
- * adanya — array kosong berarti sengaja tanpa harga. Fallback priceStart
- * hanya untuk dokumen legacy yang belum pernah disimpan editor baru, agar
- * tetap bisa tampil & dibooking tanpa migrasi manual.
- */
-export function getPriceItems(dest: Destination): PriceItem[] {
-  if (dest.priceItems) return dest.priceItems;
-  if (dest.priceStart && dest.priceStart > 0) {
-    return [{ id: "legacy", label: "Tiket Masuk", price: dest.priceStart, unit: "/pax" }];
-  }
-  return [];
-}
 
 /**
  * Harga item termurah destinasi — sumber "Mulai dari Rp X" di kartu. undefined
@@ -479,7 +459,7 @@ export async function approveRoleRequest(
     // sama-sama melihat "belum ada" dan membuat dua dokumen. Ada dua admin di
     // proyek ini, tapi persetujuan itu tindakan manual yang jarang dan hampir
     // mustahil bertabrakan sedetik; kalau nanti pengajuannya ramai, naikkan ke
-    // runTransaction (sudah diimport di file ini).
+    // runTransaction.
     const snap = await getDocs(collection(db, "destinations"));
     const existing = snap.docs.find(
       (d) => (d.data().name ?? "").trim().toLowerCase() === name.toLowerCase()
@@ -743,21 +723,49 @@ export interface Booking {
   paidAt?: unknown;
 }
 
-export type BookingInput = Omit<
-  Booking,
-  "id" | "status" | "createdAt" | "checkedInAt" | "paymentStatus" | "paymentMethod" | "paidAt"
->;
+/**
+ * Yang boleh dikirim klien saat membuat booking. Perhatikan yang TIDAK ada:
+ * `items` dan `amount`. Klien menyebut item mana dan berapa banyak; harganya
+ * dibaca ulang server dari dokumen destinasi. Total yang tampil di ringkasan
+ * layar cuma perkiraan yang enak dilihat, bukan tagihan.
+ */
+export interface BookingRequest {
+  destinationId: string;
+  date: string;
+  guests: number;
+  name: string;
+  phone: string;
+  notes: string;
+  /** { priceItemId: jumlah } */
+  qty: Record<string, number>;
+}
 
-export async function createBooking(data: BookingInput) {
-  if (!db) return;
-  await addDoc(collection(db, "bookings"), {
-    ...data,
-    items: data.items ?? [],
-    amount: data.amount ?? 0,
-    status: "confirmed",
-    paymentStatus: "unpaid",
-    createdAt: serverTimestamp(),
+/**
+ * Semua penulisan koleksi `bookings` lewat satu route server yang memakai
+ * Admin SDK — rules menutup create/update dari klien sepenuhnya.
+ *
+ * Alasannya bukan sekadar rapi. Selama browser yang menulis, tiga hal tidak
+ * bisa dijamin sama sekali: harga (klien mengirim `amount` sendiri), urutan
+ * status (pemilik tiket bisa menulis balik 'used' menjadi 'confirmed' dan
+ * masuk berkali-kali dengan satu QR), dan pembayaran (paymentStatus 'paid'
+ * tinggal ditulis tanpa membayar). Ketiganya hilang begitu keputusannya
+ * pindah ke server.
+ */
+async function bookingAction<T>(action: string, payload: Record<string, unknown>): Promise<T> {
+  const token = await auth?.currentUser?.getIdToken();
+  if (!token) throw new Error("not-signed-in");
+  const res = await fetch("/api/bookings", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify({ action, ...payload }),
   });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error ?? "request-failed");
+  return body as T;
+}
+
+export async function createBooking(data: BookingRequest): Promise<{ id: string }> {
+  return bookingAction<{ id: string }>("create", { ...data });
 }
 
 /** Semua booking milik satu user (real-time) — dipakai untuk statistik profil. */
@@ -772,40 +780,41 @@ export function subscribeUserBookings(
   });
 }
 
-export async function updateBookingStatus(id: string, status: Booking["status"]) {
-  if (!db) return;
-  await updateDoc(doc(db, "bookings", id), { status });
+/** Batalkan booking sendiri. Hanya 'cancelled' — status lain bukan urusan klien. */
+export async function cancelBooking(id: string): Promise<void> {
+  await bookingAction("cancel", { bookingId: id });
 }
 
-export type CheckInOutcome = "success" | "already-used" | "cancelled" | "notfound";
+export type CheckInOutcome =
+  | "success"
+  | "already-used"
+  | "cancelled"
+  | "unpaid"
+  | "notfound";
 
 /**
- * Check-in tiket secara transaksional: baca ulang status di dalam transaksi dan
- * hanya tandai 'used' bila tiket masih valid (confirmed/pending). Mencegah double
- * check-in / race antar petugas, dan memberi alasan jelas saat gagal.
+ * Check-in tiket. Transaksinya sekarang jalan di server (lihat /api/bookings):
+ * di klien pengecekannya cuma sopan santun — pemilik tiket bisa memanggil SDK
+ * sendiri, dan dulu itu berarti status 'used' bisa ditulis balik jadi
+ * 'confirmed' lalu dipakai masuk lagi.
  */
 export async function checkInBooking(id: string): Promise<CheckInOutcome> {
-  if (!db) return "notfound";
-  const ref = doc(db, "bookings", id);
-  return runTransaction(db, async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists()) return "notfound";
-    const status = snap.data()?.status as Booking["status"] | undefined;
-    if (status === "used") return "already-used";
-    if (status === "cancelled") return "cancelled";
-    tx.update(ref, { status: "used", checkedInAt: serverTimestamp() });
-    return "success";
+  const { outcome } = await bookingAction<{ outcome: CheckInOutcome }>("checkin", {
+    bookingId: id,
   });
+  return outcome;
 }
 
-/** Tandai booking sebagai lunas (mock — tanpa gateway). Dijalankan oleh pemilik booking. */
+/**
+ * Bayar booking. Isinya masih tiruan — belum ada gateway — TAPI keputusan
+ * lunasnya sudah diambil server. Itu bedanya dengan versi lama yang menulis
+ * 'paid' langsung dari browser: di sana tombol bayar cuma formalitas.
+ *
+ * Saat gateway sungguhan dipasang, yang berubah cuma isi cabang "pay" di
+ * /api/bookings — bentuk alurnya (pending → bayar → confirmed) sudah benar.
+ */
 export async function payBooking(id: string, method: string): Promise<void> {
-  if (!db) return;
-  await updateDoc(doc(db, "bookings", id), {
-    paymentStatus: "paid",
-    paymentMethod: method,
-    paidAt: serverTimestamp(),
-  });
+  await bookingAction("pay", { bookingId: id, method });
 }
 
 // ── Reviews (ulasan destinasi) ──

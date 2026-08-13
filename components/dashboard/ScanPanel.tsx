@@ -33,6 +33,8 @@ type ScanResult =
   | { kind: 'valid'; booking: Booking }
   | { kind: 'used'; booking: Booking }
   | { kind: 'cancelled'; booking: Booking }
+  /** Booking ada dan belum dipakai, tapi pembayarannya belum masuk. */
+  | { kind: 'unpaid'; booking: Booking }
   | { kind: 'notfound' }
   | { kind: 'invalid' }
   | { kind: 'error' };
@@ -117,8 +119,14 @@ export default function ScanPanel() {
         return;
       }
       const booking = { id: snap.id, ...snap.data() } as Booking;
+      // Urutan penting: belum-bayar dicek SETELAH dibatalkan/terpakai, supaya
+      // petugas melihat alasan yang paling spesifik. Cabang 'unpaid' ini dulu
+      // tidak ada — semua yang bukan cancelled/used langsung dianggap valid,
+      // termasuk booking yang belum dibayar sama sekali. Server menolaknya
+      // juga (lihat /api/bookings), ini supaya petugas tahu sebelum menekan.
       if (booking.status === 'cancelled') setResult({ kind: 'cancelled', booking });
       else if (booking.status === 'used') setResult({ kind: 'used', booking });
+      else if (booking.paymentStatus !== 'paid') setResult({ kind: 'unpaid', booking });
       else setResult({ kind: 'valid', booking });
     } catch {
       setResult({ kind: 'error' });
@@ -165,19 +173,23 @@ export default function ScanPanel() {
         setCheckInError('Tiket sudah digunakan (mungkin oleh petugas lain).');
       } else if (outcome === 'cancelled') {
         setCheckInError('Tiket sudah dibatalkan.');
+      } else if (outcome === 'unpaid') {
+        setCheckInError('Tiket belum dibayar, check-in ditolak.');
       } else {
         setCheckInError('Tiket tidak ditemukan.');
       }
     } catch (err) {
-      // Surface the real Firestore error code agar bisa dibedakan: 'permission-denied'
-      // (rules menolak write) vs 'unavailable' (koneksi transaksi putus di mobile).
-      const code = (err as { code?: string } | null)?.code;
-      if (code === 'permission-denied') {
-        setCheckInError('Gagal check-in: izin Firestore menolak (permission-denied). Rules perlu mengizinkan admin/pengelola meng-update booking.');
-      } else if (code === 'unavailable' || code === 'deadline-exceeded') {
-        setCheckInError(`Gagal check-in: koneksi ke Firestore terputus (${code}). Periksa jaringan lalu coba lagi.`);
+      // Check-in sekarang lewat /api/bookings, jadi yang datang bukan lagi kode
+      // error Firestore melainkan pesan dari route (atau kegagalan jaringan).
+      // Tetap ditampilkan apa adanya supaya 'forbidden' (peran petugas belum
+      // diset) bisa dibedakan dari koneksi yang putus di lapangan.
+      const reason = (err as Error | null)?.message;
+      if (reason === 'forbidden') {
+        setCheckInError('Gagal check-in: akun ini bukan admin/pengelola.');
+      } else if (reason === 'not-signed-in' || reason === 'unauthorized') {
+        setCheckInError('Sesi habis. Masuk ulang lalu coba lagi.');
       } else {
-        setCheckInError(`Gagal check-in${code ? ` (${code})` : ''}. Periksa koneksi atau izin akses Firestore.`);
+        setCheckInError(`Gagal check-in${reason ? ` (${reason})` : ''}. Periksa koneksi lalu coba lagi.`);
       }
     } finally {
       setCheckingIn(false);
@@ -233,6 +245,14 @@ export default function ScanPanel() {
               <>
                 <div className="rounded-md bg-warn-soft px-3 py-2 text-sm font-medium text-warn">
                   Tiket sudah digunakan{checkedInLabel(result.booking.checkedInAt) ? ` · ${checkedInLabel(result.booking.checkedInAt)}` : ''}.
+                </div>
+                <BookingCard booking={result.booking} />
+              </>
+            )}
+            {result?.kind === 'unpaid' && (
+              <>
+                <div className="rounded-md bg-warn-soft px-3 py-2 text-sm font-medium text-warn">
+                  Belum dibayar. Tiket ini belum bisa dipakai check-in.
                 </div>
                 <BookingCard booking={result.booking} />
               </>

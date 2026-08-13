@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthState } from '@/lib/useAuth';
-import { updateBookingStatus, type Booking as BookingType } from '@/lib/firestore';
+import { cancelBooking, type Booking as BookingType } from '@/lib/firestore';
 import { useLang } from '@/lib/useLang';
 import TicketModal from '@/components/booking/TicketModal';
+import PaymentModal from '@/components/notifications/PaymentModal';
 import clsx from 'clsx';
 
 function CalendarIcon() {
@@ -44,7 +45,9 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
 
   const [cancellingBooking, setCancellingBooking] = useState<BookingType | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [ticketBooking, setTicketBooking] = useState<BookingType | null>(null);
+  const [payingBooking, setPayingBooking] = useState<BookingType | null>(null);
 
   // Portal modal ke <body> agar lepas dari wrapper .animate-fade-in yang menyisakan
   // transform: scale(1) (fill 'both'), yang bikin position:fixed melenceng & ketutup nav.
@@ -66,12 +69,27 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
     return () => unsub();
   }, [user]);
 
+  // Pembatalan sekarang lewat /api/bookings, jadi bisa gagal karena jaringan
+  // atau ditolak server (mis. tiketnya sudah dipakai check-in). Dulu ini
+  // write langsung ke Firestore yang praktis selalu "berhasil" — modalnya
+  // menutup diri seolah beres padahal belum tentu.
   const handleCancel = async () => {
     if (!cancellingBooking) return;
+    setCancelError(null);
     setCancelling(true);
-    await updateBookingStatus(cancellingBooking.id, 'cancelled');
-    setCancelling(false);
-    setCancellingBooking(null);
+    try {
+      await cancelBooking(cancellingBooking.id);
+      setCancellingBooking(null);
+    } catch (err) {
+      const code = (err as Error | null)?.message;
+      setCancelError(
+        code === 'already-used'
+          ? t('history.cancelUsedError')
+          : t('history.cancelFailed'),
+      );
+    } finally {
+      setCancelling(false);
+    }
   };
 
   // 'active' hanya menampilkan tiket yang masih berlangsung: belum dibatalkan, belum dipakai, & belum lewat tanggal.
@@ -85,6 +103,11 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
       {/* Ticket modal — di luar semua container */}
       {ticketBooking && (
         <TicketModal booking={ticketBooking} onClose={() => setTicketBooking(null)} />
+      )}
+
+      {/* Modal bayar — onSnapshot di atas yang menyegarkan kartunya setelah lunas. */}
+      {payingBooking && (
+        <PaymentModal booking={payingBooking} onClose={() => setPayingBooking(null)} />
       )}
 
       {/* Cancel modal — di-portal ke <body> (lihat catatan 'mounted' di atas) */}
@@ -111,6 +134,11 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                   }),
                 })}
               </p>
+              {cancelError && (
+                <div className="mt-4 rounded-md bg-danger-soft px-3 py-2 text-sm font-medium text-danger">
+                  {cancelError}
+                </div>
+              )}
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => setCancellingBooking(null)}
@@ -176,8 +204,13 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
               const used = b.status === 'used';
               const cancelled = b.status === 'cancelled';
               const past = isPast(b);
-              // 'pending' (data lama) diperlakukan sama seperti 'confirmed'.
-              const activeConfirmed = (b.status === 'confirmed' || b.status === 'pending') && !past;
+              // Yang menentukan tiket keluar adalah LUNAS, bukan status.
+              // Sebelumnya 'pending' disamakan dengan 'confirmed' di sini —
+              // itulah sebabnya QR bisa dilihat tanpa membayar. Sekarang
+              // 'pending' artinya menunggu pembayaran.
+              const paid = b.paymentStatus === 'paid';
+              const unpaid = !paid && !used && !cancelled && !past;
+              const activeConfirmed = paid && !used && !cancelled && !past;
               return (
                 <div key={b.id} className="card p-5 animate-fade-in">
                   <div className="flex items-start justify-between gap-3">
@@ -197,7 +230,8 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                       used && 'bg-shore-100 text-navy-soft',
                       cancelled && 'bg-danger-soft text-danger',
                       !used && !cancelled && past && 'bg-shore-100 text-navy-soft',
-                      !used && !cancelled && !past && 'bg-teal-100 text-teal-700',
+                      unpaid && 'bg-warn-soft text-warn',
+                      activeConfirmed && 'bg-teal-100 text-teal-700',
                     )}>
                       {t(
                         used
@@ -206,10 +240,29 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                             ? 'status.cancelled'
                             : past
                               ? 'history.statusDone'
-                              : 'status.confirmed'
+                              : unpaid
+                                ? 'status.pending'
+                                : 'status.confirmed'
                       )}
                     </span>
                   </div>
+
+                  {unpaid && (
+                    <div className="flex gap-2 mt-4 pt-4 border-t border-shore-200">
+                      <button
+                        onClick={() => setPayingBooking(b)}
+                        className="btn-primary flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-xs"
+                      >
+                        {t('history.payNow')}
+                      </button>
+                      <button
+                        onClick={() => setCancellingBooking(b)}
+                        className="btn-ghost flex-1 px-4 py-2 text-xs hover:border-danger-rule hover:text-danger"
+                      >
+                        {t('history.cancelShort')}
+                      </button>
+                    </div>
+                  )}
 
                   {activeConfirmed && (
                     <div className="flex gap-2 mt-4 pt-4 border-t border-shore-200">

@@ -52,6 +52,12 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
     year: 'numeric',
   });
 
+  // Syarat tiket adalah LUNAS, bukan status booking. Booking dibuat server
+  // dengan status 'pending' + 'unpaid', dan naik ke 'confirmed' hanya lewat
+  // cabang pembayaran di /api/bookings — jadi satu pengecekan ini yang
+  // menentukan QR terbit atau tidak.
+  const paid = booking.paymentStatus === 'paid';
+
   if (!mounted) return null;
 
   return createPortal(
@@ -78,8 +84,10 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
               <span className="text-xs font-semibold text-teal-600">
                 {t('ticket.brand')}
               </span>
-              <span className="rounded-sm bg-teal-100 px-2.5 py-1 text-2xs font-medium text-teal-700">
-                {t('status.confirmed')}
+              <span className={paid
+                ? 'rounded-sm bg-teal-100 px-2.5 py-1 text-2xs font-medium text-teal-700'
+                : 'rounded-sm bg-warn-soft px-2.5 py-1 text-2xs font-medium text-warn'}>
+                {t(paid ? 'status.confirmed' : 'status.pending')}
               </span>
             </div>
 
@@ -103,18 +111,36 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
             <div className="mx-5 border-t-2 border-dashed border-shore-200" />
           </div>
 
-          {/* Bagian bawah — QR */}
+          {/* Bagian bawah — QR, hanya bila sudah lunas */}
           <div className="flex flex-col items-center gap-3 p-6">
-            {/* QR selalu hitam-di-putih + padding (quiet zone) agar tetap ter-scan di dark mode */}
-            <div className="rounded-md bg-white p-3 shadow-sm ring-1 ring-shore-200">
-              <QRCodeSVG value={qrPayload(booking)} size={160} level="M" />
-            </div>
-            <p className="font-mono text-base font-semibold tracking-[0.15em] text-navy">
-              {ticketCode(booking.id)}
-            </p>
-            <p className="text-center text-xs text-navy-soft">
-              {t('ticket.showQr')}
-            </p>
+            {paid ? (
+              <>
+                {/* QR selalu hitam-di-putih + padding (quiet zone) agar tetap ter-scan di dark mode */}
+                <div className="rounded-md bg-white p-3 shadow-sm ring-1 ring-shore-200">
+                  <QRCodeSVG value={qrPayload(booking)} size={160} level="M" />
+                </div>
+                <p className="font-mono text-base font-semibold tracking-[0.15em] text-navy">
+                  {ticketCode(booking.id)}
+                </p>
+                <p className="text-center text-xs text-navy-soft">
+                  {t('ticket.showQr')}
+                </p>
+              </>
+            ) : (
+              <>
+                {/* Kotak seukuran QR supaya tinggi kartunya tidak melompat saat lunas. */}
+                <div className="flex h-[186px] w-[186px] items-center justify-center rounded-md border border-dashed border-shore-300 bg-shore-50 text-navy-soft">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-navy">{t('ticket.lockedTitle')}</p>
+                <p className="text-center text-xs text-navy-soft">
+                  {t('ticket.lockedBody')}
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>

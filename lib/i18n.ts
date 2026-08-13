@@ -109,10 +109,12 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Destinasi ini belum punya daftar harga, booking belum bisa dilakukan.",
     en: "This destination has no price list yet, so booking is unavailable.",
   },
-  "booking.successTitle": { id: "Booking Berhasil!", en: "Booking Confirmed!" },
+  // Tiket tidak lagi terbit di sini: booking baru berstatus menunggu bayar,
+  // dan QR-nya keluar setelah pembayaran dikonfirmasi server.
+  "booking.successTitle": { id: "Booking Dibuat", en: "Booking Created" },
   "booking.successBody": {
-    id: "Tiket untuk {dest} pada tanggal {date} sudah siap. Buka untuk melihat QR check-in.",
-    en: "Your ticket for {dest} on {date} is ready. Open it to see your check-in QR code.",
+    id: "Booking {dest} untuk tanggal {date} sudah tercatat. Selesaikan pembayaran untuk menerbitkan tiket QR-mu.",
+    en: "Your booking for {dest} on {date} is saved. Complete the payment to issue your QR ticket.",
   },
   "booking.lede": {
     id: "Isi detail untuk memesan perjalanan.",
@@ -133,7 +135,14 @@ const DICT: Record<string, Record<Lang, string>> = {
   "booking.estTotal": { id: "Estimasi total", en: "Estimated total" },
   "booking.confirm": { id: "Konfirmasi Booking", en: "Confirm Booking" },
   "booking.failed": { id: "Gagal membuat booking. Coba lagi.", en: "Could not create the booking. Please try again." },
+  "booking.remaining": { id: "Sisa {n}", en: "{n} left" },
+  "booking.soldOut": { id: "Habis untuk tanggal ini", en: "Sold out for this date" },
+  "booking.itemFull": {
+    id: "Maaf, salah satu item yang kamu pilih sudah habis untuk tanggal ini. Kurangi jumlahnya atau pilih tanggal lain.",
+    en: "Sorry, one of the items you picked just sold out for this date. Reduce the quantity or choose another date.",
+  },
   "booking.viewTicket": { id: "Lihat Tiket", en: "View Ticket" },
+  "booking.goToPayment": { id: "Lanjut Bayar", en: "Continue to Payment" },
   "booking.bookAgain": { id: "Booking Lagi", en: "Book Again" },
   "booking.decrease": { id: "Kurangi {item}", en: "Decrease {item}" },
   "booking.increase": { id: "Tambah {item}", en: "Add {item}" },
@@ -153,8 +162,8 @@ const DICT: Record<string, Record<Lang, string>> = {
   "history.viewTicket": { id: "Lihat Tiket", en: "View Ticket" },
   "history.activeTitle": { id: "Booking Berlangsung", en: "Active Bookings" },
   "history.activeLede": {
-    id: "Tiket yang sudah dikonfirmasi dan belum dipakai",
-    en: "Confirmed tickets you have not used yet",
+    id: "Booking yang masih berjalan — termasuk yang menunggu pembayaran",
+    en: "Bookings still in progress, including those awaiting payment",
   },
   "history.allLede": {
     id: "Daftar booking yang pernah kamu buat",
@@ -176,6 +185,15 @@ const DICT: Record<string, Record<Lang, string>> = {
   "history.cancelShort": { id: "Batalkan", en: "Cancel" },
   "history.statusUsed": { id: "Sudah Digunakan", en: "Used" },
   "history.statusDone": { id: "Selesai", en: "Completed" },
+  "history.payNow": { id: "Bayar Sekarang", en: "Pay Now" },
+  "history.cancelFailed": {
+    id: "Gagal membatalkan booking. Periksa koneksi lalu coba lagi.",
+    en: "Could not cancel the booking. Check your connection and try again.",
+  },
+  "history.cancelUsedError": {
+    id: "Tiket ini sudah dipakai check-in, jadi tidak bisa dibatalkan.",
+    en: "This ticket has already been checked in, so it cannot be cancelled.",
+  },
 
   // ── Tiket ──
   "ticket.closeLabel": { id: "Tutup tiket", en: "Close ticket" },
@@ -188,9 +206,16 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Tunjukkan QR ini kepada petugas saat check-in.",
     en: "Show this QR code to the staff at check-in.",
   },
+  "ticket.lockedTitle": { id: "Tiket belum terbit", en: "Ticket not issued yet" },
+  "ticket.lockedBody": {
+    id: "QR check-in muncul setelah pembayaran diterima.",
+    en: "Your check-in QR appears once the payment is received.",
+  },
 
   // ── Status booking ──
-  "status.pending": { id: "Menunggu", en: "Pending" },
+  // 'pending' sekarang berarti menunggu pembayaran — sebelumnya diperlakukan
+  // sama dengan 'confirmed'.
+  "status.pending": { id: "Belum Dibayar", en: "Awaiting Payment" },
   "status.confirmed": { id: "Dikonfirmasi", en: "Confirmed" },
   "status.cancelled": { id: "Dibatalkan", en: "Cancelled" },
   "status.used": { id: "Selesai", en: "Completed" },
@@ -206,6 +231,12 @@ const DICT: Record<string, Record<Lang, string>> = {
   "payment.paying": { id: "Memproses...", en: "Processing..." },
   "payment.paid": { id: "Pembayaran Berhasil", en: "Payment Successful" },
   "payment.failed": { id: "Gagal memproses pembayaran. Coba lagi.", en: "Payment failed. Please try again." },
+  // Penolakan karena stok habis TIDAK boleh terdengar seperti "coba lagi":
+  // mengulang tidak akan pernah berhasil, jadi jalan keluarnya yang disebut.
+  "payment.full": {
+    id: "Kursinya keburu diambil orang lain sebelum pembayaran selesai. Booking ini tidak bisa dilanjutkan — silakan batalkan lalu pesan tanggal lain.",
+    en: "These spots were taken by someone else before your payment went through. This booking cannot continue — please cancel it and pick another date.",
+  },
   "payment.thanks": {
     id: "Terima kasih. Pembayaran untuk {dest} sudah tercatat.",
     en: "Thank you. Your payment for {dest} has been recorded.",
@@ -312,7 +343,10 @@ const DICT: Record<string, Record<Lang, string>> = {
   // ── Notifikasi ──
   "notif.label": { id: "Notifikasi", en: "Notifications" },
   "notif.empty": { id: "Tidak ada notifikasi.", en: "No notifications." },
-  "notif.checkinOk": { id: "Check-in berhasil", en: "Check-in successful" },
+  // Judul lonceng ikut berganti bersama filternya di NotificationBell: yang
+  // diingatkan bukan lagi "sudah check-in, belum bayar" melainkan booking yang
+  // tiketnya tertahan sampai dibayar.
+  "notif.checkinOk": { id: "Menunggu pembayaran", en: "Awaiting payment" },
 
   // ── Beranda & pencarian ──
   "home.welcome": { id: "Selamat datang", en: "Welcome" },

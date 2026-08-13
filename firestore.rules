@@ -165,9 +165,38 @@ service cloud.firestore {
     }
 
     match /bookings/{bookingId} {
-      allow create: if request.auth != null;
-      allow read:   if request.auth != null;
-      allow update: if request.auth != null
+      // Ditulis HANYA oleh Admin SDK lewat /api/bookings (Admin SDK melewati
+      // rules), sama seperti loginCodes di atas. Menutupnya di sini bukan
+      // pengetatan kosmetik — inilah yang membuat tiga jaminan berikut ada:
+      //
+      // 1. Harga. Dulu klien mengirim `amount` sendiri; siapa pun bisa
+      //    membuat booking Rp 0 lewat SDK dari console browser. Sekarang
+      //    server yang membaca daftar harga destinasi dan menghitung ulang.
+      // 2. Sekali masuk per tiket. Dulu pemilik booking boleh meng-update
+      //    dokumennya sendiri, termasuk menulis balik status 'used' menjadi
+      //    'confirmed' — transaksi anti-double-check-in di ScanPanel jadi
+      //    percuma karena bisa dilangkahi satu updateDoc.
+      // 3. Pembayaran. Dulu paymentStatus 'paid' tinggal ditulis sendiri
+      //    tanpa membayar apa pun.
+      allow create, update, delete: if false;
+
+      // Baca: booking sendiri, atau petugas (admin/pengelola).
+      //
+      // Sebelumnya cukup `request.auth != null` — aplikasinya memang selalu
+      // memfilter `userId == uid`, tapi rules-nya membiarkan siapa pun yang
+      // sudah login membaca SELURUH koleksi lewat SDK: nama dan nomor HP
+      // semua pemesan.
+      //
+      // Urutan disengaja, sama seperti blok cameras: cek pertama hanya
+      // membaca dokumen booking itu sendiri (gratis). get() ke users/{uid}
+      // berbayar, jadi ia ditaruh belakangan agar pengguna biasa — yang
+      // selalu lolos lewat cek pertama — tidak ikut membayarinya.
+      //
+      // Kueri berfilter `where('userId','==',uid)` (BookingHistory,
+      // NotificationBell) lolos lewat cabang pertama; dasbor yang membaca
+      // seluruh koleksi (StatistikPanel, PengelolaStatistikPanel, ScanPanel)
+      // lolos lewat cabang peran.
+      allow read: if request.auth != null
         && (
           resource.data.userId == request.auth.uid
           || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'pengelola']

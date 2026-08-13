@@ -15,7 +15,7 @@ import {
   type Camera,
   type AppUser,
 } from '@/lib/firestore';
-import { destinationCameraIds, parentOptions } from '@/lib/destination';
+import { cleanPriceItems, destinationCameraIds, parentOptions } from '@/lib/destination';
 import { sanitizeStationId, stationPath } from '@/lib/realtime';
 import { parseCoords, waLink } from '@/lib/format';
 
@@ -179,7 +179,7 @@ export default function DestinasiPanel() {
     const data: DestinationInput = {
       ...form,
       tags: tagInput.split(',').map((t) => t.trim()).filter(Boolean),
-      priceItems: (form.priceItems ?? []).filter((it) => it.label.trim() !== ''),
+      priceItems: cleanPriceItems(form.priceItems ?? []),
       images: imagesInput.split('\n').map((u) => u.trim()).filter(Boolean),
       lat: coords?.lat ?? null,
       lng: coords?.lng ?? null,
@@ -396,6 +396,23 @@ export default function DestinasiPanel() {
                           value={item.unit}
                           onChange={(e) => updateItem(i, { unit: e.target.value })}
                           placeholder="/pax"
+                          className="w-20 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+                        />
+                        {/* Stok/hari. Kosong ≠ 0: kosong berarti tanpa batas
+                            (semua destinasi lama), 0 berarti tutup hari itu.
+                            Karena itu '' dikirim sebagai undefined, bukan 0. */}
+                        <input
+                          type="number"
+                          min={0}
+                          aria-label={`Stok per hari ${item.label || 'item'}`}
+                          value={item.stock ?? ''}
+                          onChange={(e) =>
+                            updateItem(i, {
+                              stock: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)),
+                            })
+                          }
+                          placeholder="∞"
+                          title="Stok per hari — kosongkan untuk tanpa batas"
                           className="w-20 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                         />
                         <button

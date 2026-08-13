@@ -8,6 +8,7 @@ import { useAuthState } from '@/lib/useAuth';
 import { createBooking, getPriceItems, type Destination } from '@/lib/firestore';
 import { formatIDR } from '@/lib/format';
 import { useLang } from '@/lib/useLang';
+import clsx from 'clsx';
 import TopNav from '@/components/desktop/TopNav';
 import Footer from '@/components/desktop/Footer';
 import BottomNav from '@/components/mobile/BottomNav';
@@ -51,14 +52,24 @@ function BookingContent() {
   });
 
   const [qty, setQty] = useState<Record<string, number>>({});
+  /** Sisa stok per item pada tanggal terpilih. null = tanpa batas. */
+  const [sisa, setSisa] = useState<Record<string, number | null>>({});
 
   const priceItems = destination ? getPriceItems(destination) : [];
   const totalQty = priceItems.reduce((s, it) => s + (qty[it.id] ?? 0), 0);
   const total = priceItems.reduce((s, it) => s + it.price * (qty[it.id] ?? 0), 0);
   const selectedItems = priceItems.filter((it) => (qty[it.id] ?? 0) > 0);
 
-  const setItemQty = (id: string, next: number) =>
-    setQty((q) => ({ ...q, [id]: Math.max(0, next) }));
+  /** Sisa item ini; null berarti tanpa batas. */
+  const sisaOf = (id: string) => sisa[id] ?? null;
+
+  const setItemQty = (id: string, next: number) => {
+    const batas = sisaOf(id);
+    // Dikunci di sini, bukan cuma dicek saat submit: tombol + yang tetap bisa
+    // ditekan melewati sisa stok cuma menyiapkan penolakan beberapa detik lagi.
+    const maks = batas === null ? Number.MAX_SAFE_INTEGER : batas;
+    setQty((q) => ({ ...q, [id]: Math.min(Math.max(0, next), maks) }));
+  };
 
   // Load destination if destId provided
   useEffect(() => {
@@ -91,6 +102,49 @@ function BookingContent() {
     }
   }, [destination, preselect]);
 
+  // Sisa stok ikut tanggal: item yang habis pada 17 Agustus bisa kosong melompong
+  // pada 18. Tanpa tanggal, angka sisanya tidak berarti apa-apa — karena itu
+  // baru diambil setelah tanggalnya dipilih, dan dikosongkan lagi kalau diganti.
+  useEffect(() => {
+    if (!destId || !form.date) {
+      setSisa({});
+      return;
+    }
+    let batal = false;
+    fetch(`/api/bookings?dest=${encodeURIComponent(destId)}&date=${encodeURIComponent(form.date)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (batal || !data?.items) return;
+        setSisa(
+          Object.fromEntries(
+            (data.items as { id: string; remaining: number | null }[]).map((a) => [a.id, a.remaining]),
+          ),
+        );
+      })
+      .catch(() => {
+        // Gagal ambil sisa stok bukan alasan memblokir formulir: server tetap
+        // memeriksanya saat membayar, jadi yang hilang cuma angka di layar.
+      });
+    return () => {
+      batal = true;
+    };
+  }, [destId, form.date]);
+
+  // Jumlah yang terlanjur dipilih diturunkan kalau tanggal barunya lebih sempit.
+  useEffect(() => {
+    setQty((q) => {
+      let berubah = false;
+      const next: Record<string, number> = {};
+      for (const [id, n] of Object.entries(q)) {
+        const batas = sisa[id] ?? null;
+        const dipangkas = batas === null ? n : Math.min(n, batas);
+        if (dipangkas !== n) berubah = true;
+        next[id] = dipangkas;
+      }
+      return berubah ? next : q;
+    });
+  }, [sisa]);
+
   // Pre-fill name from auth
   useEffect(() => {
     if (user?.displayName && !form.name) {
@@ -108,31 +162,31 @@ function BookingContent() {
       setError('Pilih destinasi terlebih dahulu.');
       return;
     }
-    const items = priceItems
-      .filter((it) => (qty[it.id] ?? 0) > 0)
-      .map((it) => ({ label: it.label, price: it.price, qty: qty[it.id] ?? 0 }));
-    if (items.length === 0) {
+    if (totalQty === 0) {
       setError('Pilih minimal satu item.');
       return;
     }
     setError('');
     setSubmitting(true);
     try {
+      // Yang dikirim cuma "item mana, berapa banyak" — harga & total dihitung
+      // ulang server dari dokumen destinasi. Angka di ringkasan sebelah kanan
+      // murni perkiraan untuk dilihat, bukan yang ditagihkan.
       await createBooking({
-        userId: user.uid,
         destinationId: destination.id,
-        destinationName: destination.name,
         date: form.date,
         guests: form.guests,
         name: form.name,
         phone: form.phone,
         notes: form.notes,
-        items,
-        amount: total,
+        qty,
       });
       setSuccess(true);
-    } catch {
-      setError(t('booking.failed'));
+    } catch (err) {
+      // 'full' = stoknya keburu diambil orang lain. Bukan kegagalan sistem, jadi
+      // pesannya harus beda — kalau disamakan dengan "coba lagi", pengunjung
+      // mengulang terus untuk kursi yang memang sudah tidak ada.
+      setError((err as Error | null)?.message === 'full' ? t('booking.itemFull') : t('booking.failed'));
     } finally {
       setSubmitting(false);
     }
@@ -168,7 +222,7 @@ function BookingContent() {
               onClick={() => router.push('/booking')}
               className="btn-primary px-5 py-2.5 text-sm"
             >
-              {t('booking.viewTicket')}
+              {t('booking.goToPayment')}
             </button>
             <button
               onClick={() => {
@@ -230,13 +284,25 @@ function BookingContent() {
                   </div>
                 ) : (
                   <div className="rounded-md border border-shore-200 bg-surface divide-y divide-shore-100">
-                    {priceItems.map((it) => (
+                    {priceItems.map((it) => {
+                      const batas = sisaOf(it.id);
+                      const habis = batas === 0;
+                      const mentok = batas !== null && (qty[it.id] ?? 0) >= batas;
+                      return (
                       <div key={it.id} className="flex items-center justify-between gap-3 px-4 py-3">
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-navy truncate capitalize">{it.label}</p>
                           <p className="text-xs text-navy-soft">
                             {formatIDR(it.price)} <span className="text-navy-soft/70">{it.unit}</span>
                           </p>
+                          {/* Angka sisa cuma muncul kalau item ini memang dibatasi
+                              DAN tanggalnya sudah dipilih — tanpa tanggal, "sisa"
+                              tidak punya arti. */}
+                          {batas !== null && (
+                            <p className={clsx('mt-0.5 text-2xs font-medium', habis ? 'text-danger' : 'text-navy-soft')}>
+                              {habis ? t('booking.soldOut') : t('booking.remaining', { n: String(batas) })}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <button
@@ -252,13 +318,15 @@ function BookingContent() {
                             type="button"
                             aria-label={t('booking.increase', { item: it.label })}
                             onClick={() => setItemQty(it.id, (qty[it.id] ?? 0) + 1)}
-                            className="h-7 w-7 rounded-sm border border-shore-200 flex items-center justify-center text-navy-soft hover:text-navy hover:border-shore-300 transition-colors"
+                            disabled={mentok}
+                            className="h-7 w-7 rounded-sm border border-shore-200 flex items-center justify-center text-navy-soft hover:text-navy hover:border-shore-300 transition-colors disabled:opacity-40 disabled:hover:border-shore-200 disabled:hover:text-navy-soft"
                           >
                             +
                           </button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

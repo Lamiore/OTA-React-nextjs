@@ -40,7 +40,12 @@ export default function NotificationBell({ variant }: NotificationBellProps) {
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs
         .map((d) => ({ id: d.id, ...d.data() } as Booking))
-        .filter((b) => b.status === 'used' && b.paymentStatus === 'unpaid');
+        // Dulu: tiket yang sudah di-scan tapi belum dibayar (bayar di lokasi
+        // setelah masuk). Kombinasi itu sekarang mustahil — check-in menolak
+        // tiket yang belum lunas — jadi lonceng ini akan diam selamanya kalau
+        // filternya dibiarkan. Diarahkan ulang ke arah yang benar sekarang:
+        // booking yang menunggu pembayaran, sebelum tiketnya terbit.
+        .filter((b) => b.status === 'pending' && b.paymentStatus !== 'paid');
       setUnpaid(list);
     });
     return () => unsub();
@@ -97,7 +102,7 @@ export default function NotificationBell({ variant }: NotificationBellProps) {
                 <div key={b.id} className="rounded-md px-3 py-2.5 hover:bg-shore-50">
                   <p className="text-sm font-medium text-navy">{t('notif.checkinOk')}</p>
                   <p className="mt-0.5 text-xs text-navy-soft">
-                    Silakan selesaikan pembayaran untuk {b.destinationName}.
+                    Selesaikan pembayaran {b.destinationName} untuk menerbitkan tiket QR.
                   </p>
                   <p className="mt-1 text-xs font-semibold text-navy">{formatIDR(b.amount ?? 0)}</p>
                   <button

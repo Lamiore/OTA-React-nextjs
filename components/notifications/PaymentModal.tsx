@@ -32,6 +32,8 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
   const [paying, setPaying] = useState(false);
   const [paid, setPaid] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Booking ini tidak bisa dilanjutkan lagi — stoknya sudah habis. */
+  const [stuck, setStuck] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -42,8 +44,13 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
     try {
       await payBooking(booking.id, method);
       setPaid(true);
-    } catch {
-      setError(t('payment.failed'));
+    } catch (err) {
+      // 'full' = stok item ini habis diambil orang lain di antara booking dibuat
+      // dan tombol ini ditekan. Sengaja dibedakan: pesan "coba lagi" akan
+      // membuat orang menekan tombol yang tidak akan pernah berhasil.
+      const penuh = (err as Error | null)?.message === 'full';
+      setError(t(penuh ? 'payment.full' : 'payment.failed'));
+      setStuck(penuh);
     } finally {
       setPaying(false);
     }
@@ -130,9 +137,11 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
                   </div>
                 )}
 
+                {/* Tombol bayar dimatikan permanen kalau stoknya habis — dibiarkan
+                    hidup, ia cuma mengundang penekanan yang pasti gagal. */}
                 <button
                   onClick={handlePay}
-                  disabled={!method || paying}
+                  disabled={!method || paying || stuck}
                   className="btn-primary mt-5 w-full px-4 py-2.5 text-sm disabled:opacity-50"
                 >
                   {paying ? t('payment.paying') : t('payment.confirm')}

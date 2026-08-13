@@ -159,7 +159,7 @@ export default function PengelolaStatistikPanel({ uid }: { uid: string }) {
                   b.status === 'cancelled' ? 'bg-danger-soft text-danger' :
                   'bg-warn-soft text-warn'
                 }`}>
-                  {b.status === 'used' ? 'Sudah Digunakan' : b.status === 'confirmed' ? 'Dikonfirmasi' : b.status === 'cancelled' ? 'Dibatalkan' : 'Menunggu'}
+                  {b.status === 'used' ? 'Sudah Digunakan' : b.status === 'confirmed' ? 'Dikonfirmasi' : b.status === 'cancelled' ? 'Dibatalkan' : 'Belum Dibayar'}
                 </span>
               </div>
             ))}
