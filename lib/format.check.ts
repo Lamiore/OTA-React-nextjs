@@ -5,7 +5,14 @@
  * Jalankan: node lib/format.check.ts
  */
 import assert from 'node:assert/strict';
-import { formatTimestamp, normalizeViewerEmail, parseCoords, waLink } from './format.ts';
+import {
+  formatTimestamp,
+  isoDate,
+  nextDays,
+  normalizeViewerEmail,
+  parseCoords,
+  waLink,
+} from './format.ts';
 
 // Koordinat — bentuk yang disalin Google Maps.
 assert.deepEqual(parseCoords('1.4508, 125.0917'), { lat: 1.4508, lng: 125.0917 });
@@ -77,5 +84,51 @@ assert.equal(
   'orang@mail.com',
   'yang sudah normal tidak berubah'
 );
+
+// ── Tanggal lokal ──
+//
+// Yang dijaga: isoDate memakai jam LOKAL, bukan UTC. Cara membuktikannya tanpa
+// mengganti zona waktu mesin adalah membandingkan dengan getFullYear/getMonth/
+// getDate — trio yang menurut definisi memang lokal. Kalau suatu saat isoDate
+// diam-diam diganti toISOString(), assert ini jatuh di zona mana pun yang
+// bergeser dari UTC pada jam tesnya dijalankan.
+const lokal = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+for (const jam of [0, 1, 7, 12, 16, 23]) {
+  const d = new Date(2026, 7, 14, jam, 30);
+  assert.equal(isoDate(d), lokal(d), `jam ${jam} tetap tanggal lokal`);
+}
+
+// Titik paling rawan: sesaat setelah tengah malam lokal. Di WITA jam itu masih
+// kemarin menurut UTC, dan justru itulah bug yang fungsi ini ada untuk cegah.
+const lewatTengahMalam = new Date(2026, 7, 14, 0, 5);
+assert.equal(isoDate(lewatTengahMalam), '2026-08-14');
+
+// nextDays: maju saja, dimulai dari harinya sendiri, dan pergantian bulan benar.
+assert.deepEqual(nextDays(3, new Date(2026, 7, 14)), ['2026-08-14', '2026-08-15', '2026-08-16']);
+assert.deepEqual(
+  nextDays(3, new Date(2026, 7, 30)),
+  ['2026-08-30', '2026-08-31', '2026-09-01'],
+  'ganti bulan'
+);
+assert.deepEqual(
+  nextDays(2, new Date(2026, 11, 31)),
+  ['2026-12-31', '2027-01-01'],
+  'ganti tahun'
+);
+assert.deepEqual(
+  nextDays(3, new Date(2028, 1, 28)),
+  ['2028-02-28', '2028-02-29', '2028-03-01'],
+  'tahun kabisat'
+);
+assert.deepEqual(nextDays(0), [], 'nol hari = tidak ada kartu');
+
+// Tanggal awal tidak boleh ikut bergeser — pemanggil memakai objek Date-nya
+// sendiri, dan strip yang menggeser 'hari ini' milik pemanggil akan merusak
+// batas minimal input tanggal di halaman yang sama.
+const awal = new Date(2026, 7, 14);
+nextDays(5, awal);
+assert.equal(isoDate(awal), '2026-08-14', 'argumennya tidak dimutasi');
 
 console.log('format.ts OK');

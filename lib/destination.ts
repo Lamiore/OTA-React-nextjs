@@ -415,6 +415,49 @@ export function overStock(
     .map((l) => l.label);
 }
 
+/** Ringkasan satu tanggal untuk strip pemilih tanggal. */
+export interface DateFit {
+  /**
+   * Angka yang dipajang di kartu tanggal: sisa PALING SEDIKIT di antara item
+   * yang dipilih. null = tidak ada yang dibatasi, jadi tidak ada angka yang
+   * perlu ditulis.
+   */
+  remaining: number | null;
+  /** false = pilihan sekarang tidak muat di tanggal ini. */
+  fits: boolean;
+}
+
+/**
+ * Apakah pilihan sekarang muat pada satu tanggal, dan berapa sisa tersempitnya.
+ *
+ * Dua jawaban, bukan satu, dan sengaja tidak diturunkan satu dari yang lain.
+ * Angka yang dipajang adalah sisa item terlangka; `fits` membandingkan sisa
+ * TIAP item dengan jumlah yang diminta untuk item ITU sendiri. Contoh yang
+ * membedakan keduanya: item A sisa 10 diminta 12, item B sisa 3 diminta 1 —
+ * kartunya harus menulis "Sisa 3" (B memang paling langka) sekaligus tetap
+ * mati, karena yang tidak muat justru A. Kalau `fits` ikut dihitung dari angka
+ * terkecil saja, tanggal itu tampil bisa dipesan lalu ditolak server.
+ *
+ * Bekerja di atas ItemAvailability, bukan PriceItem, karena route sudah
+ * memulangkan sisa per item — halaman booking tinggal menghitung ulang label
+ * tiap kali jumlahnya diubah, tanpa menembak jaringan lagi.
+ */
+export function dateFit(
+  av: ItemAvailability[],
+  qty: Record<string, unknown>
+): DateFit {
+  let remaining: number | null = null;
+  let fits = true;
+  for (const a of av) {
+    const n = Math.floor(Number(qty[a.id] ?? 0));
+    if (!Number.isFinite(n) || n <= 0) continue;
+    if (a.remaining === null) continue; // tanpa batas: tidak menyempitkan apa pun
+    if (remaining === null || a.remaining < remaining) remaining = a.remaining;
+    if (n > a.remaining) fits = false;
+  }
+  return { remaining, fits };
+}
+
 /**
  * Rapikan daftar harga sebelum disimpan: buang item tanpa nama, dan buang
  * field `stock` yang tidak diisi.

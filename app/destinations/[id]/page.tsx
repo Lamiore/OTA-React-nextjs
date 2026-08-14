@@ -16,7 +16,7 @@ import {
 } from '@/lib/firestore';
 import { destinationCameraIds } from '@/lib/destination';
 import { stationPath } from '@/lib/realtime';
-import { formatIDR, waLink } from '@/lib/format';
+import { formatIDR, isoDate, waLink } from '@/lib/format';
 import TopNav from '@/components/desktop/TopNav';
 import DesktopDestinationCard from '@/components/desktop/DesktopDestinationCard';
 import Footer from '@/components/desktop/Footer';
@@ -107,9 +107,7 @@ export default function DestinationDetail() {
   // dipatok ke hari ini — cukup untuk menjawab "masih ada nggak?" sebelum orang
   // masuk ke formulir, dan tanggal lain tetap dihitung ulang di /booking.
   //
-  // en-CA memberi YYYY-MM-DD di zona waktu LOKAL. toISOString() tidak boleh
-  // dipakai: itu tanggal UTC, jadi di WITA sebelum pukul 08:00 pagi angkanya
-  // milik kemarin. Bug yang sama sudah dicatat di app/booking/page.tsx.
+  // Alasan lengkap kenapa isoDate() dan bukan toISOString() ada di lib/format.
   //
   // Lewat route agregat, bukan query langsung: rules menutup baca koleksi
   // bookings, dan yang dikembalikan route itu memang cuma angka — tanpa nama
@@ -126,7 +124,7 @@ export default function DestinationDetail() {
     // jawabannya sudah pasti "tanpa batas", jadi permintaannya tidak dikirim
     // sama sekali — bukan dikirim lalu hasilnya dibuang.
     if (!id || !adaStok) return;
-    const hariIni = new Date().toLocaleDateString('en-CA');
+    const hariIni = isoDate();
     let batal = false;
     fetch(`/api/bookings?dest=${encodeURIComponent(id)}&date=${hariIni}`)
       .then((r) => (r.ok ? r.json() : null))

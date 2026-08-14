@@ -92,18 +92,59 @@ function paidQuery(destinationId: string, date: string) {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const destinationId = docId(url.searchParams.get('dest'));
+  if (!destinationId) return bad('bad-request', 400);
+
   const date = str(url.searchParams.get('date'), 10);
-  if (!destinationId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return bad('bad-request', 400);
+  // `days` = mode strip: sisa untuk BANYAK tanggal sekaligus. Tanpa itu,
+  // perilakunya persis seperti sebelumnya (satu tanggal) — halaman destinasi
+  // yang sudah tayang memakai bentuk itu dan tidak ikut berubah.
+  const banyakTanggal = url.searchParams.get('days') === '1';
+  if (!banyakTanggal && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return bad('bad-request', 400);
 
   const destSnap = await adminDb().doc(`destinations/${destinationId}`).get();
   if (!destSnap.exists) return bad('destination-notfound', 404);
+  const items = getPriceItems(destSnap.data() ?? {});
 
-  const paid = await paidQuery(destinationId, date).get();
-  const booked = bookedPerItem(paid.docs.map((d) => d.data() as BookingForCount));
+  if (!banyakTanggal) {
+    const paid = await paidQuery(destinationId, date).get();
+    const booked = bookedPerItem(paid.docs.map((d) => d.data() as BookingForCount));
+    return NextResponse.json({ items: availability(items, booked) });
+  }
 
-  return NextResponse.json({
-    items: availability(getPriceItems(destSnap.data() ?? {}), booked),
-  });
+  // Satu query untuk semua tanggal, lalu dikelompokkan di sini.
+  //
+  // Bukan query rentang, dan bukan pula belasan query sehari-satu. Rentang
+  // (`date >= x && date <= y` bersama dua filter kesamaan) menuntut composite
+  // index yang belum ada sama sekali di koleksi ini — query kesamaan saja
+  // dilayani index bawaan lewat zigzag merge, jadi menjatuhkan filter tanggal
+  // justru membuatnya tetap bebas index.
+  //
+  // ponytail: konsekuensinya seluruh booking berbayar destinasi ini terbaca,
+  // bukan cuma tanggal yang diminta. Aman selama satu destinasi punya puluhan
+  // sampai ratusan booking. Ganti jadi filter rentang + composite index kalau
+  // satu destinasi sudah menyimpan ribuan.
+  const semua = await adminDb()
+    .collection('bookings')
+    .where('destinationId', '==', destinationId)
+    .where('paymentStatus', '==', 'paid')
+    .get();
+
+  const perTanggal: Record<string, BookingForCount[]> = {};
+  for (const d of semua.docs) {
+    const b = d.data() as BookingForCount & { date?: string };
+    if (typeof b.date !== 'string') continue;
+    (perTanggal[b.date] ??= []).push(b);
+  }
+
+  // Hanya tanggal yang PUNYA penjualan yang dikirim. Tanggal yang tidak
+  // disebut berarti belum ada yang terjual, dan klien sudah tahu artinya
+  // "stok penuh" — mengirim seluruh kalender kosong cuma memperbesar balasan.
+  const days: Record<string, ReturnType<typeof availability>> = {};
+  for (const tanggal of Object.keys(perTanggal)) {
+    days[tanggal] = availability(items, bookedPerItem(perTanggal[tanggal]));
+  }
+
+  return NextResponse.json({ items: availability(items, {}), days });
 }
 
 export async function POST(req: Request) {

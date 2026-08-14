@@ -13,13 +13,15 @@ import {
   type Destination,
   type PriceItem,
 } from '@/lib/firestore';
-import { formatIDR } from '@/lib/format';
+import { dateFit, type ItemAvailability } from '@/lib/destination';
+import { formatIDR, isoDate } from '@/lib/format';
 import { useLang } from '@/lib/useLang';
 import clsx from 'clsx';
 import TopNav from '@/components/desktop/TopNav';
 import Footer from '@/components/desktop/Footer';
 import BottomNav from '@/components/mobile/BottomNav';
 import BookingHistory from '@/components/booking/BookingHistory';
+import DateStrip from '@/components/booking/DateStrip';
 
 function CheckCircleIcon() {
   return (
@@ -44,11 +46,8 @@ function BookingContent() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  // en-CA memberi YYYY-MM-DD di zona waktu lokal — sama seperti isPast() di
-  // BookingHistory. toISOString() tidak boleh dipakai di sini: itu tanggal UTC,
-  // jadi di WITA (UTC+8) sebelum jam 08:00 pagi batas minimalnya mundur ke
-  // kemarin dan booking yang baru dibuat langsung terhitung kedaluwarsa.
-  const today = new Date().toLocaleDateString('en-CA');
+  // Alasan lengkap kenapa bukan toISOString() ada di isoDate (lib/format).
+  const today = isoDate();
 
   const [form, setForm] = useState({
     date: '',
@@ -59,8 +58,17 @@ function BookingContent() {
   });
 
   const [qty, setQty] = useState<Record<string, number>>({});
-  /** Sisa stok per item pada tanggal terpilih. null = tanpa batas. */
-  const [sisa, setSisa] = useState<Record<string, number | null>>({});
+  /**
+   * Sisa per item, per tanggal — diambil sekali untuk seluruh destinasi.
+   *
+   * Satu muatan, bukan satu per tanggal yang dipilih: strip tanggal harus bisa
+   * menulis angka di keempat belas kartunya sekaligus, dan angka itu ikut
+   * berubah tiap kali jumlah item digeser. Menembak jaringan tiap perubahan
+   * jumlah akan membuat strip berkedip untuk data yang sudah ada di tangan.
+   */
+  const [days, setDays] = useState<Record<string, ItemAvailability[]>>({});
+  /** Sisa saat belum ada satu pun penjualan — dasar untuk tanggal yang kosong. */
+  const [dasar, setDasar] = useState<ItemAvailability[]>([]);
 
   /** Lama sewa, satu angka untuk seluruh booking. Lihat BookingRequest.hours. */
   const [hours, setHours] = useState(1);
@@ -79,8 +87,24 @@ function BookingContent() {
   /** Kolom durasi cuma muncul kalau ada item per jam yang benar-benar dipilih. */
   const adaPerJam = selectedItems.some(isHourly);
 
+  /**
+   * Sisa per item pada tanggal yang SEDANG dipilih. Tanggal yang belum menjual
+   * apa pun tidak dikirim server, jadi jatuh ke `dasar` — stok penuh, bukan
+   * "tidak diketahui". Belum memilih tanggal berarti belum ada yang bisa
+   * dikatakan sama sekali.
+   */
+  const sisaTanggal: ItemAvailability[] = form.date ? (days[form.date] ?? dasar) : [];
+
   /** Sisa item ini; null berarti tanpa batas. */
-  const sisaOf = (id: string) => sisa[id] ?? null;
+  const sisaOf = (id: string) =>
+    sisaTanggal.find((a) => a.id === id)?.remaining ?? null;
+
+  /**
+   * Ringkasan satu tanggal untuk strip. Dihitung dari `days` yang sudah di
+   * tangan — jadi mengubah jumlah item langsung menulis ulang keempat belas
+   * kartunya tanpa satu pun permintaan baru.
+   */
+  const fitOf = (tanggal: string) => dateFit(days[tanggal] ?? dasar, qty);
 
   const setItemQty = (id: string, next: number) => {
     const batas = sisaOf(id);
@@ -121,48 +145,51 @@ function BookingContent() {
     }
   }, [destination, preselect]);
 
-  // Sisa stok ikut tanggal: item yang habis pada 17 Agustus bisa kosong melompong
-  // pada 18. Tanpa tanggal, angka sisanya tidak berarti apa-apa — karena itu
-  // baru diambil setelah tanggalnya dipilih, dan dikosongkan lagi kalau diganti.
+  // Sisa stok seluruh tanggal, sekali per destinasi. Tidak bergantung pada
+  // form.date: strip harus menulis angka di semua kartunya sebelum satu pun
+  // tanggal dipilih, dan itu justru inti gunanya.
   useEffect(() => {
-    if (!destId || !form.date) {
-      setSisa({});
-      return;
-    }
+    if (!destId) return;
     let batal = false;
-    fetch(`/api/bookings?dest=${encodeURIComponent(destId)}&date=${encodeURIComponent(form.date)}`)
+    fetch(`/api/bookings?dest=${encodeURIComponent(destId)}&days=1`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (batal || !data?.items) return;
-        setSisa(
-          Object.fromEntries(
-            (data.items as { id: string; remaining: number | null }[]).map((a) => [a.id, a.remaining]),
-          ),
-        );
+        if (batal || !data) return;
+        setDays((data.days ?? {}) as Record<string, ItemAvailability[]>);
+        setDasar((data.items ?? []) as ItemAvailability[]);
       })
       .catch(() => {
-        // Gagal ambil sisa stok bukan alasan memblokir formulir: server tetap
-        // memeriksanya saat membayar, jadi yang hilang cuma angka di layar.
+        // Gagal memuat angka sisa bukan alasan memblokir formulir: server tetap
+        // memeriksanya saat membayar, jadi yang hilang cuma angka di layar —
+        // dan `dasar` yang kosong membuat semua tanggal terbaca tanpa batas,
+        // bukan habis. Menutup tanggal karena jaringan gagal jauh lebih buruk
+        // daripada membiarkan server yang menolak nanti.
       });
     return () => {
       batal = true;
     };
-  }, [destId, form.date]);
+  }, [destId]);
 
   // Jumlah yang terlanjur dipilih diturunkan kalau tanggal barunya lebih sempit.
+  //
+  // Sengaja hanya bergantung pada tanggal & data yang termuat, bukan pada objek
+  // sisaTanggal — objek itu dibentuk ulang tiap render, dan effect yang
+  // mengejarnya akan berjalan tanpa henti.
   useEffect(() => {
+    if (!form.date) return;
+    const av = days[form.date] ?? dasar;
     setQty((q) => {
       let berubah = false;
       const next: Record<string, number> = {};
       for (const [id, n] of Object.entries(q)) {
-        const batas = sisa[id] ?? null;
+        const batas = av.find((a) => a.id === id)?.remaining ?? null;
         const dipangkas = batas === null ? n : Math.min(n, batas);
         if (dipangkas !== n) berubah = true;
         next[id] = dipangkas;
       }
       return berubah ? next : q;
     });
-  }, [sisa]);
+  }, [form.date, days, dasar]);
 
   // Pre-fill name from auth
   useEffect(() => {
@@ -183,6 +210,14 @@ function BookingContent() {
     }
     if (totalQty === 0) {
       setError('Pilih minimal satu item.');
+      return;
+    }
+    // Dulu ini dikerjakan atribut `required` pada input tanggal. Input itu
+    // sekarang cuma muncul kalau pengguna menekan "Tanggal lain", jadi
+    // penjaganya harus pindah ke sini — tanpa ini, formulir tanpa tanggal
+    // terkirim dan ditolak server dengan pesan yang jauh lebih membingungkan.
+    if (!form.date) {
+      setError(t('booking.needDate'));
       return;
     }
     setError('');
@@ -266,7 +301,11 @@ function BookingContent() {
       <h1 className="section-title">{t('booking.title')}</h1>
       <p className="section-lede">{t('booking.lede')}</p>
 
-      <form onSubmit={handleSubmit} className="mt-6 lg:grid lg:grid-cols-[1fr_340px] lg:gap-8 lg:items-start">
+      {/* minmax(0,1fr), bukan 1fr: kolom grid punya min-width:auto, jadi isi
+          yang lebih lebar dari ruangnya MELEBARKAN kolomnya alih-alih bergulir
+          di dalamnya. Sebelum ini, strip tanggal mendorong ringkasan keluar
+          layar dan seluruh halaman ikut bisa digeser ke samping. */}
+      <form onSubmit={handleSubmit} className="mt-6 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 lg:items-start">
         {/* KIRI: field-field */}
         <div className="space-y-5">
             {/* Destination info */}
@@ -382,33 +421,28 @@ function BookingContent() {
               </div>
             )}
 
-            {/* Date + Guests */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="booking-date" className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.dateLabel')}</label>
-                <input
-                  id="booking-date"
-                  type="date"
-                  value={form.date}
-                  min={today}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })}
-                  required
-                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
-                />
-              </div>
-              <div>
-                <label htmlFor="booking-guests" className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.guestsLabel')}</label>
-                <input
-                  id="booking-guests"
-                  type="number"
-                  value={form.guests}
-                  min={1}
-                  max={100}
-                  onChange={(e) => setForm({ ...form, guests: Number(e.target.value) })}
-                  required
-                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
-                />
-              </div>
+            {/* Tanggal — selebar kolom, bukan lagi separuh di sebelah Jumlah
+                Orang: kartunya perlu ruang untuk digeser, dan angka sisa di
+                tiap kartu adalah alasan utama seksi ini ada. */}
+            <DateStrip
+              value={form.date}
+              onChange={(date) => setForm((f) => ({ ...f, date }))}
+              fitOf={fitOf}
+              min={today}
+            />
+
+            <div>
+              <label htmlFor="booking-guests" className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.guestsLabel')}</label>
+              <input
+                id="booking-guests"
+                type="number"
+                value={form.guests}
+                min={1}
+                max={100}
+                onChange={(e) => setForm({ ...form, guests: Number(e.target.value) })}
+                required
+                className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+              />
             </div>
 
             {/* Name */}

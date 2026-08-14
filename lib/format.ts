@@ -54,6 +54,41 @@ export function formatTimestamp(value: unknown): string | null {
 }
 
 /**
+ * Tanggal YYYY-MM-DD menurut zona waktu LOKAL pengguna.
+ *
+ * `toISOString().slice(0, 10)` TIDAK boleh dipakai untuk ini: itu tanggal UTC,
+ * jadi di WITA (UTC+8) sebelum pukul 08:00 pagi ia memulangkan tanggal kemarin.
+ * Akibatnya nyata di dua tempat — batas minimal input tanggal booking mundur
+ * sehari, dan angka "sisa hari ini" di halaman destinasi jadi milik hari yang
+ * sudah lewat. en-CA dipilih karena satu-satunya locale umum yang formatnya
+ * memang YYYY-MM-DD.
+ *
+ * Dipusatkan di sini karena tiga permukaan harus sepakat soal "hari ini":
+ * halaman booking, halaman destinasi, dan strip tanggal.
+ */
+export function isoDate(d: Date = new Date()): string {
+  return d.toLocaleDateString('en-CA');
+}
+
+/**
+ * `count` tanggal berturut-turut mulai dari `start` (default hari ini), maju
+ * ke depan saja.
+ *
+ * Sengaja tanpa arah mundur: server menolak booking bertanggal lampau, jadi
+ * kartu kemarin di strip cuma tombol yang dijamin gagal. Penambahan lewat
+ * setDate() supaya pergantian bulan ikut benar tanpa aritmetika milidetik.
+ */
+export function nextDays(count: number, start: Date = new Date()): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    out.push(isoDate(d));
+  }
+  return out;
+}
+
+/**
  * Bentuk simpan email penonton kamera: sama persis dengan klaim `email` di ID
  * token (huruf kecil, tanpa spasi tepi). Rules mencocokkannya dengan operator
  * `in` yang membandingkan string persis — tanpa ini, email berhuruf besar

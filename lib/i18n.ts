@@ -141,6 +141,11 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Maaf, salah satu item yang kamu pilih sudah habis untuk tanggal ini. Kurangi jumlahnya atau pilih tanggal lain.",
     en: "Sorry, one of the items you picked just sold out for this date. Reduce the quantity or choose another date.",
   },
+  // Pendek, karena tempatnya kartu tanggal selebar dua digit — beda dari
+  // booking.soldOut yang berdiri sendiri di bawah nama item.
+  "booking.dateFull": { id: "Habis", en: "Full" },
+  "booking.otherDate": { id: "Tanggal lain", en: "Another date" },
+  "booking.needDate": { id: "Pilih tanggal dulu.", en: "Pick a date first." },
   "booking.hoursLabel": { id: "Lama Sewa *", en: "Rental Duration *" },
   "booking.hoursHint": {
     id: "Berlaku untuk item yang harganya per jam.",

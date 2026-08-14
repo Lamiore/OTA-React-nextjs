@@ -11,6 +11,7 @@ import {
   bookedPerItem,
   bookingLines,
   bookingTotal,
+  dateFit,
   descendantIds,
   destinationCameraIds,
   getPriceItems,
@@ -276,5 +277,55 @@ assert.deepEqual(
   { selam: 2 },
   'stok menghitung barangnya, bukan jam-nya',
 );
+
+// ── Ringkasan per tanggal (strip pemilih tanggal) ──
+//
+// Angka yang dipajang dan keputusan "muat/tidak" TIDAK boleh saling
+// diturunkan. Kalau keduanya digabung, ada tanggal yang tampil bisa dipesan
+// lalu ditolak server — kegagalan yang cuma terlihat setelah formulir dikirim.
+
+const avA = { id: 'a', stock: 20, booked: 10, remaining: 10 };
+const avB = { id: 'b', stock: 5, booked: 2, remaining: 3 };
+const avBebas = { id: 'c', stock: null, booked: 99, remaining: null };
+
+// Kasus pemisah: yang paling langka (B, sisa 3) bukan yang bikin gagal (A,
+// diminta 12 dari sisa 10). Kartunya harus menulis 3 DAN tetap mati.
+assert.deepEqual(
+  dateFit([avA, avB], { a: 12, b: 1 }),
+  { remaining: 3, fits: false },
+  'angka dari yang terlangka, kegagalan dari item yang benar-benar tidak muat'
+);
+
+assert.deepEqual(dateFit([avA, avB], { a: 1, b: 1 }), { remaining: 3, fits: true });
+assert.deepEqual(dateFit([avA, avB], { a: 1, b: 4 }), { remaining: 3, fits: false }, 'minta 4 dari sisa 3');
+
+// Item yang tidak dipilih tidak boleh ikut menyempitkan angkanya — kalau ikut,
+// tanggal tampil "Sisa 3" gara-gara barang yang tidak dipesan siapa pun.
+assert.deepEqual(dateFit([avA, avB], { a: 1 }), { remaining: 10, fits: true });
+
+// Tanpa batas tidak pernah jadi angka, dan tidak pernah menggagalkan.
+assert.deepEqual(dateFit([avBebas], { c: 999 }), { remaining: null, fits: true });
+assert.deepEqual(
+  dateFit([avA, avBebas], { a: 2, c: 999 }),
+  { remaining: 10, fits: true },
+  'yang tanpa batas dilewati, yang berbatas tetap dihitung'
+);
+
+// Belum memilih apa pun, dan daftar kosong (tanggal yang datanya belum termuat):
+// dua-duanya null + muat. Yang TIDAK boleh terjadi adalah tanggal tanpa data
+// terbaca sebagai habis — itu menutup tanggal gara-gara jaringan lambat.
+assert.deepEqual(dateFit([avA, avB], {}), { remaining: null, fits: true });
+assert.deepEqual(dateFit([], { a: 5 }), { remaining: null, fits: true });
+
+// Habis sungguhan: sisa 0 dengan permintaan apa pun di atas nol.
+assert.deepEqual(
+  dateFit([{ id: 'a', stock: 3, booked: 3, remaining: 0 }], { a: 1 }),
+  { remaining: 0, fits: false }
+);
+
+// Sampah di jumlah tidak boleh membuat tanggal ikut mati.
+assert.deepEqual(dateFit([avB], { b: 'abc' }), { remaining: null, fits: true });
+assert.deepEqual(dateFit([avB], { b: -3 }), { remaining: null, fits: true });
+assert.deepEqual(dateFit([avB], { b: 2.9 }), { remaining: 3, fits: true }, 'dibulatkan ke bawah jadi 2');
 
 console.log('destination.ts OK');
