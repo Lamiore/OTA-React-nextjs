@@ -185,7 +185,10 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
   if (!destSnap.exists) return bad('destination-notfound', 404);
   const dest = destSnap.data() ?? {};
 
-  const items = bookingLines(getPriceItems(dest), qty);
+  // body.hours dilempar mentah — resolveHours di dalam bookingLines yang
+  // membersihkannya, di tempat yang sama dengan pembersihan jumlah. Ditaruh di
+  // sini juga, angka jam dari klien akan punya dua penjaga yang bisa berbeda.
+  const items = bookingLines(getPriceItems(dest), qty, body.hours);
   if (items.length === 0) return bad('no-items', 400);
   const amount = bookingTotal(items);
   // Sabuk pengaman terakhir sebelum angka ini jadi tagihan. bookingLines sudah

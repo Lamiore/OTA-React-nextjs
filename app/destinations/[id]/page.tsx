@@ -70,6 +70,8 @@ export default function DestinationDetail() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [children, setChildren] = useState<Destination[]>([]);
+  /** Sisa stok tiap item untuk HARI INI. null / tidak ada = tanpa batas. */
+  const [sisa, setSisa] = useState<Record<string, number | null>>({});
   const initedForId = useRef<string | null>(null);
 
   useEffect(() => {
@@ -100,6 +102,53 @@ export default function DestinationDetail() {
     if (!id) return;
     return subscribeChildDestinations(id, setChildren);
   }, [id]);
+
+  // Sisa kursi hari ini. Halaman ini tidak punya pemilih tanggal, jadi angkanya
+  // dipatok ke hari ini — cukup untuk menjawab "masih ada nggak?" sebelum orang
+  // masuk ke formulir, dan tanggal lain tetap dihitung ulang di /booking.
+  //
+  // en-CA memberi YYYY-MM-DD di zona waktu LOKAL. toISOString() tidak boleh
+  // dipakai: itu tanggal UTC, jadi di WITA sebelum pukul 08:00 pagi angkanya
+  // milik kemarin. Bug yang sama sudah dicatat di app/booking/page.tsx.
+  //
+  // Lewat route agregat, bukan query langsung: rules menutup baca koleksi
+  // bookings, dan yang dikembalikan route itu memang cuma angka — tanpa nama
+  // atau nomor telepon siapa pun.
+  // Boolean, bukan daftar itemnya: nilainya cuma berubah saat pengelola mulai
+  // (atau berhenti) membatasi stok, jadi effect di bawah tidak ikut menembak
+  // ulang tiap kali snapshot realtime destinasi masuk.
+  const adaStok = dest
+    ? getPriceItems(dest).some((it) => typeof it.stock === 'number')
+    : false;
+
+  useEffect(() => {
+    // Sebagian besar destinasi belum membatasi stok apa pun. Untuk mereka
+    // jawabannya sudah pasti "tanpa batas", jadi permintaannya tidak dikirim
+    // sama sekali — bukan dikirim lalu hasilnya dibuang.
+    if (!id || !adaStok) return;
+    const hariIni = new Date().toLocaleDateString('en-CA');
+    let batal = false;
+    fetch(`/api/bookings?dest=${encodeURIComponent(id)}&date=${hariIni}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (batal || !data?.items) return;
+        setSisa(
+          Object.fromEntries(
+            (data.items as { id: string; remaining: number | null }[]).map((a) => [
+              a.id,
+              a.remaining,
+            ]),
+          ),
+        );
+      })
+      .catch(() => {
+        // Gagal mengambil angka sisa bukan alasan menyembunyikan daftar harga:
+        // yang hilang cuma satu baris keterangan, bookingnya tetap jalan.
+      });
+    return () => {
+      batal = true;
+    };
+  }, [id, adaStok]);
 
   // Pra-pilih item pertama (biasanya tiket masuk) sekali per destinasi saat
   // harga tersedia. Dikunci per id agar update realtime tidak menimpa pilihan
@@ -428,6 +477,8 @@ export default function DestinationDetail() {
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                   {priceItems.map((item) => {
                     const isSelected = selectedIds.includes(item.id);
+                    // null = tanpa batas, jadi tidak ada yang perlu diberitahukan.
+                    const sisaHariIni = sisa[item.id] ?? null;
                     return (
                       <button
                         key={item.id}
@@ -476,6 +527,22 @@ export default function DestinationDetail() {
                             {formatIDR(item.price)}
                             <span className="text-xs font-normal text-navy-soft"> {item.unit}</span>
                           </span>
+                          {/* Habis hari ini SENGAJA tidak mematikan kartunya.
+                              Angka ini cuma berlaku hari ini, sedangkan tujuan
+                              tombol di bawah adalah formulir yang tanggalnya
+                              bebas — mengunci di sini akan memblokir booking
+                              untuk minggu depan gara-gara stok hari ini. */}
+                          {sisaHariIni !== null && (
+                            <span
+                              className={`mt-0.5 block text-2xs font-medium ${
+                                sisaHariIni === 0 ? 'text-danger' : 'text-navy-soft'
+                              }`}
+                            >
+                              {sisaHariIni === 0
+                                ? t('dest.soldOutToday')
+                                : t('dest.remainingToday', { n: String(sisaHariIni) })}
+                            </span>
+                          )}
                         </span>
 
                         <span

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
-import { payBooking, type Booking } from '@/lib/firestore';
+import { lineTotal, payBooking, type Booking } from '@/lib/firestore';
 import { formatIDR } from '@/lib/format';
 import { useLang } from '@/lib/useLang';
 
@@ -100,8 +100,14 @@ export default function PaymentModal({ booking, onClose }: PaymentModalProps) {
                   <ul className="mt-4 space-y-1.5">
                     {booking.items.map((it, i) => (
                       <li key={i} className="flex items-center justify-between gap-3 text-sm">
-                        <span className="text-navy-soft">{it.label} ×{it.qty}</span>
-                        <span className="font-medium text-navy shrink-0">{formatIDR(it.price * it.qty)}</span>
+                        <span className="text-navy-soft">
+                          {it.label} ×{it.qty}
+                          {/* Baris tanpa `hours` = item sekali bayar, dan itu
+                              termasuk semua booking yang dibuat sebelum durasi
+                              ada. lineTotal yang menangani nilai kosongnya. */}
+                          {it.hours ? ` · ${t('booking.hour', { n: String(it.hours) })}` : ''}
+                        </span>
+                        <span className="font-medium text-navy shrink-0">{formatIDR(lineTotal(it))}</span>
                       </li>
                     ))}
                   </ul>

@@ -144,6 +144,13 @@ export function parentOptions<T extends DestinationNode>(
 /** Batas atas jumlah per item. Sama dengan max pada input jumlah tamu. */
 export const MAX_QTY = 100;
 
+/**
+ * Batas atas durasi sewa. 24 karena stok item dihitung PER HARI — sewa yang
+ * melewati tengah malam sudah memakan kuota hari berikutnya, dan tidak ada
+ * apa pun di sini yang mencatat itu.
+ */
+export const MAX_HOURS = 24;
+
 export interface PriceItem {
   id: string; // key React & edit admin — crypto.randomUUID()
   label: string; // "Tiket Masuk", "Penginapan", "Sewa Alat Diving", ...
@@ -170,6 +177,37 @@ export interface PriceItem {
   stock?: number;
 }
 
+/**
+ * Item ini disewa per jam — harganya dikali durasi, bukan cuma jumlahnya.
+ *
+ * Dibaca dari `unit` yang sudah ada, bukan dari field/centang baru: pengelola
+ * memang sudah menulis "/jam" di situ untuk sewa alat, jadi tidak ada yang
+ * perlu dimigrasi dan tidak ada dua tempat yang bisa berbeda pendapat.
+ *
+ * Tinggal di sini, bukan di komponen, karena server memakai jawaban yang sama
+ * untuk menghitung tagihan — sama alasannya dengan bookingLines. Kalau layar
+ * dan server pernah beda menilai satu item per jam atau tidak, tagihannya beda
+ * berlipat dan tidak ada yang tahu sampai ada yang komplain.
+ *
+ * `s?\b` menjaga "jamur" tidak ikut terbaca sebagai jam, sementara "perjam",
+ * "/jam", "/hour", "hrs" semuanya kena.
+ */
+export function isHourly(item: Pick<PriceItem, "unit">): boolean {
+  return /(jam|hour|hr)s?\b/i.test(item.unit ?? "");
+}
+
+/**
+ * Durasi sewa yang sudah dibersihkan. Sama seperti jumlah di bookingLines, ini
+ * batas kepercayaan: di server angkanya datang mentah dari body permintaan dan
+ * langsung jadi pengali tagihan. Apa pun yang tidak masuk akal jatuh ke 1 —
+ * bukan 0, karena 0 jam berarti tagihannya nol untuk barang yang tetap dibawa.
+ */
+export function resolveHours(v: unknown): number {
+  const n = Math.floor(Number(v ?? 1));
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(n, MAX_HOURS);
+}
+
 /** Bentuk minimal yang dibutuhkan; dokumen aslinya punya jauh lebih banyak. */
 export interface DestinationPrices {
   /** Daftar harga multi-item (tiket, penginapan, sewa alat, ...). */
@@ -192,6 +230,18 @@ export interface BookingLine {
   label: string;
   price: number;
   qty: number;
+  /**
+   * Lama sewa dalam jam, hanya untuk item per jam. Tidak ada field ini berarti
+   * sekali bayar — SEMUA booking lama ada di golongan itu, jadi setiap
+   * pembacaan wajib `?? 1` (lihat lineTotal). Nilai `undefined` tidak boleh
+   * ikut tersimpan: Firestore menolaknya.
+   *
+   * Ikut disnapshot ke tiap baris seperti label dan harga, meski dikirim sekali
+   * untuk seluruh booking. Kalau tidak, pengelola yang besok mengganti unit
+   * item dari "/jam" jadi "/set" membuat tiket yang sudah terbit ikut berubah
+   * totalnya.
+   */
+  hours?: number;
 }
 
 /**
@@ -220,8 +270,10 @@ export function getPriceItems(dest: DestinationPrices): PriceItem[] {
  */
 export function bookingLines(
   items: PriceItem[],
-  qty: Record<string, unknown>
+  qty: Record<string, unknown>,
+  hours?: unknown
 ): BookingLine[] {
+  const jam = resolveHours(hours);
   return items.flatMap((it) => {
     const n = Math.floor(Number(qty[it.id] ?? 0));
     if (!Number.isFinite(n) || n <= 0) return [];
@@ -230,13 +282,32 @@ export function bookingLines(
     // sebagai teks sudah cukup untuk membuat total jadi NaN — dan NaN yang
     // lolos ke tagihan jauh lebih sulit dilacak daripada item yang hilang.
     if (!Number.isFinite(it.price) || it.price < 0) return [];
-    return [{ id: it.id, label: it.label, price: it.price, qty: Math.min(n, MAX_QTY) }];
+    const line: BookingLine = {
+      id: it.id,
+      label: it.label,
+      price: it.price,
+      qty: Math.min(n, MAX_QTY),
+    };
+    // Sengaja hanya dipasang kalau itemnya memang per jam. Menaruh `hours: 1`
+    // di tiket masuk cuma menambah angka yang harus dijelaskan di layar, dan
+    // menaruh `hours: undefined` membuat Firestore melempar saat menyimpan.
+    if (isHourly(it)) line.hours = jam;
+    return [line];
   });
+}
+
+/**
+ * Rupiah satu baris. `?? 1` bukan kehati-hatian berlebih: seluruh booking yang
+ * sudah ada di database dibuat sebelum ada durasi, dan tanpa itu tiket lama
+ * berubah jadi "Rp NaN" begitu perubahan ini naik.
+ */
+export function lineTotal(line: BookingLine): number {
+  return line.price * line.qty * (line.hours ?? 1);
 }
 
 /** Total rupiah dari baris tagihan. */
 export function bookingTotal(lines: BookingLine[]): number {
-  return lines.reduce((sum, l) => sum + l.price * l.qty, 0);
+  return lines.reduce((sum, l) => sum + lineTotal(l), 0);
 }
 
 // ── Stok per item per hari ──
@@ -268,6 +339,16 @@ export interface BookingForCount {
  *
  * Pemanggil yang menyaring tanggalnya, bukan fungsi ini — supaya fungsi ini
  * tetap murni dan bisa diuji tanpa Firestore.
+ *
+ * Yang dijumlahkan `qty` saja, SENGAJA tanpa `hours`. Stok menghitung barangnya
+ * — 10 set alat selam tetap 10 set, dipinjam sejam atau enam jam. Mengalikan
+ * jam di sini akan menghabiskan stok enam kali lipat untuk satu set yang sama.
+ *
+ * ponytail: harganya jadi konservatif — dua penyewa yang jamnya tidak bertabrakan
+ * (pagi dan sore) tetap memakan dua jatah dari stok hari itu. Arahnya aman (tidak
+ * pernah menjual barang yang tidak ada), dan memperbaikinya butuh jam mulai per
+ * booking, bukan cuma durasi. Pasang itu kalau pengelola mulai mengeluh alatnya
+ * "habis" padahal sudah kembali.
  */
 export function bookedPerItem(bookings: BookingForCount[]): Record<string, number> {
   const out: Record<string, number> = {};

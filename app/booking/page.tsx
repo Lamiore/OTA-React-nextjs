@@ -5,7 +5,14 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthState } from '@/lib/useAuth';
-import { createBooking, getPriceItems, type Destination } from '@/lib/firestore';
+import {
+  createBooking,
+  getPriceItems,
+  isHourly,
+  MAX_HOURS,
+  type Destination,
+  type PriceItem,
+} from '@/lib/firestore';
 import { formatIDR } from '@/lib/format';
 import { useLang } from '@/lib/useLang';
 import clsx from 'clsx';
@@ -55,10 +62,22 @@ function BookingContent() {
   /** Sisa stok per item pada tanggal terpilih. null = tanpa batas. */
   const [sisa, setSisa] = useState<Record<string, number | null>>({});
 
+  /** Lama sewa, satu angka untuk seluruh booking. Lihat BookingRequest.hours. */
+  const [hours, setHours] = useState(1);
+
   const priceItems = destination ? getPriceItems(destination) : [];
   const totalQty = priceItems.reduce((s, it) => s + (qty[it.id] ?? 0), 0);
-  const total = priceItems.reduce((s, it) => s + it.price * (qty[it.id] ?? 0), 0);
   const selectedItems = priceItems.filter((it) => (qty[it.id] ?? 0) > 0);
+  /**
+   * Pengali harga baris: item per jam ikut durasi, sisanya sekali bayar.
+   * Rumusnya harus sama persis dengan lineTotal di lib/destination — yang di
+   * layar cuma perkiraan, tapi perkiraan yang meleset dari tagihan lebih buruk
+   * daripada tidak menampilkan angka sama sekali.
+   */
+  const kali = (it: PriceItem) => (isHourly(it) ? hours : 1);
+  const total = priceItems.reduce((s, it) => s + it.price * (qty[it.id] ?? 0) * kali(it), 0);
+  /** Kolom durasi cuma muncul kalau ada item per jam yang benar-benar dipilih. */
+  const adaPerJam = selectedItems.some(isHourly);
 
   /** Sisa item ini; null berarti tanpa batas. */
   const sisaOf = (id: string) => sisa[id] ?? null;
@@ -180,6 +199,7 @@ function BookingContent() {
         phone: form.phone,
         notes: form.notes,
         qty,
+        hours,
       });
       setSuccess(true);
     } catch (err) {
@@ -229,6 +249,7 @@ function BookingContent() {
                 setSuccess(false);
                 setForm({ date: '', guests: 1, name: user?.displayName ?? '', phone: '', notes: '' });
                 setQty(priceItems.length > 0 ? { [priceItems[0].id]: 1 } : {});
+                setHours(1);
               }}
               className="btn-ghost px-5 py-2.5 text-sm"
             >
@@ -329,6 +350,35 @@ function BookingContent() {
                     })}
                   </div>
                 )}
+
+                {/* Durasi ditaruh menempel pada daftar item, bukan di baris
+                    Tanggal/Jumlah Orang: yang ditanyakan di sini menyangkut
+                    item tertentu, dan kolomnya ikut hilang begitu item per jam
+                    terakhir dilepas. */}
+                {adaPerJam && (
+                  <div className="mt-3">
+                    <label htmlFor="booking-hours" className="mb-1.5 block text-xs font-medium text-navy-soft">
+                      {t('booking.hoursLabel')}
+                    </label>
+                    <input
+                      id="booking-hours"
+                      type="number"
+                      min={1}
+                      max={MAX_HOURS}
+                      value={hours}
+                      onChange={(e) =>
+                        // `|| 1` menangkap input yang dikosongkan: Number('')
+                        // itu 0, dan 0 jam berarti tagihan nol untuk alat yang
+                        // tetap dibawa pulang.
+                        setHours(
+                          Math.min(MAX_HOURS, Math.max(1, Math.floor(Number(e.target.value)) || 1)),
+                        )
+                      }
+                      className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+                    />
+                    <p className="mt-1 text-2xs text-navy-soft">{t('booking.hoursHint')}</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -413,9 +463,16 @@ function BookingContent() {
                 {selectedItems.map((it) => (
                   <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
                     <span className="min-w-0 truncate text-navy-soft capitalize">
-                      {it.label} <span className="text-navy-soft/60">×{qty[it.id] ?? 0}</span>
+                      {it.label}{' '}
+                      <span className="text-navy-soft/60">
+                        ×{qty[it.id] ?? 0}
+                        {/* Durasi dicetak per baris, bukan sekali di bawah:
+                            dalam satu booking bisa ada tiket masuk yang tidak
+                            ikut dikali jam di sebelah alat selam yang ikut. */}
+                        {isHourly(it) && ` · ${t('booking.hour', { n: String(hours) })}`}
+                      </span>
                     </span>
-                    <span className="shrink-0 font-medium text-navy">{formatIDR(it.price * (qty[it.id] ?? 0))}</span>
+                    <span className="shrink-0 font-medium text-navy">{formatIDR(it.price * (qty[it.id] ?? 0) * kali(it))}</span>
                   </div>
                 ))}
               </div>

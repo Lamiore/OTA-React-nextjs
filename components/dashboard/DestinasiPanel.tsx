@@ -392,10 +392,15 @@ export default function DestinasiPanel() {
                           placeholder="Harga"
                           className="w-24 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                         />
+                        {/* Satuan bukan cuma hiasan: tulis "/jam" di sini dan
+                            item ini jadi sewa per jam — halaman booking minta
+                            durasinya dan harganya dikali jam (lihat isHourly di
+                            lib/destination). */}
                         <input
                           value={item.unit}
                           onChange={(e) => updateItem(i, { unit: e.target.value })}
                           placeholder="/pax"
+                          title='Satuan. Tulis "/jam" untuk sewa per jam — harganya dikali durasi'
                           className="w-20 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                         />
                         {/* Stok/hari. Kosong ≠ 0: kosong berarti tanpa batas

@@ -141,6 +141,12 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Maaf, salah satu item yang kamu pilih sudah habis untuk tanggal ini. Kurangi jumlahnya atau pilih tanggal lain.",
     en: "Sorry, one of the items you picked just sold out for this date. Reduce the quantity or choose another date.",
   },
+  "booking.hoursLabel": { id: "Lama Sewa *", en: "Rental Duration *" },
+  "booking.hoursHint": {
+    id: "Berlaku untuk item yang harganya per jam.",
+    en: "Applies to items priced per hour.",
+  },
+  "booking.hour": { id: "{n} jam", en: "{n} hours" },
   "booking.viewTicket": { id: "Lihat Tiket", en: "View Ticket" },
   "booking.goToPayment": { id: "Lanjut Bayar", en: "Continue to Payment" },
   "booking.bookAgain": { id: "Booking Lagi", en: "Book Again" },
@@ -249,6 +255,11 @@ const DICT: Record<string, Record<Lang, string>> = {
   // ── Destinasi ──
   "dest.priceList": { id: "Daftar harga", en: "Price list" },
   "dest.noPriceList": { id: "Belum ada daftar harga untuk destinasi ini.", en: "No price list for this destination yet." },
+  // Angka sisa di halaman destinasi selalu untuk HARI INI — halaman itu tidak
+  // punya pemilih tanggal, jadi kuncinya dibedakan dari milik halaman booking
+  // yang tanggalnya dipilih sendiri oleh pengunjung.
+  "dest.remainingToday": { id: "Sisa {n} hari ini", en: "{n} left today" },
+  "dest.soldOutToday": { id: "Habis hari ini", en: "Sold out today" },
   "dest.reviews": { id: "Ulasan", en: "Reviews" },
   "dest.noReviews": { id: "Belum ada ulasan.", en: "No reviews yet." },
   "dest.writeReview": { id: "Tulis ulasan", en: "Write a review" },

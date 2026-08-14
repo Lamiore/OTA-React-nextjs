@@ -14,10 +14,14 @@ import {
   descendantIds,
   destinationCameraIds,
   getPriceItems,
+  isHourly,
   isTopLevel,
+  lineTotal,
+  MAX_HOURS,
   MAX_QTY,
   overStock,
   parentOptions,
+  resolveHours,
 } from './destination.ts';
 
 // Bentuk sekarang: dipakai apa adanya, urutannya dipertahankan (itu urutan
@@ -216,5 +220,61 @@ assert.deepEqual(
 
 // bookingLines sekarang membawa id — tanpa ini stok tidak bisa dihitung sama sekali.
 assert.equal(bookingLines(daftar, { tiket: 1 })[0].id, 'tiket');
+
+// ── Sewa per jam ──
+//
+// Dua hal dijaga di sini dan dua-duanya gagal secara senyap. Pertama, durasi
+// dikenali dari teks `unit` yang ditulis bebas oleh pengelola — salah membaca
+// berarti tagihan meleset berlipat, bukan error. Kedua, `hours` tidak ada pada
+// SATU pun booking yang sudah tersimpan, jadi tiap pembacaan wajib `?? 1`.
+
+assert.equal(isHourly({ unit: '/jam' }), true);
+assert.equal(isHourly({ unit: 'per jam' }), true);
+assert.equal(isHourly({ unit: 'perjam' }), true, 'tanpa spasi tetap terbaca');
+assert.equal(isHourly({ unit: '/hour' }), true);
+assert.equal(isHourly({ unit: '/hrs' }), true);
+assert.equal(isHourly({ unit: '/pax' }), false);
+assert.equal(isHourly({ unit: '/malam' }), false);
+assert.equal(isHourly({ unit: '/jamur' }), false, '"jamur" bukan satuan waktu');
+assert.equal(isHourly({ unit: '' }), false);
+
+// Durasi dari jaringan: sama mentahnya dengan jumlah, jadi disaring sama ketat.
+assert.equal(resolveHours(3), 3);
+assert.equal(resolveHours(undefined), 1, 'tanpa durasi = sekali bayar');
+assert.equal(resolveHours(0), 1, '0 jam bukan gratis');
+assert.equal(resolveHours(-4), 1);
+assert.equal(resolveHours('abc'), 1);
+assert.equal(resolveHours(Infinity), 1);
+assert.equal(resolveHours(2.9), 2, 'pecahan dibulatkan ke bawah');
+assert.equal(resolveHours(1e9), MAX_HOURS, 'durasi dibatasi');
+
+const sewa = [
+  { id: 'tiket', label: 'Tiket Masuk', price: 25000, unit: '/pax' },
+  { id: 'selam', label: 'Sewa Alat Selam', price: 50000, unit: '/jam' },
+];
+
+// Jam cuma menempel pada item per jam. Kalau bocor ke tiket masuk, tiket
+// masuk ikut dikali durasi dan tagihannya berlipat tanpa ada yang tahu.
+const barisSewa = bookingLines(sewa, { tiket: 2, selam: 1 }, 3);
+assert.equal(barisSewa[0].hours, undefined, 'item non-jam tidak membawa durasi');
+assert.equal(barisSewa[1].hours, 3);
+assert.equal(bookingTotal(barisSewa), 25000 * 2 + 50000 * 3);
+
+// `hours: undefined` tidak boleh IKUT TERSIMPAN — Firestore menolak undefined
+// dan penyimpanannya melempar. Yang benar: kuncinya memang tidak ada.
+assert.equal('hours' in barisSewa[0], false, 'kunci hours tidak dipasang sama sekali');
+
+// Booking lama tanpa hours tetap terbaca — ini yang menjaga 'Rp NaN' tidak
+// muncul di tiket yang sudah terbit.
+assert.equal(lineTotal({ label: 'Lama', price: 10000, qty: 2 }), 20000);
+assert.equal(bookingTotal([{ label: 'Lama', price: 10000, qty: 2 }]), 20000);
+
+// Durasi TIDAK ikut menghabiskan stok: 1 set alat selam tetap 1 set, dipinjam
+// sejam atau enam jam. Kalau baris ini bergeser, stok habis berlipat diam-diam.
+assert.deepEqual(
+  bookedPerItem([{ paymentStatus: 'paid', items: [{ id: 'selam', label: 'S', price: 1, qty: 2, hours: 6 }] }]),
+  { selam: 2 },
+  'stok menghitung barangnya, bukan jam-nya',
+);
 
 console.log('destination.ts OK');

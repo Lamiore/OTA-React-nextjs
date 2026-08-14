@@ -73,6 +73,10 @@ await adminDb().doc(`destinations/${DEST}`).set({
     // Dipakai HANYA oleh tes balapan, supaya hitungannya tidak tercampur
     // penjualan dari tes-tes di atas.
     { id: 'kursi', label: 'Kursi Balap', price: 1000, unit: '/pax', stock: 2 },
+    // Sewa per jam. Satuannya yang menentukan, bukan field terpisah — lihat
+    // isHourly. Stoknya sengaja dibatasi supaya bisa dibuktikan bahwa jam TIDAK
+    // ikut memakan stok.
+    { id: 'selam', label: 'Sewa Alat Selam', price: 50000, unit: '/jam', stock: 3 },
   ],
 });
 
@@ -104,6 +108,37 @@ try {
   check('pembayaran dipaksa unpaid', doc1.paymentStatus === 'unpaid', doc1.paymentStatus);
   check('userId dipaksa pemanggil', doc1.userId === UID_USER, doc1.userId);
   check('items ditulis ulang server', doc1.items.length === 2 && doc1.amount === 350000);
+
+  // 2a. Sewa per jam: durasi jadi pengali, tapi HANYA untuk item bersatuan jam.
+  // Kalau jam bocor ke tiket masuk, tagihannya berlipat tanpa jejak error.
+  const jam = await post(tokUser, {
+    action: 'create', destinationId: DEST, date: besok, guests: 1,
+    name: 'Probe Jam', phone: '0800', notes: '',
+    qty: { tiket: 1, selam: 2 }, hours: 3,
+  });
+  if (jam.body.id) created.push(jam.body.id);
+  // 25.000×1 (tidak dikali jam) + 50.000×2×3 jam = 325.000
+  check('total per jam benar (325000)', jam.body.amount === 325000, `dapat ${jam.body.amount}`);
+  const docJam = (await adminDb().doc(`bookings/${jam.body.id}`).get()).data();
+  const barisTiket = docJam.items.find((i) => i.id === 'tiket');
+  const barisSelam = docJam.items.find((i) => i.id === 'selam');
+  check('item non-jam tidak membawa durasi', barisTiket.hours === undefined, `${barisTiket.hours}`);
+  check('durasi disnapshot ke baris sewa', barisSelam.hours === 3, `${barisSelam.hours}`);
+
+  // 2b. Durasi juga batas kepercayaan — angkanya datang mentah dari jaringan.
+  const jamGila = await post(tokUser, {
+    action: 'create', destinationId: DEST, date: besok, guests: 1,
+    name: 'Probe Jam', phone: '0800', notes: '', qty: { selam: 1 }, hours: 1e9,
+  });
+  if (jamGila.body.id) created.push(jamGila.body.id);
+  check('durasi raksasa dibatasi 24 jam', jamGila.body.amount === 50000 * 24, `dapat ${jamGila.body.amount}`);
+
+  const jamNol = await post(tokUser, {
+    action: 'create', destinationId: DEST, date: besok, guests: 1,
+    name: 'Probe Jam', phone: '0800', notes: '', qty: { selam: 1 }, hours: 0,
+  });
+  if (jamNol.body.id) created.push(jamNol.body.id);
+  check('durasi 0 tidak menggratiskan', jamNol.body.amount === 50000, `dapat ${jamNol.body.amount}`);
 
   // 2b. Email belum diverifikasi → ditolak server, bukan cuma disembunyikan UI.
   const UID_MENTAH = 'probe-mentah-' + Date.now();
@@ -170,6 +205,11 @@ try {
 
   // ── Kuota / stok per item ──
 
+  // Booking sewa 2 set × 3 jam dilunasi, supaya bisa dibuktikan yang terpakai
+  // 2 (jumlah setnya) dan bukan 6 (set × jam). Kalau jam ikut memakan stok,
+  // alat yang masih ada di gudang akan tampil habis.
+  await post(tokUser, { action: 'pay', bookingId: jam.body.id, method: 'transfer' });
+
   // GET sisa stok: tanpa autentikasi, dan cuma angka agregat.
   const av = await (await fetch(`${API}?dest=${DEST}&date=${besok}`)).json();
   const byId = Object.fromEntries(av.items.map((a) => [a.id, a]));
@@ -178,6 +218,9 @@ try {
   check('sisa = stok - terjual', byId.kapal?.stock === 2 && byId.kapal?.booked === 1, JSON.stringify(byId.kapal));
   check('item tanpa stok = tanpa batas', byId.tiket?.remaining === null, JSON.stringify(byId.tiket));
   check('stok 0 = habis, bukan tanpa batas', byId.tutup?.remaining === 0, JSON.stringify(byId.tutup));
+  check('jam TIDAK memakan stok (2 set × 3 jam = 2 terpakai)',
+    byId.selam?.booked === 2 && byId.selam?.remaining === 1,
+    JSON.stringify(byId.selam));
 
   // Item berstok 0 tidak bisa dipesan sama sekali.
   const tutup = await post(tokUser, {

@@ -23,6 +23,7 @@ import {
   destinationCameraIds,
   getPriceItems,
   isTopLevel,
+  type BookingLine,
   type DestinationCameras,
   type PriceItem,
 } from "./destination";
@@ -34,7 +35,15 @@ import {
 // menarik SDK Firebase sisi klien. Di-export ulang di sini agar pemanggil lama
 // tidak perlu diubah.
 export type { PriceItem, BookingLine } from "./destination";
-export { getPriceItems, bookingLines, bookingTotal, MAX_QTY } from "./destination";
+export {
+  getPriceItems,
+  bookingLines,
+  bookingTotal,
+  lineTotal,
+  isHourly,
+  MAX_QTY,
+  MAX_HOURS,
+} from "./destination";
 
 export interface Destination {
   id: string;
@@ -696,11 +705,13 @@ export function resolveDetectionUrl(
 
 // ── Bookings ──
 
-export interface BookingItem {
-  label: string;
-  price: number;
-  qty: number;
-}
+/**
+ * Alias, bukan salinan. Dulu bentuk ini ditulis ulang di sini dan sudah
+ * langsung menyimpang: `id` yang dipakai menghitung stok tidak pernah ikut
+ * tersalin. Yang disimpan Firestore memang persis apa yang ditulis server dari
+ * bookingLines, jadi satu tipe saja.
+ */
+export type BookingItem = BookingLine;
 
 export interface Booking {
   id: string;
@@ -738,6 +749,13 @@ export interface BookingRequest {
   notes: string;
   /** { priceItemId: jumlah } */
   qty: Record<string, number>;
+  /**
+   * Lama sewa, satu angka untuk seluruh booking. Hanya berlaku pada item yang
+   * unitnya per jam; sisanya mengabaikannya. Satu angka, bukan per item, karena
+   * orang yang menyewa alat selam dan perahu di hari yang sama praktis selalu
+   * menyewanya untuk rentang yang sama.
+   */
+  hours?: number;
 }
 
 /**
