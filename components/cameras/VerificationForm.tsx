@@ -80,8 +80,23 @@ export default function VerificationForm({ initial, title, description }: Props)
       // Server memulangkan kunci kamus yang sama dengan validasi di layar, jadi
       // pesan seperti "hak lahan wajib dipilih" tetap terbaca — bukan jatuh ke
       // "gagal mengirim" yang tidak memberi tahu apa yang salah.
+      //
+      // Penjaga `startsWith` wajib: t() memulangkan kuncinya APA ADANYA kalau
+      // tidak ada di kamus (lihat lib/i18n.ts), jadi meneruskan pesan galat
+      // mentah ke sini akan mencetak "unauthorized" di layar pengaju.
+      //
+      // Sisanya dipilah seperti handleCheckIn di ScanPanel: sesi habis dan tiket
+      // yang belum dibuka menuntut tindakan yang berbeda dari "coba lagi".
       const reason = (err as Error | null)?.message ?? '';
-      setError(reason.startsWith('verifyForm.') ? reason : 'verifyForm.submitFailed');
+      if (reason.startsWith('verifyForm.')) {
+        setError(reason);
+      } else if (reason === 'not-signed-in' || reason === 'unauthorized') {
+        setError('verifyForm.sessionExpired');
+      } else if (reason === 'not-invited') {
+        setError('verifyForm.notInvited');
+      } else {
+        setError('verifyForm.submitFailed');
+      }
     } finally {
       setSubmitting(false);
     }

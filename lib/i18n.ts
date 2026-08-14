@@ -563,8 +563,19 @@ const DICT: Record<string, Record<Lang, string>> = {
   "verifyForm.submitting": { id: "Mengirim...", en: "Submitting..." },
   "verifyForm.submitPengelola": { id: "Ajukan Jadi Pengelola", en: "Apply to Be a Manager" },
   "verifyForm.submitFailed": {
-    id: "Gagal mengirim pengajuan. Coba lagi.",
-    en: "Couldn't submit the request. Please try again.",
+    id: "Gagal mengirim pengajuan. Periksa koneksi lalu coba lagi.",
+    en: "Couldn't submit the request. Check your connection and try again.",
+  },
+  // Dua sebab di bawah dulu ikut jatuh ke submitFailed. Dipisah karena tindakan
+  // yang harus diambil pengaju berbeda — "coba lagi" tidak menolong siapa pun
+  // yang sesinya habis atau tiketnya memang belum dibuka.
+  "verifyForm.sessionExpired": {
+    id: "Sesi kamu sudah habis. Masuk ulang, lalu kirim lagi.",
+    en: "Your session expired. Sign in again, then resubmit.",
+  },
+  "verifyForm.notInvited": {
+    id: "Pendaftaran pengelola belum dibuka untuk akun ini, atau pengajuanmu sudah terkirim. Muat ulang halaman untuk melihat statusnya.",
+    en: "Manager registration isn't open for this account, or your request was already submitted. Reload the page to see its status.",
   },
 
   // Pesan validasi form — dikembalikan sebagai kunci oleh validateRoleRequest().
