@@ -17,7 +17,24 @@ Cakupan: seluruh `app/`, `components/`, `lib/`, `firestore.rules`, `public/sw.js
 | **Low** | 7 | Biaya listener, re-render sensor, kebocoran minor, kerapian |
 | **Total** | **27** | |
 
-> **Diperbarui 15 Agustus 2026.** Dua koreksi terhadap terbitan pertama:
+> ### Status pengerjaan (15 Agustus 2026)
+>
+> Dua commit di branch `fix/pengerasan-audit`, belum di-merge ke `main`, belum di-push.
+>
+> | Commit | Isi |
+> |---|---|
+> | `148b137` | **S-04** (rules RTDB masuk repo), **S-07** (path injection), **S-09** (`.vercelignore`), **S-13** (log dipotong), **Q-02** (error boundary), **F-02a** (config indeks), **F-03** (kueri pengelola berfilter), **P-04** (detak sensor + `memo`), **P-05** (i18n), **Q-05** (kerapian) |
+> | `ee7f76b` | **S-11** (pengajuan pengelola pindah ke `/api/role-request`; `verification` ditutup dari klien; penjaga regresi `lib/roleRequest.check.ts`) |
+>
+> **Ditunda atas keputusan pemilik proyek:** S-01 (pembayaran, masih direvisi), seluruh High (S-02, S-03, S-05, S-06, P-01, T-01), dan Q-03 (`guests` — dua-duanya opsi mengubah perilaku yang terlihat pengguna, sementara masalahnya kejelasan operasional, bukan keamanan).
+>
+> **Belum di-deploy:** `database.rules.json` dan `firestore.rules` ada di repo tapi belum naik ke Firebase. Selama itu belum dilakukan, RTDB masih terbuka baca-tulis untuk publik. Urutannya penting — lihat catatan di S-11.
+>
+> Verifikasi tiap commit: `tsc` bersih, seluruh self-test lolos (7/7 lalu 8/8), build produksi hijau, `firestore.rules` divalidasi Firebase CLI.
+>
+> ---
+>
+> **Dua koreksi terhadap terbitan pertama:**
 > **(1)** **S-04 naik dari High ke Critical.** Isi rules RTDB akhirnya dibuka: `{".read": true, ".write": true}` di seluruh pohon — default *test mode* yang tidak pernah dicabut. Tulis publik yang tadinya "belum terverifikasi" ternyata **terbuka**.
 > **(2)** Hitungan terbitan pertama meleset: **P-01** ditandai HIGH di badan laporan tapi tidak ikut terhitung di ringkasan. Totalnya 27, bukan 25.
 
@@ -623,7 +640,23 @@ match /rateLimits/{id} { allow read, write: if false; }
 
 ---
 
-### 🟡 S-11 · MEDIUM · Jejak persetujuan Perjanjian Pengelola bisa dipalsukan oleh yang menyetujuinya
+### ✅ S-11 · MEDIUM · Jejak persetujuan Perjanjian Pengelola bisa dipalsukan oleh yang menyetujuinya — **SUDAH DIPERBAIKI** (`ee7f76b`)
+
+> **Yang dikerjakan**, sesuai usulan di bawah: `app/api/role-request/route.ts` jadi satu-satunya pintu tulis, `uid` diambil dari ID token, `landRights` dikunci ke `LAND_RIGHTS`, isinya divalidasi `validateRoleRequest()` yang sama dengan formulir, dan `agreementVersion` ditulis dari `AGREEMENT` di server. Cabang `invited` → `pending` dihapus dari `firestore.rules`; `verification` kini tertutup total dari klien.
+>
+> Ditambah satu yang tidak ada di usulan awal: **`lib/roleRequest.check.ts`**, penjaga regresi mengikuti pola `destinationKeys.check.ts`. Alasannya — mengembalikan celah lama tidak membuat apa pun gagal saat build: halaman pengajuan tetap jalan, tes lain tetap hijau, dan yang berubah cuma jaminan yang tidak terlihat di layar mana pun. Penjaganya diuji dengan benar-benar mengembalikan celahnya (cek merah), lalu memulihkannya (hijau).
+>
+> **⚠️ Urutan deploy penting.** Naikkan **kode aplikasi dulu**, baru `firestore.rules`. Kalau rules naik duluan, browser yang masih memegang JS lama akan mencoba `updateDoc` langsung ke `verification` dan kena `permission-denied` — pengaju yang sedang mengisi formulir melihat kegagalan yang tidak perlu terjadi.
+>
+> ```bash
+> git push                                   # Vercel membangun & menaikkan kode
+> # tunggu deploy selesai, lalu:
+> firebase deploy --only firestore:rules
+> ```
+
+---
+
+#### Analisis lengkap (untuk rujukan)
 
 **File:** `lib/firestore.ts:389-415`, `components/cameras/VerificationForm.tsx:59-73`, `firestore.rules:39-42`
 
