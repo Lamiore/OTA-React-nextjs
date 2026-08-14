@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
+import { docId, str } from '@/lib/format';
 import {
   availability,
   bookedPerItem,
@@ -46,23 +47,9 @@ function bad(error: string, status: number) {
   return NextResponse.json({ error }, { status });
 }
 
-/** Ambil string yang sudah dirapikan & dibatasi panjangnya. */
-function str(v: unknown, max: number): string {
-  return typeof v === 'string' ? v.trim().slice(0, max) : '';
-}
-
-/**
- * Id dokumen dari klien, divalidasi sebelum dipakai menyusun path.
- *
- * Tanpa ini `doc(\`destinations/${id}\`)` bisa dibelokkan dengan menyelipkan
- * garis miring — nilai seperti "x/y/users/admin" menunjuk dokumen yang sama
- * sekali lain. Sama alasannya dengan parseTicketId di ScanPanel. Yang
- * diizinkan hanya bentuk id Firestore yang wajar; string kosong berarti gagal.
- */
-function docId(v: unknown): string {
-  const s = str(v, 128);
-  return /^[A-Za-z0-9_-]+$/.test(s) ? s : '';
-}
+// `str` dan `docId` pindah ke lib/format.ts — dua route lain (delete-user,
+// notify-approval) menyusun path dari id mentah karena tidak punya akses ke
+// salinan yang ada di sini. Alasan lengkapnya ditulis di sana.
 
 /**
  * Booking berbayar pada satu destinasi + tanggal — dasar hitungan stok.
@@ -284,7 +271,7 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
  * dilakukan DI DALAM transaksi: Admin SDK memakai transaksi berkunci di
  * server, jadi query di sini benar-benar menahan pesaing — sudah diuji dengan
  * 8 pembayaran serentak pada stok 2, dan tepat 2 yang lolos, lima ronde
- * berturut-turut (lihat bookings.probe.mjs).
+ * berturut-turut (lihat scripts/bookings.probe.mjs).
  *
  * Semua pembacaan harus selesai sebelum penulisan pertama — itu syarat
  * transaksi Firestore, dan urutan di bawah sudah mematuhinya.

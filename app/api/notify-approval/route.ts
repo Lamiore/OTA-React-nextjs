@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import { mailer, MAIL_FROM } from '@/lib/mailer';
+import { docId } from '@/lib/format';
 
 export const runtime = 'nodejs';
 
@@ -33,13 +34,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
 
-  let uid: unknown;
+  let raw: unknown;
   try {
-    ({ uid } = await req.json());
+    ({ uid: raw } = await req.json());
   } catch {
     return NextResponse.json({ error: 'bad-request' }, { status: 400 });
   }
-  if (typeof uid !== 'string') {
+  // Bentuk id dikunci, bukan cuma tipenya. Rute ini belum menyusun path dokumen
+  // dari `uid`, tapi menyaringnya di gerbang membuat penambahan kelak (mis.
+  // mencatat jejak kirim ke users/{uid}) tidak diam-diam membuka lubang itu.
+  const uid = docId(raw);
+  if (!uid) {
     return NextResponse.json({ error: 'bad-request' }, { status: 400 });
   }
 

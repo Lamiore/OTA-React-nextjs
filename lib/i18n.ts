@@ -486,6 +486,12 @@ const DICT: Record<string, Record<Lang, string>> = {
   "monitor.daysAgo": { id: "{n} hari lalu", en: "{n}d ago" },
   "monitor.sensorsTitle": { id: "Sensor Lingkungan", en: "Environmental Sensors" },
   "monitor.connecting": { id: "Menghubungkan…", en: "Connecting…" },
+  // Beda dari monitor.connecting di atas: yang itu status paket sensor, yang ini
+  // menunggu frame pertama siaran kamera masuk.
+  "monitor.connectingCamera": {
+    id: "Menghubungkan ke kamera…",
+    en: "Connecting to camera…",
+  },
   "monitor.gpsTitle": { id: "Lokasi Stasiun (GPS)", en: "Station Location (GPS)" },
   "monitor.gpsSearching": { id: "Mencari sinyal satelit…", en: "Searching for satellites…" },
   "monitor.gpsVisible": { id: "{n} terlihat", en: "{n} visible" },

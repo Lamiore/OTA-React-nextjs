@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
+import { docId } from '@/lib/format';
 
 export const runtime = 'nodejs';
 
@@ -30,7 +31,11 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
 
-  const uid = new URL(req.url).searchParams.get('uid');
+  // docId(), bukan pembacaan mentah: `uid` di bawah menyusun path dokumen, dan
+  // path Firestore bersegmen — "abc/pengajuan/xyz" menunjuk dokumen di
+  // subkoleksi lain, yang lalu ikut terhapus. Digerbangi admin, tapi penjaganya
+  // sudah ada dan tidak ada alasan route ini tidak memakainya.
+  const uid = docId(new URL(req.url).searchParams.get('uid'));
   if (!uid) return NextResponse.json({ error: 'bad-request' }, { status: 400 });
   if (uid === callerUid) {
     return NextResponse.json({ error: 'self-delete' }, { status: 400 });

@@ -1,0 +1,72 @@
+/*
+ * Rules Realtime Database — sumber data sensor IoT (lib/realtime.ts).
+ *
+ * Sebelum file ini ada, rules-nya `{".read": true, ".write": true}` di seluruh
+ * pohon: default "test mode" yang tidak pernah dicabut. Artinya siapa pun tanpa
+ * akun bisa menghapus seluruh database dengan satu DELETE, menulis apa saja di
+ * path mana saja, dan memalsukan angka sensor yang tayang di halaman publik.
+ *
+ * Yang BERUBAH di sini, dan kenapa aman untuk firmware:
+ *
+ *   Dulu: seluruh pohon terbuka baca-tulis.
+ *   Kini: default tertutup; hanya cabang `monitoring` yang terbuka.
+ *
+ * Firmware menulis ke `monitoring/latest` (dan nanti `monitoring/<stationId>/
+ * latest`). Kedua path itu masih ditulis persis seperti sebelumnya — TANPA auth,
+ * TANPA validasi bentuk. Jadi tidak ada satu pun perubahan yang perlu dilakukan
+ * di sisi firmware, dan paket sensor yang sedang jalan tidak akan berhenti.
+ *
+ * Yang sudah tertutup sesudah ini:
+ *   - Penghapusan/penulisan di root dan di path mana pun di luar `monitoring`.
+ *   - Pembacaan apa pun di luar `monitoring`.
+ *
+ * Yang BELUM tertutup, dan butuh keputusan terpisah:
+ *   Menulis ke `monitoring` masih tidak menuntut identitas, jadi orang yang tahu
+ *   URL database ini masih bisa menimpa angka sensornya. Menutup itu menuntut
+ *   firmware punya cara membuktikan diri (custom token / uid khusus), dan itulah
+ *   satu-satunya alasan langkah ini belum diambil. Begitu cara auth firmware
+ *   diputuskan, ganti `".write": true` di bawah menjadi:
+ *
+ *     ".write": "auth != null && auth.token.station === $stationId"
+ *
+ *   dan hidupkan blok `.validate` yang sudah disiapkan di bawahnya — tanpa itu,
+ *   satu paket rusak bisa menulis tempDHT 99999 dan halaman publik menayangkannya
+ *   apa adanya (fmt() di LiveMonitorPanel hanya menyaring NaN, bukan kewajaran).
+ *
+ * Baca publik memang disengaja: angka lingkungan tayang di hero beranda dan di
+ * halaman destinasi untuk pengunjung anonim, sejalan dengan `monitoring_data`
+ * yang juga `allow read: if true` di firestore.rules.
+ */
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "monitoring": {
+      ".read": true,
+
+      // Bentuk lama: stasiun pertama yang firmware-nya belum diberi id.
+      // Lihat stationPath() di lib/realtime.ts:34 — dokumen destinasi tanpa
+      // stationId dibaca dari sini. Ini satu-satunya cabang yang saat ini terisi.
+      "latest": {
+        ".write": true
+      },
+
+      // Bentuk sekarang: satu cabang per paket sensor.
+      "$stationId": {
+        "latest": {
+          ".write": true
+
+          // Siapkan, jangan hidupkan sebelum bentuk tulisan firmware dipastikan:
+          // ".validate": "newData.hasChildren(['updatedAt'])",
+          // "tempDHT":   { ".validate": "newData.isNumber() && newData.val() >= -50 && newData.val() <= 100" },
+          // "tempDS18":  { ".validate": "newData.isNumber() && newData.val() >= -50 && newData.val() <= 100" },
+          // "humidity":  { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+          // "windSpeed": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+          // "flowRate":  { ".validate": "newData.isNumber() && newData.val() >= 0" },
+          // "updatedAt": { ".validate": "newData.isNumber()" }
+        }
+      }
+    }
+  }
+}

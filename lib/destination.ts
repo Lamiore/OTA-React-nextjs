@@ -63,18 +63,6 @@ export interface DestinationNode extends DestinationParent {
 }
 
 /**
- * Destinasi yang boleh dipilih sebagai induk `docId` — yaitu semuanya kecuali
- * `docId` sendiri dan apa pun yang sudah ada di dalamnya.
- *
- * Kalau keduanya tidak dibuang, admin bisa menaruh A di dalam B sementara B
- * ada di dalam A: dua-duanya lenyap dari beranda (bukan lagi tingkat atas)
- * sementara halaman masing-masing saling memajang satu sama lain, dan tidak
- * ada satu pun permukaan yang tersisa untuk membatalkannya.
- *
- * `docId` null (sedang menambah, bukan menyunting) berarti belum ada dokumen
- * yang bisa jadi induknya sendiri — semua boleh.
- */
-/**
  * Id semua destinasi yang berada DI DALAM `rootId`, sedalam apa pun rantainya.
  * `rootId` sendiri tidak ikut.
  *
@@ -111,6 +99,18 @@ export function descendantIds<T extends DestinationNode>(
   return out;
 }
 
+/**
+ * Destinasi yang boleh dipilih sebagai induk `docId` — yaitu semuanya kecuali
+ * `docId` sendiri dan apa pun yang sudah ada di dalamnya.
+ *
+ * Kalau keduanya tidak dibuang, admin bisa menaruh A di dalam B sementara B
+ * ada di dalam A: dua-duanya lenyap dari beranda (bukan lagi tingkat atas)
+ * sementara halaman masing-masing saling memajang satu sama lain, dan tidak
+ * ada satu pun permukaan yang tersisa untuk membatalkannya.
+ *
+ * `docId` null (sedang menambah, bukan menyunting) berarti belum ada dokumen
+ * yang bisa jadi induknya sendiri — semua boleh.
+ */
 export function parentOptions<T extends DestinationNode>(
   all: T[],
   docId: string | null

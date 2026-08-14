@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { memo, useEffect, useRef, useState, type ReactNode } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { cameraStatus, subscribeCameraServerUrl, type Camera } from '@/lib/firestore';
@@ -87,7 +87,7 @@ function CameraFeed({ cam, serverUrl }: { cam: Camera; serverUrl: string | null 
           {!loaded && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 text-white/70">
               <span className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white/80 animate-spin" />
-              <p className="text-sm">Menghubungkan ke kamera…</p>
+              <p className="text-sm">{t('monitor.connectingCamera')}</p>
             </div>
           )}
         </>
@@ -235,18 +235,61 @@ export function useSensorReading(sensorPath: string | null) {
     });
   }, [sensorPath]);
 
+  // Detaknya menyesuaikan umur data, bukan 1 detik selamanya.
+  //
+  // Tiap detak me-render ulang seluruh panel — enam kartu metrik berikut SVG-nya
+  // dan kartu GPS. Presisi satu detik cuma berguna selagi datanya masih segar,
+  // karena di situlah label Live/Offline berpindah dan relTime() masih berbicara
+  // dalam detik. Lewat semenit, teksnya sudah dalam satuan menit: 29 detak dari
+  // 30 tidak mengubah satu piksel pun.
+  //
+  // setTimeout yang menjadwalkan dirinya sendiri, bukan setInterval: umur data
+  // dinilai ulang tiap detak. Dengan setInterval, stasiun yang mati sesudah
+  // sempat segar akan terkunci di detak 1 detik selamanya — effect-nya tidak
+  // pernah jalan lagi karena updatedAt-nya justru berhenti berubah.
   useEffect(() => {
     if (!sensorPath) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [sensorPath]);
+    let t: ReturnType<typeof setTimeout>;
+
+    const jadwalkan = () => {
+      const umur = data?.updatedAt ? Date.now() - data.updatedAt : 0;
+      t = setTimeout(() => {
+        setNow(Date.now());
+        jadwalkan();
+      }, umur < 60_000 ? 1000 : 30_000);
+    };
+
+    // Tab di latar belakang tidak perlu detak sama sekali; saat kembali,
+    // jamnya disetel ulang sekali supaya angkanya tidak terlihat tertinggal.
+    const onVisibilitas = () => {
+      clearTimeout(t);
+      if (!document.hidden) {
+        setNow(Date.now());
+        jadwalkan();
+      }
+    };
+
+    jadwalkan();
+    document.addEventListener('visibilitychange', onVisibilitas);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('visibilitychange', onVisibilitas);
+    };
+  }, [sensorPath, data?.updatedAt]);
 
   const ageSec = data?.updatedAt ? Math.max(0, Math.round((now - data.updatedAt) / 1000)) : null;
   return { data, ready, ageSec, isLive: ageSec !== null && ageSec < 15 };
 }
 
-/** Enam kotak metrik + status Live/Offline. `cols` biar kolom sempit tidak sesak. */
-export function SensorGrid({
+/**
+ * Enam kotak metrik + status Live/Offline. `cols` biar kolom sempit tidak sesak.
+ *
+ * memo() bukan hiasan: `now` yang berdetak di useSensorReading me-render ulang
+ * induknya, sementara props ke sini (data, ready, isLive) tidak ikut berubah di
+ * antara dua kedatangan data. Tanpa memo, tiap detak membangun ulang seluruh
+ * array metrik berikut enam SVG di dalamnya.
+ */
+export const SensorGrid = memo(function SensorGrid({
   data,
   ready,
   isLive,
@@ -357,10 +400,12 @@ export function SensorGrid({
       </div>
     </div>
   );
-}
+});
 
-/** Koordinat stasiun + tautan peta; sebelum fix satelit jadi baris "mencari". */
-export function GpsCard({ data }: { data: SensorReading | null }) {
+/** Koordinat stasiun + tautan peta; sebelum fix satelit jadi baris "mencari".
+ *  memo() dengan alasan yang sama seperti SensorGrid: detak jam tidak mengubah
+ *  koordinat, jadi tidak perlu menyentuh kartu ini. */
+export const GpsCard = memo(function GpsCard({ data }: { data: SensorReading | null }) {
   const { t } = useLang();
   const lat = data?.latitude;
   const lng = data?.longitude;
@@ -420,7 +465,7 @@ export function GpsCard({ data }: { data: SensorReading | null }) {
       )}
     </div>
   );
-}
+});
 
 /**
  * Panel "Pantau Langsung" gabungan: stream kamera + sensor IoT dalam satu card.

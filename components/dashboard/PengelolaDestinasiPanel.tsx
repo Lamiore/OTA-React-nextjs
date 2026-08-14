@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   addChildDestination,
   deleteDestination,
-  subscribeDestinations,
+  subscribeManagedDestinations,
   updateDestination,
   getPriceItems,
   type Destination,
@@ -78,9 +78,11 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
   const [whatsapp, setWhatsapp] = useState('');
   const [priceItems, setPriceItems] = useState<PriceItem[]>([]);
 
+  // Kueri berfilter di server, bukan seluruh katalog yang disaring di sini —
+  // lihat subscribeManagedDestinations() di lib/firestore.
   useEffect(() => {
-    const unsub = subscribeDestinations((all) => {
-      setDestinations(all.filter((d) => d.managerUid === uid));
+    const unsub = subscribeManagedDestinations(uid, (mine) => {
+      setDestinations(mine);
       setLoaded(true);
     });
     return () => unsub();

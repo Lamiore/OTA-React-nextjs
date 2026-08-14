@@ -148,6 +148,30 @@ export function subscribeDestinations(
 }
 
 /**
+ * Destinasi kelolaan satu pengelola, real-time.
+ *
+ * Query berfilter, bukan subscribeDestinations() yang hasilnya disaring di
+ * klien: yang kedua membuat pengelola dengan dua destinasi tetap membayar
+ * pembacaan SELURUH katalog, dan membuat setiap suntingan destinasi milik siapa
+ * pun memicu ulang snapshot di panelnya. Firestore menagih per dokumen terbaca,
+ * per snapshot.
+ *
+ * Spot di dalam kawasan ikut terbawa tanpa kueri kedua: addChildDestination()
+ * menurunkan `managerUid` dari induknya, jadi induk dan isinya sama-sama cocok
+ * dengan filter yang sama.
+ */
+export function subscribeManagedDestinations(
+  uid: string,
+  callback: (destinations: Destination[]) => void
+) {
+  if (!db) return () => {};
+  const q = query(collection(db, "destinations"), where("managerUid", "==", uid));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Destination)));
+  });
+}
+
+/**
  * Daftar wilayah unik (non-kosong, terurut) dari destinasi — sumber chip filter
  * beranda dan pilihan wilayah pengelola & kamera.
  *

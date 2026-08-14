@@ -1,0 +1,25 @@
+# Apa yang TIDAK ikut naik saat `vercel deploy` dari CLI.
+#
+# Deploy lewat integrasi Git memakai isi repo, jadi .gitignore sudah cukup di
+# sana. Deploy dari CLI lain ceritanya: ia mengunggah isi direktori kerja, dan
+# file yang cuma dijaga .gitignore bisa ikut terbawa ke build.
+#
+# Baris pertama yang paling penting: kunci privat Admin SDK melewati SELURUH
+# firestore.rules. Di produksi kredensialnya sudah lewat FIREBASE_ADMIN_SA_B64
+# (env Vercel), jadi file JSON-nya memang tidak pernah dibutuhkan di sana.
+
+# Rahasia
+*-firebase-adminsdk-*.json
+serviceAccount.json
+.env*.local
+
+# Proyek terpisah — server deteksi karang (Python), bukan bagian aplikasi web
+Proyek_Karang/
+firmware/
+
+# Dokumen, skrip uji, dan artefak perkakas: tidak satu pun di-import aplikasi
+docs/
+scripts/
+.playwright-mcp/
+.superpowers/
+.remember/

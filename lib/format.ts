@@ -100,3 +100,27 @@ export function nextDays(count: number, start: Date = new Date()): string[] {
 export function normalizeViewerEmail(email: string): string {
   return email.trim().toLowerCase();
 }
+
+/** Ambil string yang sudah dirapikan & dibatasi panjangnya. */
+export function str(v: unknown, max: number): string {
+  return typeof v === 'string' ? v.trim().slice(0, max) : '';
+}
+
+/**
+ * Id dokumen dari klien, divalidasi sebelum dipakai menyusun path Firestore.
+ * String kosong berarti gagal — pemanggil wajib memeriksanya.
+ *
+ * Tanpa ini `doc(\`users/${id}\`)` bisa dibelokkan dengan menyelipkan garis
+ * miring: path Firestore itu bersegmen, dan id seperti "abc/pengajuan/xyz"
+ * menghasilkan `users/abc/pengajuan/xyz` — dokumen di subkoleksi yang sama
+ * sekali lain, yang lalu terbaca atau terhapus alih-alih yang dimaksud.
+ *
+ * Pindah ke sini dari app/api/bookings/route.ts: penjaganya sudah benar di
+ * sana, tapi dua route lain (delete-user, notify-approval) menyusun path dari
+ * id mentah karena tidak punya akses ke salinan yang sama. Satu definisi, satu
+ * perilaku — sama alasannya dengan rumus harga di lib/destination.
+ */
+export function docId(v: unknown): string {
+  const s = str(v, 128);
+  return /^[A-Za-z0-9_-]+$/.test(s) ? s : '';
+}

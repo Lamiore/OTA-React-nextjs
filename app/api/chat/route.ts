@@ -168,7 +168,10 @@ export async function POST(req: Request) {
   }
 
   if (!res.ok) {
-    console.error('[chat] gemini', res.status, await res.text().catch(() => ''));
+    // Dipotong: balasan galat Gemini bisa memuat kembali seluruh permintaan,
+    // termasuk katalog di system instruction. Status + awal pesannya sudah cukup
+    // untuk mendiagnosis, dan sisanya cuma menumpuk di log.
+    console.error('[chat] gemini', res.status, (await res.text().catch(() => '')).slice(0, 300));
     // 429 dari Gemini = kuota gratis habis; teruskan supaya UI bisa bilang
     // "lagi ramai" alih-alih error umum.
     return NextResponse.json(
