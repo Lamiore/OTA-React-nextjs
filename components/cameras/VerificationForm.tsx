@@ -6,14 +6,16 @@ import { AGREEMENT, LAND_RIGHTS, validateRoleRequest } from '@/lib/verification'
 import { useLang } from '@/lib/useLang';
 
 interface Props {
-  uid: string;
   /** Data pengajuan sebelumnya (prefill saat ajukan ulang setelah ditolak). */
   initial?: RoleVerification;
   title?: string;
   description?: string;
 }
 
-export default function VerificationForm({ uid, initial, title, description }: Props) {
+// `uid` tidak lagi jadi prop: pengirimannya sekarang lewat /api/role-request,
+// yang mengambil uid dari ID token. Menerimanya di sini cuma akan jadi angka
+// yang terlihat menentukan padahal server mengabaikannya.
+export default function VerificationForm({ initial, title, description }: Props) {
   const { t } = useLang();
   const agreement = AGREEMENT.pengelola;
   const [fullName, setFullName] = useState(initial?.fullName ?? '');
@@ -56,25 +58,30 @@ export default function VerificationForm({ uid, initial, title, description }: P
     setError('');
     setSubmitting(true);
     try {
-      await submitRoleRequest(uid, {
+      // `agreementVersion` sengaja TIDAK dikirim: server menuliskannya dari
+      // AGREEMENT miliknya sendiri. Kalau dikirim dari sini, versi yang tercatat
+      // adalah versi yang browser bilang — dan itu persis yang diperbaiki.
+      await submitRoleRequest({
         fullName: fullName.trim(),
         phone: phone.trim(),
         organization: organization.trim(),
-        // agreedAt tidak dikirim dari sini — submitRoleRequest yang
-        // menstempelnya dengan serverTimestamp() begitu agreementVersion ada.
-        agreementVersion: agreement.version,
         destination: destination.trim(),
         destinationLocation: destinationLocation.trim(),
         destinationDescription: destinationDescription.trim(),
         landRights,
-        // Disimpan, bukan cuma divalidasi: Pasal 2 ayat 4 memakai pernyataan
-        // ini sebagai dasar pencabutan, jadi harus ada jejaknya.
-        declaredRights: true,
+        // Dikirim apa adanya, bukan `true` mati: server memvalidasinya lagi, dan
+        // mengirim true tanpa centang di sini cuma menyembunyikan bug sendiri.
+        declaredRights,
+        agreed,
       });
       // Tidak reset/pindah view di sini: PengelolaRequest berpindah ke kartu
       // status pending begitu onSnapshot dokumen user menerima perubahan.
-    } catch {
-      setError('verifyForm.submitFailed');
+    } catch (err) {
+      // Server memulangkan kunci kamus yang sama dengan validasi di layar, jadi
+      // pesan seperti "hak lahan wajib dipilih" tetap terbaca — bukan jatuh ke
+      // "gagal mengirim" yang tidak memberi tahu apa yang salah.
+      const reason = (err as Error | null)?.message ?? '';
+      setError(reason.startsWith('verifyForm.') ? reason : 'verifyForm.submitFailed');
     } finally {
       setSubmitting(false);
     }

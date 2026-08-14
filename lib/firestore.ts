@@ -409,33 +409,39 @@ export async function openRoleRequest(uid: string) {
 /**
  * Kirim pengajuan jadi pengelola dari Pengaturan. Satu pengajuan aktif per
  * user — pengajuan baru menimpa yang lama.
+ *
+ * Lewat /api/role-request, bukan updateDoc dari sini. Rules sekarang menutup
+ * `verification` dari klien sepenuhnya: selama browser yang menulis, isi
+ * formulirnya tidak bisa dijamin sama sekali — `agreementVersion` bisa menyebut
+ * versi yang tidak pernah terbit dan `declaredRights` bisa true tanpa satu pun
+ * centang, padahal keduanya jadi dasar pencabutan di Pasal 2 ayat 4.
+ *
+ * `uid` tidak lagi diminta: server mengambilnya dari ID token, jadi tidak ada
+ * lagi jalan mengirim pengajuan atas nama orang lain.
+ *
+ * Melempar Error yang pesannya kunci kamus (mis. 'verifyForm.landRightsRequired')
+ * supaya formulir bisa menampilkannya apa adanya.
  */
-export async function submitRoleRequest(
-  uid: string,
-  data: {
-    fullName: string;
-    phone: string;
-    organization: string;
-    destination?: string;
-    newDestination?: boolean;
-    destinationLocation?: string;
-    destinationDescription?: string;
-    landRights?: string;
-    declaredRights?: boolean;
-    agreementVersion?: string;
-  }
-) {
-  if (!db) return;
-  await updateDoc(doc(db, "users", uid), {
-    verification: {
-      ...data,
-      status: "pending",
-      submittedAt: serverTimestamp(),
-      // Distempel di sini, bukan di komponen: waktu persetujuan harus datang
-      // dari server, dan pemanggil tidak perlu mengimpor SDK Firestore.
-      ...(data.agreementVersion && { agreedAt: serverTimestamp() }),
-    },
+export async function submitRoleRequest(data: {
+  fullName: string;
+  phone: string;
+  organization: string;
+  destination?: string;
+  destinationLocation?: string;
+  destinationDescription?: string;
+  landRights?: string;
+  declaredRights?: boolean;
+  agreed?: boolean;
+}) {
+  const token = await auth?.currentUser?.getIdToken();
+  if (!token) throw new Error("not-signed-in");
+  const res = await fetch("/api/role-request", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
   });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error ?? "request-failed");
 }
 
 /** Tampilan bawaan destinasi hasil pembuatan otomatis. Pengelola menggantinya

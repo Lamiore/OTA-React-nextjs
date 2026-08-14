@@ -125,7 +125,6 @@ export default function PengelolaRequest({
     return (
       <div className="mb-4">
         <VerificationForm
-          uid={user.uid}
           initial={verification ?? undefined}
           title={t('manager.title')}
           description={t('manager.formDesc')}
