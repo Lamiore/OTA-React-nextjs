@@ -9,11 +9,18 @@ import {
   createBooking,
   getPriceItems,
   isHourly,
+  updateBooking,
   MAX_HOURS,
+  type Booking as BookingDoc,
   type Destination,
   type PriceItem,
 } from '@/lib/firestore';
-import { dateFit, type ItemAvailability } from '@/lib/destination';
+import {
+  dateFit,
+  hoursFromLines,
+  qtyFromLines,
+  type ItemAvailability,
+} from '@/lib/destination';
 import { formatIDR, isoDate } from '@/lib/format';
 import { useLang } from '@/lib/useLang';
 import clsx from 'clsx';
@@ -39,23 +46,42 @@ function BookingContent() {
   const { t, locale } = useLang();
   const destId = searchParams.get('dest');
   const preselect = searchParams.get('items');
+  /**
+   * Id booking yang sedang diubah. Halaman yang sama dipakai untuk membuat dan
+   * mengubah — bukan modal terpisah: pemilihan item, strip tanggal beserta sisa
+   * stoknya, dan kolom durasi semuanya sudah di sini, dan ringkasan harga di
+   * sebelah kanan harus memakai rumus yang sama persis.
+   */
+  const editId = searchParams.get('edit');
 
   const [destination, setDestination] = useState<Destination | null>(null);
   const [loadingDest, setLoadingDest] = useState(!!destId);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  /**
+   * Kunci i18n, bukan teks jadi: booking yang tidak bisa diubah harus tetap
+   * berganti bahasa saat pengguna menukar bahasa setelah pesannya muncul.
+   * Terisi = formulirnya tidak dirender sama sekali.
+   */
+  const [editError, setEditError] = useState('');
+  const [loadingEdit, setLoadingEdit] = useState(!!editId);
 
   // Alasan lengkap kenapa bukan toISOString() ada di isoDate (lib/format).
   const today = isoDate();
 
   const [form, setForm] = useState({
     date: '',
-    guests: 1,
-    name: '',
     phone: '',
     notes: '',
   });
+
+  /**
+   * Nama pemesan — dibaca dari akun, tidak bisa diubah di sini. Cuma untuk
+   * dilihat: yang tersimpan di tiket ditentukan server dari akun yang sama
+   * (lihat create di /api/bookings), jadi kolom ini tidak ikut terkirim.
+   */
+  const namaAkun = user?.displayName?.trim() || user?.email?.split('@')[0] || '';
 
   const [qty, setQty] = useState<Record<string, number>>({});
   /**
@@ -118,19 +144,69 @@ function BookingContent() {
   useEffect(() => {
     if (!destId || !db) {
       setLoadingDest(false);
+      if (editId) setEditError('booking.editNotFound');
       return;
     }
     getDoc(doc(db, 'destinations', destId)).then((snap) => {
       if (snap.exists()) {
         setDestination({ id: snap.id, ...snap.data() } as Destination);
+      } else if (editId) {
+        // Mode ubah menunggu destinasinya sebelum bisa mengisi formulir, jadi
+        // destinasi yang tidak ada berarti menunggu selamanya. Membuat booking
+        // baru tidak punya masalah ini: kartu "tidak ada destinasi dipilih"
+        // yang tampil, dan halamannya tetap bisa ditinggalkan.
+        setEditError('booking.editNotFound');
+        setLoadingEdit(false);
       }
       setLoadingDest(false);
     });
-  }, [destId]);
+  }, [destId, editId]);
+
+  // Isi formulir dari booking yang sedang diubah.
+  //
+  // Menunggu `destination` lebih dulu, bukan berjalan sendiri: jumlah per item
+  // harus disaring terhadap daftar harga yang berlaku SEKARANG (lihat
+  // qtyFromLines), dan daftar itu baru ada setelah destinasinya termuat.
+  useEffect(() => {
+    if (!editId || !destination || !db) return;
+    let batal = false;
+    getDoc(doc(db, 'bookings', editId))
+      .then((snap) => {
+        if (batal) return;
+        const b = snap.exists() ? (snap.data() as BookingDoc) : null;
+        // Booking milik orang lain tidak sampai ke sini — rules menolak
+        // pembacaannya, jadi jatuh ke .catch di bawah. Yang diperiksa di sini
+        // adalah booking sendiri yang sudah lewat titik bisa-diubah.
+        if (!b) return setEditError('booking.editNotFound');
+        if (b.paymentStatus === 'paid' || b.status === 'cancelled') {
+          return setEditError('booking.editLocked');
+        }
+        const isi = qtyFromLines(b.items, getPriceItems(destination));
+        // Kosong berarti tidak ada satu pun item yang masih bisa dipesan:
+        // booking lama yang barisnya belum ber-id, atau itemnya sudah dihapus
+        // pengelola. Menyimpan dari keadaan itu akan menghapus isi bookingnya.
+        if (Object.keys(isi).length === 0) return setEditError('booking.editUnsupported');
+        setForm({ date: b.date ?? '', phone: b.phone ?? '', notes: b.notes ?? '' });
+        setQty(isi);
+        setHours(hoursFromLines(b.items));
+      })
+      .catch(() => {
+        if (!batal) setEditError('booking.editNotFound');
+      })
+      .finally(() => {
+        if (!batal) setLoadingEdit(false);
+      });
+    return () => {
+      batal = true;
+    };
+  }, [editId, destination]);
 
   // Default qty: item yang dibawa dari halaman detail (?items=), atau item
   // pertama (biasanya tiket masuk) bila tidak ada pra-pilihan.
   useEffect(() => {
+    // Mode ubah punya isinya sendiri dari booking yang tersimpan — tanpa
+    // penjaga ini, effect di bawah menimpanya dengan "tiket masuk ×1".
+    if (editId) return;
     if (!destination) return;
     const items = getPriceItems(destination);
     if (items.length === 0) return;
@@ -191,12 +267,14 @@ function BookingContent() {
     });
   }, [form.date, days, dasar]);
 
-  // Pre-fill name from auth
+  // Booking yang dibuka untuk diubah bisa menemukan stoknya sudah habis diambil
+  // orang lain — jumlahnya dipangkas effect di atas sampai nol, tombol simpan
+  // mati, dan tanpa kalimat ini tidak ada satu pun petunjuk kenapa.
   useEffect(() => {
-    if (user?.displayName && !form.name) {
-      setForm((f) => ({ ...f, name: user.displayName ?? '' }));
+    if (editId && !loadingEdit && !editError && form.date && totalQty === 0) {
+      setError(t('booking.itemFull'));
     }
-  }, [user]);
+  }, [editId, loadingEdit, editError, form.date, totalQty, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,22 +304,43 @@ function BookingContent() {
       // Yang dikirim cuma "item mana, berapa banyak" — harga & total dihitung
       // ulang server dari dokumen destinasi. Angka di ringkasan sebelah kanan
       // murni perkiraan untuk dilihat, bukan yang ditagihkan.
-      await createBooking({
-        destinationId: destination.id,
-        date: form.date,
-        guests: form.guests,
-        name: form.name,
-        phone: form.phone,
-        notes: form.notes,
-        qty,
-        hours,
-      });
+      if (editId) {
+        // Destinasi tidak ikut dikirim: server membacanya dari dokumen
+        // bookingnya sendiri (lihat update di /api/bookings).
+        await updateBooking({
+          bookingId: editId,
+          date: form.date,
+          phone: form.phone,
+          notes: form.notes,
+          qty,
+          hours,
+        });
+      } else {
+        await createBooking({
+          destinationId: destination.id,
+          date: form.date,
+          phone: form.phone,
+          notes: form.notes,
+          qty,
+          hours,
+        });
+      }
       setSuccess(true);
     } catch (err) {
+      const code = (err as Error | null)?.message;
       // 'full' = stoknya keburu diambil orang lain. Bukan kegagalan sistem, jadi
       // pesannya harus beda — kalau disamakan dengan "coba lagi", pengunjung
       // mengulang terus untuk kursi yang memang sudah tidak ada.
-      setError((err as Error | null)?.message === 'full' ? t('booking.itemFull') : t('booking.failed'));
+      //
+      // 'already-paid'/'cancelled' malah terminal: bookingnya berubah di tempat
+      // lain sementara layar ini terbuka, dan mengulang tidak akan menolong.
+      setError(
+        code === 'full'
+          ? t('booking.itemFull')
+          : code === 'already-paid' || code === 'cancelled'
+            ? t('booking.editLocked')
+            : t('booking.failed'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -256,14 +355,35 @@ function BookingContent() {
     );
   }
 
+  // Booking yang tidak bisa diubah (sudah dibayar, dibatalkan, atau item-nya
+  // tidak ada lagi di daftar harga). Formulirnya sengaja tidak dirender: yang
+  // tampil di situ tidak akan sama dengan yang bisa disimpan server.
+  if (editError) {
+    return (
+      <div className="w-full max-w-lg mx-auto animate-fade-in text-center py-16">
+        <div className="card p-8 sm:p-10 flex flex-col items-center gap-4">
+          <p className="text-sm text-navy-soft">{t(editError)}</p>
+          <button
+            onClick={() => router.push('/booking')}
+            className="btn-primary px-5 py-2.5 text-sm"
+          >
+            {t('booking.backToBookings')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className="w-full max-w-lg mx-auto animate-fade-in text-center py-16">
         <div className="card p-8 sm:p-10 flex flex-col items-center gap-4">
           <CheckCircleIcon />
-          <h2 className="font-serif text-xl font-medium text-navy">{t('booking.successTitle')}</h2>
+          <h2 className="font-serif text-xl font-medium text-navy">
+            {t(editId ? 'booking.editSuccessTitle' : 'booking.successTitle')}
+          </h2>
           <p className="text-sm text-navy-soft max-w-xs">
-            {t('booking.successBody', {
+            {t(editId ? 'booking.editSuccessBody' : 'booking.successBody', {
               dest: destination?.name ?? '',
               date: new Date(form.date).toLocaleDateString(locale, {
                 day: 'numeric',
@@ -279,18 +399,38 @@ function BookingContent() {
             >
               {t('booking.goToPayment')}
             </button>
-            <button
-              onClick={() => {
-                setSuccess(false);
-                setForm({ date: '', guests: 1, name: user?.displayName ?? '', phone: '', notes: '' });
-                setQty(priceItems.length > 0 ? { [priceItems[0].id]: 1 } : {});
-                setHours(1);
-              }}
-              className="btn-ghost px-5 py-2.5 text-sm"
-            >
-              {t('booking.bookAgain')}
-            </button>
+            {/* "Booking Lagi" cuma masuk akal setelah membuat: sesudah
+                mengubah, mengosongkan formulir yang sama malah mengundang
+                booking kedua yang tidak diminta siapa pun. */}
+            {!editId && (
+              <button
+                onClick={() => {
+                  setSuccess(false);
+                  setForm({ date: '', phone: '', notes: '' });
+                  setQty(priceItems.length > 0 ? { [priceItems[0].id]: 1 } : {});
+                  setHours(1);
+                }}
+                className="btn-ghost px-5 py-2.5 text-sm"
+              >
+                {t('booking.bookAgain')}
+              </button>
+            )}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Menahan formulir sampai isi bookingnya termuat. Merender lebih awal berarti
+  // pengguna sempat melihat "tiket masuk ×1" — yang bukan isi bookingnya — lalu
+  // angkanya melompat sendiri beberapa ratus milidetik kemudian.
+  if (loadingEdit) {
+    return (
+      <div className="w-full max-w-5xl mx-auto animate-fade-in">
+        <div className="card p-8 animate-pulse space-y-4">
+          <div className="h-4 w-1/3 rounded-full bg-shore-100" />
+          <div className="h-4 w-2/3 rounded-full bg-shore-100" />
+          <div className="h-4 w-1/2 rounded-full bg-shore-100" />
         </div>
       </div>
     );
@@ -298,8 +438,8 @@ function BookingContent() {
 
   return (
     <div className="w-full max-w-5xl mx-auto animate-fade-in">
-      <h1 className="section-title">{t('booking.title')}</h1>
-      <p className="section-lede">{t('booking.lede')}</p>
+      <h1 className="section-title">{t(editId ? 'booking.editTitle' : 'booking.title')}</h1>
+      <p className="section-lede">{t(editId ? 'booking.editLede' : 'booking.lede')}</p>
 
       {/* minmax(0,1fr), bukan 1fr: kolom grid punya min-width:auto, jadi isi
           yang lebih lebar dari ruangnya MELEBARKAN kolomnya alih-alih bergulir
@@ -431,31 +571,20 @@ function BookingContent() {
               min={today}
             />
 
-            <div>
-              <label htmlFor="booking-guests" className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.guestsLabel')}</label>
-              <input
-                id="booking-guests"
-                type="number"
-                value={form.guests}
-                min={1}
-                max={100}
-                onChange={(e) => setForm({ ...form, guests: Number(e.target.value) })}
-                required
-                className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
-              />
-            </div>
+            {/* Jumlah Orang tidak ditanyakan lagi: jumlahnya sudah disebut per
+                item di atas, dan dua angka yang bisa berbeda cuma menyisakan
+                pertanyaan mana yang benar saat tiketnya di-scan. */}
 
-            {/* Name */}
+            {/* Nama — dari akun, tidak bisa diubah di sini. Yang tersimpan di
+                tiket ditentukan server dari akun yang sama, jadi ini benar-benar
+                cuma tampilan. */}
             <div>
-              <label htmlFor="booking-name" className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.nameLabel')}</label>
-              <input
-                  id="booking-name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder={t('booking.namePlaceholder')}
-                required
-                className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
-              />
+              {/* Tanpa bintang: bukan lagi kolom yang diisi. */}
+              <label className="mb-1.5 block text-xs font-medium text-navy-soft">{t('booking.name')}</label>
+              <div className="w-full rounded-md border border-shore-200 bg-shore-50 px-3.5 py-2.5 text-sm text-navy">
+                {namaAkun || <span className="text-navy-soft">{t('booking.namePlaceholder')}</span>}
+              </div>
+              <p className="mt-1 text-2xs text-navy-soft">{t('booking.nameHint')}</p>
             </div>
 
             {/* Phone */}
@@ -530,8 +659,23 @@ function BookingContent() {
               disabled={submitting || !destination || totalQty === 0}
               className="btn-primary w-full px-4 py-3 text-sm font-medium disabled:opacity-50"
             >
-              {submitting ? t('booking.submitting') : t('booking.confirm')}
+              {submitting
+                ? t('booking.submitting')
+                : t(editId ? 'booking.editSubmit' : 'booking.confirm')}
             </button>
+
+            {/* Jalan keluar dari mode ubah tanpa menyimpan. Tanpa ini satu-satunya
+                cara mundur adalah tombol back browser, yang di aplikasi terpasang
+                (standalone PWA) tidak selalu ada. */}
+            {editId && (
+              <button
+                type="button"
+                onClick={() => router.push('/booking')}
+                className="btn-ghost w-full px-4 py-2.5 text-sm"
+              >
+                {t('booking.editCancel')}
+              </button>
+            )}
 
             {!user ? (
               <p className="text-center text-xs text-navy-soft">

@@ -203,6 +203,68 @@ try {
   const cancelUsed = await post(tokUser, { action: 'cancel', bookingId: id });
   check('batal setelah check-in ditolak', cancelUsed.status === 409, cancelUsed.body.error);
 
+  // ── Ubah booking sebelum dibayar ──
+  //
+  // Pakai `tiket` yang tanpa batas: blok stok di bawah menghitung kapal/kursi/
+  // selam, dan booking uji coba di sini tidak boleh ikut menggeser angkanya.
+  const ubahAwal = await post(tokUser, {
+    action: 'create', destinationId: DEST, date: besok,
+    phone: '0800', notes: 'awal', qty: { tiket: 1 },
+  });
+  const idUbah = ubahAwal.body.id;
+  if (idUbah) created.push(idUbah);
+
+  // INTI: sama seperti create, harga & status tidak boleh datang dari klien.
+  const ubah = await post(tokUser, {
+    action: 'update', bookingId: idUbah, date: besok,
+    phone: '0899', notes: 'diubah', qty: { tiket: 3 },
+    amount: 1, items: [{ label: 'Gratis', price: 0, qty: 1 }], // <- upaya curang
+    status: 'confirmed', paymentStatus: 'paid', userId: 'orang-lain',
+    destinationId: 'destinasi-lain',
+  });
+  check('ubah booking berhasil', ubah.status === 200, JSON.stringify(ubah.body));
+  check('total dihitung ulang server (75000)', ubah.body.amount === 75000, `dapat ${ubah.body.amount}`);
+
+  const docUbah = (await adminDb().doc(`bookings/${idUbah}`).get()).data();
+  check('items ditulis ulang server saat ubah',
+    docUbah.items.length === 1 && docUbah.items[0].qty === 3 && docUbah.amount === 75000,
+    JSON.stringify(docUbah.items));
+  check('ubah tidak menaikkan status/pembayaran',
+    docUbah.status === 'pending' && docUbah.paymentStatus === 'unpaid',
+    `${docUbah.status}/${docUbah.paymentStatus}`);
+  check('destinasi tidak ikut berpindah', docUbah.destinationId === DEST, docUbah.destinationId);
+  check('catatan & telepon ikut tersimpan',
+    docUbah.notes === 'diubah' && docUbah.phone === '0899',
+    `${docUbah.phone}/${docUbah.notes}`);
+
+  // Booking orang lain tidak bisa diubah — penjagaan yang sama dengan cancel.
+  const ubahLain = await post(tokPetugas, {
+    action: 'update', bookingId: idUbah, date: besok,
+    phone: '08', notes: '', qty: { tiket: 1 },
+  });
+  check('orang lain tidak bisa mengubah', ubahLain.status === 403, `status ${ubahLain.status}`);
+
+  // Yang sudah dibayar terkunci: `id` sudah lunas (dan malah sudah dipakai
+  // masuk) di blok-blok di atas.
+  const ubahLunas = await post(tokUser, {
+    action: 'update', bookingId: id, date: besok,
+    phone: '08', notes: '', qty: { tiket: 1 },
+  });
+  check('booking lunas tidak bisa diubah', ubahLunas.body.error === 'already-paid', ubahLunas.body.error);
+
+  // Penjagaan yang sama dengan create, karena jalurnya memang sama-sama menulis.
+  const ubahLampau = await post(tokUser, {
+    action: 'update', bookingId: idUbah, date: kemarin,
+    phone: '08', notes: '', qty: { tiket: 1 },
+  });
+  check('ubah ke tanggal lampau ditolak', ubahLampau.status === 400, ubahLampau.body.error);
+
+  const ubahKosong = await post(tokUser, {
+    action: 'update', bookingId: idUbah, date: besok,
+    phone: '08', notes: '', qty: { itemKarangan: 9 },
+  });
+  check('ubah jadi tanpa item ditolak', ubahKosong.status === 400, ubahKosong.body.error);
+
   // ── Kuota / stok per item ──
 
   // Booking sewa 2 set × 3 jam dilunasi, supaya bisa dibuktikan yang terpakai

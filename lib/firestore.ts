@@ -749,7 +749,13 @@ export interface Booking {
   destinationId: string;
   destinationName: string;
   date: string;
-  guests: number;
+  /**
+   * Jumlah orang yang dulu diisi sendiri pemesan. Tidak pernah ditulis lagi —
+   * yang dipesan sudah terbaca dari `items`. Tetap opsional di sini karena
+   * booking lama masih menyimpannya, dan tampilan jatuh ke angka ini kalau
+   * `items` belum ada.
+   */
+  guests?: number;
   name: string;
   phone: string;
   notes: string;
@@ -773,8 +779,11 @@ export interface Booking {
 export interface BookingRequest {
   destinationId: string;
   date: string;
-  guests: number;
-  name: string;
+  /**
+   * Nama TIDAK ada di sini: server membacanya dari akun yang mengirim. Selama
+   * kolomnya ada di layar, nama di tiket bisa ditulis apa saja — termasuk nama
+   * orang lain — padahal yang diperiksa petugas di gerbang justru nama itu.
+   */
   phone: string;
   notes: string;
   /** { priceItemId: jumlah } */
@@ -814,6 +823,21 @@ async function bookingAction<T>(action: string, payload: Record<string, unknown>
 
 export async function createBooking(data: BookingRequest): Promise<{ id: string }> {
   return bookingAction<{ id: string }>("create", { ...data });
+}
+
+/**
+ * Ubah booking yang belum dibayar. Isinya sama persis dengan BookingRequest
+ * dikurangi destinasi — yang itu dibaca server dari dokumen bookingnya, karena
+ * pindah destinasi berarti booking lain sama sekali.
+ */
+export interface BookingEditRequest extends Omit<BookingRequest, "destinationId"> {
+  bookingId: string;
+}
+
+export async function updateBooking(
+  data: BookingEditRequest
+): Promise<{ amount: number }> {
+  return bookingAction<{ amount: number }>("update", { ...data });
 }
 
 /** Semua booking milik satu user (real-time) — dipakai untuk statistik profil. */

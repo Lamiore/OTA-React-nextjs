@@ -310,6 +310,64 @@ export function bookingTotal(lines: BookingLine[]): number {
   return lines.reduce((sum, l) => sum + lineTotal(l), 0);
 }
 
+/**
+ * Rincian isi booking untuk dibaca manusia: "Tiket Masuk ×2 · Sewa Alat ×1".
+ *
+ * Pengganti angka "jumlah orang" yang dulu diisi sendiri oleh pemesan. Sejak
+ * jumlahnya dihitung per item, satu angka tunggal tidak bisa lagi mewakili
+ * booking yang berisi tiket masuk di sebelah sewa alat — dan angka itu yang
+ * dibaca petugas di gerbang.
+ *
+ * Kosong berarti booking lama yang belum punya `items`; pemanggil yang
+ * memutuskan apa yang ditampilkan sebagai gantinya.
+ */
+export function itemSummary(lines?: BookingLine[]): string {
+  return (lines ?? []).map((l) => `${l.label} ×${l.qty}`).join(" · ");
+}
+
+/** Total unit dalam satu booking — dipakai statistik pengelola. */
+export function itemCount(lines?: BookingLine[]): number {
+  return (lines ?? []).reduce((sum, l) => sum + (l.qty || 0), 0);
+}
+
+/**
+ * Kebalikan bookingLines: dari baris yang tersimpan kembali ke { id: jumlah }
+ * untuk mengisi formulir saat booking diubah sebelum dibayar.
+ *
+ * Disaring terhadap daftar harga destinasi YANG SEKARANG, sengaja. Dua hal
+ * yang jatuh di sini:
+ * - Baris tanpa `id` — booking yang dibuat sebelum stok per item ada. Tidak
+ *   ada yang bisa dicocokkan; label tidak dipakai karena pengelola boleh
+ *   menggantinya kapan saja (alasan yang sama dengan bookedPerItem).
+ * - Item yang sudah dihapus pengelola dari daftar harga. bookingLines di
+ *   server juga akan menggugurkannya saat menyimpan, jadi kalau formulir
+ *   tetap menampilkannya, yang dilihat pemesan berbeda dari yang ditagihkan.
+ *
+ * Pemanggil yang memutuskan apa artinya hasil kosong — halaman booking
+ * menolak masuk mode ubah, bukan menyimpan booking tanpa item.
+ */
+export function qtyFromLines(
+  lines: BookingLine[] | undefined,
+  items: PriceItem[]
+): Record<string, number> {
+  const dijual = new Set(items.map((it) => it.id));
+  const out: Record<string, number> = {};
+  for (const l of lines ?? []) {
+    if (!l.id || !dijual.has(l.id)) continue;
+    out[l.id] = (out[l.id] ?? 0) + l.qty;
+  }
+  return out;
+}
+
+/**
+ * Durasi sewa yang tersimpan di booking. Satu angka untuk seluruh booking
+ * (lihat BookingRequest.hours), jadi baris per jam pertama sudah mewakili —
+ * dan booking tanpa item per jam sama sekali jatuh ke 1.
+ */
+export function hoursFromLines(lines?: BookingLine[]): number {
+  return resolveHours((lines ?? []).find((l) => l.hours)?.hours);
+}
+
 // ── Stok per item per hari ──
 //
 // Yang menghabiskan stok adalah booking yang SUDAH DIBAYAR dan belum

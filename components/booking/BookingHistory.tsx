@@ -7,6 +7,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthState } from '@/lib/useAuth';
 import { cancelBooking, type Booking as BookingType } from '@/lib/firestore';
+import { itemSummary } from '@/lib/destination';
 import { useLang } from '@/lib/useLang';
 import TicketModal from '@/components/booking/TicketModal';
 import PaymentModal from '@/components/notifications/PaymentModal';
@@ -21,6 +22,23 @@ function CalendarIcon() {
       <line x1="3" x2="21" y1="10" y2="10" />
     </svg>
   );
+}
+
+/**
+ * Booking ini bisa dibuka di formulir ubah?
+ *
+ * Syaratnya cuma satu: setiap barisnya punya `id` item. Booking yang dibuat
+ * sebelum stok per item ada tidak menyimpannya (lihat BookingLine.id), dan
+ * tanpa id tidak ada yang bisa dicocokkan ke daftar harga — formulirnya akan
+ * terbuka kosong lalu menyimpan booking tanpa isi.
+ *
+ * Item yang sudah dihapus pengelola TIDAK diperiksa di sini: itu butuh dokumen
+ * destinasinya, dan halaman ubah yang memuatnya sudah menolak dengan pesan yang
+ * benar. Yang dijaga di sini hanya yang bisa dijawab dari dokumen bookingnya
+ * sendiri.
+ */
+function bisaDiubah(b: BookingType) {
+  return (b.items?.length ?? 0) > 0 && (b.items ?? []).every((l) => !!l.id);
 }
 
 /** Booking dianggap "lewat" jika tanggalnya sebelum hari ini (waktu lokal). Hari ini masih berlangsung. */
@@ -218,7 +236,7 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                       <p className="text-base font-medium text-navy capitalize">{b.destinationName}</p>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-navy-soft">
                         <span>{new Date(b.date).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                        <span>{b.guests} {t('common.people')}</span>
+                        <span>{itemSummary(b.items) || `${b.guests ?? 0} ${t('common.people')}`}</span>
                         <span>{b.phone}</span>
                       </div>
                       {b.notes && (
@@ -255,6 +273,19 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                       >
                         {t('history.payNow')}
                       </button>
+                      {/* Ubah hanya muncul kalau isinya memang bisa dipetakan
+                          balik ke daftar harga — lihat bisaDiubah di atas.
+                          Tombol yang selalu tampil lalu berakhir di layar
+                          "tidak bisa diubah" cuma memindahkan kekecewaannya
+                          satu klik lebih jauh. */}
+                      {bisaDiubah(b) && (
+                        <button
+                          onClick={() => router.push(`/booking?dest=${encodeURIComponent(b.destinationId)}&edit=${encodeURIComponent(b.id)}`)}
+                          className="btn-ghost flex-1 px-4 py-2 text-xs"
+                        >
+                          {t('history.edit')}
+                        </button>
+                      )}
                       <button
                         onClick={() => setCancellingBooking(b)}
                         className="btn-ghost flex-1 px-4 py-2 text-xs hover:border-danger-rule hover:text-danger"

@@ -38,9 +38,6 @@ export const runtime = 'nodejs';
  *   berjam-jam, daftar "menunggu pembayaran" akan penuh sampah tanpa penyapu.
  */
 
-/** Batas jumlah tamu — cocokkan dengan min/max input di halaman booking. */
-const MAX_GUESTS = 100;
-
 type Ctx = { uid: string; role: string };
 
 function bad(error: string, status: number) {
@@ -167,6 +164,8 @@ export async function POST(req: Request) {
   switch (body.action) {
     case 'create':
       return create(ctx, body);
+    case 'update':
+      return update(ctx, body);
     case 'pay':
       return pay(ctx, body);
     case 'cancel':
@@ -176,6 +175,23 @@ export async function POST(req: Request) {
     default:
       return bad('bad-action', 400);
   }
+}
+
+/**
+ * Nama yang dicetak di tiket — dibaca dari akun, bukan dari body permintaan.
+ * Layar booking sudah tidak menawarkan kolomnya, dan yang dicocokkan petugas di
+ * gerbang justru nama ini.
+ *
+ * Sumbernya Auth, bukan dokumen users: Profil › Pengaturan hanya menulis
+ * displayName di Auth, jadi `users/{uid}.name` bisa tertinggal berbulan-bulan
+ * dan tiketnya keluar dengan nama lama.
+ */
+async function namaPemesan(uid: string): Promise<string> {
+  const akun = await adminAuth().getUser(uid);
+  // Fallback bagian email sebelum "@" — sama dengan nama awal yang dipasang
+  // saat akun dibuat (lihat verify-code). Akun tanpa nama sama sekali tidak
+  // boleh berarti booking yang gagal terkirim.
+  return str(akun.displayName, 120) || str(akun.email, 120).split('@')[0];
 }
 
 /**
@@ -190,12 +206,11 @@ export async function POST(req: Request) {
 async function create(ctx: Ctx, body: Record<string, unknown>) {
   const destinationId = docId(body.destinationId);
   const date = str(body.date, 10);
-  const name = str(body.name, 120);
   const phone = str(body.phone, 32);
   const notes = str(body.notes, 500);
   const qty = (body.qty ?? {}) as Record<string, unknown>;
 
-  if (!destinationId || !name || !phone) return bad('missing-field', 400);
+  if (!destinationId || !phone) return bad('missing-field', 400);
   if (typeof qty !== 'object' || Array.isArray(qty)) return bad('bad-qty', 400);
 
   // Tanggal: bentuk ketat + tidak boleh sebelum hari ini menurut UTC. UTC
@@ -204,10 +219,7 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return bad('bad-date', 400);
   if (date < new Date().toISOString().slice(0, 10)) return bad('past-date', 400);
 
-  const guests = Math.floor(Number(body.guests));
-  if (!Number.isFinite(guests) || guests < 1 || guests > MAX_GUESTS) {
-    return bad('bad-guests', 400);
-  }
+  const name = await namaPemesan(ctx.uid);
 
   const destSnap = await adminDb().doc(`destinations/${destinationId}`).get();
   if (!destSnap.exists) return bad('destination-notfound', 404);
@@ -242,7 +254,6 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
     destinationId,
     destinationName: dest.name ?? '',
     date,
-    guests,
     name,
     phone,
     notes,
@@ -254,6 +265,86 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
   });
 
   return NextResponse.json({ id: ref.id, amount });
+}
+
+/**
+ * Ubah booking yang BELUM dibayar: tanggal, item, jumlah, durasi, telepon,
+ * catatan. Menggantikan "batalkan lalu pesan ulang" — yang sebelumnya jadi
+ * satu-satunya cara menambah satu tiket.
+ *
+ * Yang TIDAK bisa diubah, dan alasannya:
+ * - Destinasi. Dibaca dari dokumennya sendiri, tidak pernah dari body: pindah
+ *   destinasi berarti daftar harga, stok, dan pengelola yang lain sama sekali —
+ *   itu booking baru, bukan perubahan.
+ * - Harga & total. Dihitung ulang server dari daftar harga destinasi, persis
+ *   seperti di create. Bagian ini yang membuat "ubah" tidak jadi pintu belakang
+ *   untuk menulis `amount` sendiri.
+ * - Status & pembayaran. Tidak disentuh sama sekali di sini.
+ *
+ * Di dalam transaksi, bukan baca-lalu-tulis biasa. Tanpa itu, pembayaran yang
+ * masuk di tab lain tepat setelah pemeriksaan `paymentStatus` akan menemukan
+ * item & tagihannya berubah SESUDAH uangnya diterima.
+ */
+async function update(ctx: Ctx, body: Record<string, unknown>) {
+  const id = docId(body.bookingId);
+  const date = str(body.date, 10);
+  const phone = str(body.phone, 32);
+  const notes = str(body.notes, 500);
+  const qty = (body.qty ?? {}) as Record<string, unknown>;
+
+  if (!id || !phone) return bad('missing-field', 400);
+  if (typeof qty !== 'object' || Array.isArray(qty)) return bad('bad-qty', 400);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return bad('bad-date', 400);
+  if (date < new Date().toISOString().slice(0, 10)) return bad('past-date', 400);
+
+  // Ikut diperbarui: kalau namanya diganti di Profil sejak booking dibuat,
+  // yang tersimpan di sini harus ikut, bukan tertinggal sebagai satu-satunya
+  // tempat nama lama masih hidup.
+  const name = await namaPemesan(ctx.uid);
+  const ref = adminDb().doc(`bookings/${id}`);
+
+  const outcome = await adminDb().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return { kind: 'notfound' as const };
+    const b = snap.data() ?? {};
+    if (b.userId !== ctx.uid) return { kind: 'forbidden' as const };
+    if (b.status === 'cancelled') return { kind: 'cancelled' as const };
+    if (b.paymentStatus === 'paid') return { kind: 'already-paid' as const };
+
+    const destSnap = await tx.get(adminDb().doc(`destinations/${b.destinationId}`));
+    if (!destSnap.exists) return { kind: 'destination-notfound' as const };
+    const priceItems = getPriceItems(destSnap.data() ?? {});
+
+    const items = bookingLines(priceItems, qty, body.hours);
+    if (items.length === 0) return { kind: 'no-items' as const };
+    const amount = bookingTotal(items);
+    if (!Number.isFinite(amount) || amount < 0) return { kind: 'bad-amount' as const };
+
+    // Stok diperiksa untuk tanggal BARU, bukan `b.date` yang sedang diganti.
+    // Booking ini sendiri tidak pernah ikut terhitung: yang dijumlahkan hanya
+    // yang sudah dibayar, dan yang sedang diubah menurut definisi belum.
+    const paidSnap = await tx.get(paidQuery(b.destinationId, date));
+    const booked = bookedPerItem(paidSnap.docs.map((d) => d.data() as BookingForCount));
+    const penuh = overStock(items, priceItems, booked);
+    if (penuh.length > 0) return { kind: 'full' as const, full: penuh };
+
+    tx.update(ref, { date, name, phone, notes, items, amount });
+    return { kind: 'success' as const, amount };
+  });
+
+  if (outcome.kind === 'notfound') return bad('notfound', 404);
+  if (outcome.kind === 'forbidden') return bad('forbidden', 403);
+  if (outcome.kind === 'cancelled') return bad('cancelled', 409);
+  // Terminal, bukan "coba lagi": booking yang sudah lunas tidak boleh berubah
+  // isinya, dan layar yang menampilkannya sudah basi.
+  if (outcome.kind === 'already-paid') return bad('already-paid', 409);
+  if (outcome.kind === 'destination-notfound') return bad('destination-notfound', 404);
+  if (outcome.kind === 'no-items') return bad('no-items', 400);
+  if (outcome.kind === 'bad-amount') return bad('bad-amount', 500);
+  if (outcome.kind === 'full') {
+    return NextResponse.json({ error: 'full', full: outcome.full }, { status: 409 });
+  }
+  return NextResponse.json({ id, amount: outcome.amount });
 }
 
 /**

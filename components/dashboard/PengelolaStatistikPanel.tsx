@@ -5,14 +5,18 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
   subscribeDestinations,
+  type BookingItem,
   type Destination,
 } from '@/lib/firestore';
+import { itemCount, itemSummary } from '@/lib/destination';
 
 interface Booking {
   id: string;
   destinationId: string;
   destinationName: string;
-  guests: number;
+  /** Booking lama saja — sejak jumlah dihitung per item, ini tidak ditulis lagi. */
+  guests?: number;
+  items?: BookingItem[];
   status: string;
   date: string;
 }
@@ -41,7 +45,12 @@ export default function PengelolaStatistikPanel({ uid }: { uid: string }) {
   const managedBookings = bookings.filter((b) => managedIds.has(b.destinationId));
 
   const totalBookings = managedBookings.length;
-  const totalGuests = managedBookings.reduce((sum, b) => sum + (b.guests || 0), 0);
+  // Item yang dipesan, bukan "jumlah orang" — angka itu tidak diisi lagi sejak
+  // jumlahnya dihitung per item. Booking lama tetap ikut lewat fallback guests.
+  const totalItems = managedBookings.reduce(
+    (sum, b) => sum + (itemCount(b.items) || b.guests || 0),
+    0,
+  );
   const usedTickets = managedBookings.filter((b) => b.status === 'used').length;
 
   const stats = [
@@ -81,8 +90,8 @@ export default function PengelolaStatistikPanel({ uid }: { uid: string }) {
       ),
     },
     {
-      label: 'Total Pengunjung',
-      value: totalGuests,
+      label: 'Item Dipesan',
+      value: totalItems,
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -150,7 +159,7 @@ export default function PengelolaStatistikPanel({ uid }: { uid: string }) {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-navy truncate">{b.destinationName}</p>
                   <p className="text-xs text-navy-soft">
-                    {new Date(b.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} — {b.guests} orang
+                    {new Date(b.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} — {itemSummary(b.items) || `${b.guests ?? 0} orang`}
                   </p>
                 </div>
                 <span className={`rounded-sm px-2.5 py-1 text-2xs font-medium ${

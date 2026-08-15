@@ -97,7 +97,6 @@ const DICT: Record<string, Record<Lang, string>> = {
   // ── Booking ──
   "booking.title": { id: "Booking", en: "Book a Visit" },
   "booking.date": { id: "Tanggal Kunjungan", en: "Visit Date" },
-  "booking.guests": { id: "Jumlah Orang", en: "Number of Guests" },
   "booking.name": { id: "Nama Pemesan", en: "Full Name" },
   "booking.phone": { id: "No. HP", en: "Phone Number" },
   "booking.notes": { id: "Catatan", en: "Notes" },
@@ -120,14 +119,43 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Isi detail untuk memesan perjalanan.",
     en: "Fill in the details to book your trip.",
   },
+
+  // ── Ubah booking (sebelum dibayar) ──
+  "booking.editTitle": { id: "Ubah Booking", en: "Edit Booking" },
+  "booking.editLede": {
+    id: "Ubah tanggal, item, atau catatan selama booking ini belum dibayar.",
+    en: "Change the date, items, or notes while this booking is still unpaid.",
+  },
+  "booking.editSubmit": { id: "Simpan Perubahan", en: "Save Changes" },
+  "booking.editCancel": { id: "Batal", en: "Discard" },
+  "booking.editSuccessTitle": { id: "Perubahan Tersimpan", en: "Changes Saved" },
+  "booking.editSuccessBody": {
+    id: "Booking {dest} sekarang untuk tanggal {date}. Selesaikan pembayaran untuk menerbitkan tiket QR-mu.",
+    en: "Your booking for {dest} is now set for {date}. Complete the payment to issue your QR ticket.",
+  },
+  "booking.editLocked": {
+    id: "Booking ini sudah dibayar atau dibatalkan, jadi isinya tidak bisa diubah lagi.",
+    en: "This booking has already been paid or cancelled, so its contents can no longer be changed.",
+  },
+  "booking.editNotFound": {
+    id: "Booking yang mau diubah tidak ditemukan.",
+    en: "The booking you are trying to edit could not be found.",
+  },
+  "booking.editUnsupported": {
+    id: "Booking ini tidak bisa diubah — itemnya sudah tidak ada di daftar harga destinasi. Batalkan lalu pesan ulang.",
+    en: "This booking cannot be edited — its items are no longer on the destination's price list. Cancel it and book again.",
+  },
+  "booking.backToBookings": { id: "Kembali ke Booking", en: "Back to Bookings" },
   "booking.destination": { id: "Destinasi", en: "Destination" },
   "booking.noDestination": { id: "Tidak ada destinasi dipilih.", en: "No destination selected." },
   "booking.pickFromHome": { id: "Pilih dari beranda", en: "Pick one from home" },
   "booking.selectItems": { id: "Pilih Item *", en: "Select Items *" },
   "booking.dateLabel": { id: "Tanggal *", en: "Date *" },
-  "booking.guestsLabel": { id: "Jumlah Orang *", en: "Number of Guests *" },
-  "booking.nameLabel": { id: "Nama Lengkap *", en: "Full Name *" },
   "booking.namePlaceholder": { id: "Nama pemesan", en: "Name on the booking" },
+  "booking.nameHint": {
+    id: "Diambil dari akun. Ubah di Profil › Pengaturan.",
+    en: "Taken from your account. Change it in Profile › Settings.",
+  },
   "booking.phoneLabel": { id: "No. Telepon *", en: "Phone Number *" },
   "booking.notesLabel": { id: "Catatan (opsional)", en: "Notes (optional)" },
   "booking.summary": { id: "Ringkasan", en: "Summary" },
@@ -197,6 +225,7 @@ const DICT: Record<string, Record<Lang, string>> = {
   "history.statusUsed": { id: "Sudah Digunakan", en: "Used" },
   "history.statusDone": { id: "Selesai", en: "Completed" },
   "history.payNow": { id: "Bayar Sekarang", en: "Pay Now" },
+  "history.edit": { id: "Ubah", en: "Edit" },
   "history.cancelFailed": {
     id: "Gagal membatalkan booking. Periksa koneksi lalu coba lagi.",
     en: "Could not cancel the booking. Check your connection and try again.",
@@ -211,6 +240,7 @@ const DICT: Record<string, Record<Lang, string>> = {
   "ticket.brand": { id: "OTA · Tiket Wisata", en: "OTA · Visit Ticket" },
   "ticket.holder": { id: "Pemesan", en: "Booked by" },
   "ticket.guests": { id: "Jumlah", en: "Guests" },
+  "ticket.items": { id: "Rincian", en: "Items" },
   "ticket.phone": { id: "Telepon", en: "Phone" },
   "ticket.code": { id: "Kode Tiket", en: "Ticket Code" },
   "ticket.showQr": {
