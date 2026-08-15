@@ -28,7 +28,9 @@ Cakupan: seluruh `app/`, `components/`, `lib/`, `firestore.rules`, `public/sw.js
 >
 > **Ditunda atas keputusan pemilik proyek:** S-01 (pembayaran, masih direvisi), seluruh High (S-02, S-03, S-05, S-06, P-01, T-01), dan Q-03 (`guests` — dua-duanya opsi mengubah perilaku yang terlihat pengguna, sementara masalahnya kejelasan operasional, bukan keamanan).
 >
-> **Belum di-deploy:** `database.rules.json` dan `firestore.rules` ada di repo tapi belum naik ke Firebase. Selama itu belum dilakukan, RTDB masih terbuka baca-tulis untuk publik. Urutannya penting — lihat catatan di S-11.
+> **Status deploy:**
+> - ✅ **`database.rules.json` sudah naik** (15 Agu 2026). Root tertutup, cabang `monitoring` tetap terbuka untuk website dan firmware. Matriks verifikasinya di S-04.
+> - ⏳ **`firestore.rules` belum naik.** Wajib menunggu kode aplikasi ada di Vercel lebih dulu — urutannya tidak bisa dibalik, lihat catatan di S-11.
 >
 > Verifikasi tiap commit: `tsc` bersih, seluruh self-test lolos (7/7 lalu 8/8), build produksi hijau, `firestore.rules` divalidasi Firebase CLI.
 >
@@ -239,7 +241,24 @@ Lebih baik lagi: wajibkan akun untuk chat (`verifyIdToken`) dan pakai `uid` seba
 >
 > Ini default *test mode* Firebase yang tidak pernah dicabut. Analisis di bawah tentang **baca** publik tetap berlaku (itu memang perilaku produk); yang naik jadi Critical adalah **tulis**.
 >
-> **Sudah ditangani sebagian** — `database.rules.json` di repo sekarang menutup root dan hanya membuka cabang `monitoring`, tanpa menuntut perubahan apa pun di firmware. **Belum di-deploy**; lihat "Perbaikan" di bawah.
+> **✅ SUDAH DI-DEPLOY — 15 Agustus 2026.** `firebase deploy --only database`. Rules baru propagasi dalam ~10 detik, diverifikasi dengan matriks di bawah, dan data sensar asli terbukti tidak tersentuh (md5 sebelum = sesudah).
+>
+> | Uji | Hasil | Arti |
+> |---|---|---|
+> | Baca `monitoring` | `200` | Website tetap menayangkan sensor |
+> | Baca `monitoring/latest` | `200` | Halaman destinasi & hero tetap jalan |
+> | **Tulis `monitoring/latest`** | `200` | **Firmware yang sekarang tetap bisa masuk** |
+> | **Tulis `monitoring/<stasiun>/latest`** | `200` | Bentuk ber-stationId juga siap |
+> | Baca root | `401` | ⬅ dulu `200` |
+> | Tulis root | `401` | ⬅ dulu `200` |
+> | **Hapus seluruh `monitoring`** | `401` | ⬅ dulu `200` — ini yang paling berbahaya |
+> | Tulis di luar `monitoring` | `401` | ⬅ dulu `200` |
+>
+> Nol perubahan di ESP32, nol perubahan di kode website — kode hanya menyentuh RTDB di satu titik (`lib/realtime.ts:48`), dan selalu di bawah `monitoring/`.
+>
+> **Catatan operasional dari verifikasi:** menghapus node stasiun itu sendiri (`monitoring/<stasiun>`) ditolak — izin tulis hanya diberikan di `<stasiun>/latest`. Itu memang disengaja, tapi artinya membuang stasiun lama harus lewat Firebase Console, bukan dari perangkat.
+>
+> **Yang masih terbuka:** menulis ke path sensor tidak menuntut identitas, jadi angka sensor masih bisa dipalsukan orang yang tahu URL database. Menutupnya butuh keputusan cara auth firmware — tahap 2 di bawah.
 
 ---
 
@@ -1485,7 +1504,7 @@ Diurutkan dari yang paling mendesak. Kolom "Usaha" adalah perkiraan kasar untuk 
 
 | # | Temuan | File | Usaha |
 |---|---|---|---|
-| 1 | **S-04** `firebase deploy --only database` — rules RTDB sekarang terbuka baca-tulis untuk seluruh internet. File perbaikannya sudah siap di repo dan tidak menuntut perubahan firmware | `database.rules.json` | **5 menit** |
+| ~~1~~ | ~~**S-04** deploy rules RTDB~~ — ✅ **selesai 15 Agu 2026**, terverifikasi | `database.rules.json` | — |
 | 2 | **S-01** Pasang gateway pembayaran sungguhan + webhook bertanda tangan. Sampai itu jadi, pertimbangkan menutup tombol Bayar di produksi — sekarang setiap pengguna bisa menerbitkan tiket gratis dan menghabiskan kuota semua destinasi | `app/api/bookings/route.ts:292` | 2–3 hari |
 
 ### 🟠 Pekan ini
