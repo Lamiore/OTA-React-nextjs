@@ -5,6 +5,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import type { Html5Qrcode as Html5QrcodeType } from 'html5-qrcode';
 import { db } from '@/lib/firebase';
 import { checkInBooking, type Booking } from '@/lib/firestore';
+import { itemSummary } from '@/lib/destination';
 
 const READER_ID = 'qr-reader';
 
@@ -68,7 +69,9 @@ function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
       <p className="text-sm font-semibold text-navy">{label}</p>
-      <p className="mt-0.5 truncate text-sm font-medium text-navy">{value}</p>
+      {/* break-words, bukan truncate: rincian item lebih panjang dari satu
+          baris sel, dan itu justru yang dicocokkan petugas di gerbang. */}
+      <p className="mt-0.5 break-words text-sm font-medium text-navy">{value}</p>
     </div>
   );
 }
@@ -80,7 +83,13 @@ function BookingCard({ booking }: { booking: Booking }) {
       <p className="mt-0.5 text-xs text-navy-soft">{dateLabel(booking.date)}</p>
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
         <Detail label="Pemesan" value={booking.name} />
-        <Detail label="Jumlah" value={`${booking.guests} orang`} />
+        {/* Rincian item, bukan "jumlah orang" — yang perlu dicocokkan petugas
+            adalah apa yang dibayar. Booking lama tanpa items jatuh ke angka
+            lamanya. */}
+        <Detail
+          label={itemSummary(booking.items) ? 'Rincian' : 'Jumlah'}
+          value={itemSummary(booking.items) || `${booking.guests ?? 0} orang`}
+        />
         <Detail label="Telepon" value={booking.phone} />
         <Detail label="Kode Tiket" value={'OTA-' + booking.id.slice(0, 8).toUpperCase()} />
       </div>

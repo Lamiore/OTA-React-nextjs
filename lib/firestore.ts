@@ -749,7 +749,13 @@ export interface Booking {
   destinationId: string;
   destinationName: string;
   date: string;
-  guests: number;
+  /**
+   * Jumlah orang yang dulu diisi sendiri pemesan. Tidak pernah ditulis lagi —
+   * yang dipesan sudah terbaca dari `items`. Tetap opsional di sini karena
+   * booking lama masih menyimpannya, dan tampilan jatuh ke angka ini kalau
+   * `items` belum ada.
+   */
+  guests?: number;
   name: string;
   phone: string;
   notes: string;
@@ -759,9 +765,12 @@ export interface Booking {
   createdAt: unknown;
   checkedInAt?: unknown;
   amount?: number;
-  paymentStatus?: "unpaid" | "paid";
+  /** 'pending' = tagihan Midtrans sudah terbit dan kursinya sedang ditahan. */
+  paymentStatus?: "unpaid" | "pending" | "paid";
   paymentMethod?: string;
   paidAt?: unknown;
+  /** Batas penahanan kursi (ms epoch). Lihat bookedPerItem di lib/destination. */
+  holdUntil?: number;
 }
 
 /**
@@ -773,8 +782,11 @@ export interface Booking {
 export interface BookingRequest {
   destinationId: string;
   date: string;
-  guests: number;
-  name: string;
+  /**
+   * Nama TIDAK ada di sini: server membacanya dari akun yang mengirim. Selama
+   * kolomnya ada di layar, nama di tiket bisa ditulis apa saja — termasuk nama
+   * orang lain — padahal yang diperiksa petugas di gerbang justru nama itu.
+   */
   phone: string;
   notes: string;
   /** { priceItemId: jumlah } */
@@ -816,6 +828,21 @@ export async function createBooking(data: BookingRequest): Promise<{ id: string 
   return bookingAction<{ id: string }>("create", { ...data });
 }
 
+/**
+ * Ubah booking yang belum dibayar. Isinya sama persis dengan BookingRequest
+ * dikurangi destinasi — yang itu dibaca server dari dokumen bookingnya, karena
+ * pindah destinasi berarti booking lain sama sekali.
+ */
+export interface BookingEditRequest extends Omit<BookingRequest, "destinationId"> {
+  bookingId: string;
+}
+
+export async function updateBooking(
+  data: BookingEditRequest
+): Promise<{ amount: number }> {
+  return bookingAction<{ amount: number }>("update", { ...data });
+}
+
 /** Semua booking milik satu user (real-time) — dipakai untuk statistik profil. */
 export function subscribeUserBookings(
   uid: string,
@@ -854,15 +881,23 @@ export async function checkInBooking(id: string): Promise<CheckInOutcome> {
 }
 
 /**
- * Bayar booking. Isinya masih tiruan — belum ada gateway — TAPI keputusan
- * lunasnya sudah diambil server. Itu bedanya dengan versi lama yang menulis
- * 'paid' langsung dari browser: di sana tombol bayar cuma formalitas.
+ * Buka pembayaran: minta server menerbitkan tagihan QRIS lewat Midtrans.
  *
- * Saat gateway sungguhan dipasang, yang berubah cuma isi cabang "pay" di
- * /api/bookings — bentuk alurnya (pending → bayar → confirmed) sudah benar.
+ * Yang kembali cuma tiket masuk ke layar pembayaran, BUKAN kabar lunas.
+ * Lunasnya datang belakangan lewat webhook, dan layar mengetahuinya dari
+ * dokumen bookingnya sendiri yang ikut berubah — bukan dari nilai balik ini.
+ *
+ * `snapUrl` ikut dikirim server, tidak dibaca ulang di sini dari env: alamat
+ * skripnya dan token yang dipakainya harus berasal dari satu keputusan
+ * lingkungan yang sama, kalau tidak popupnya memuat tapi tokennya ditolak.
  */
-export async function payBooking(id: string, method: string): Promise<void> {
-  await bookingAction("pay", { bookingId: id, method });
+export interface PaymentSession {
+  token: string;
+  snapUrl: string;
+}
+
+export async function payBooking(id: string): Promise<PaymentSession> {
+  return bookingAction<PaymentSession>("pay", { bookingId: id });
 }
 
 // ── Reviews (ulasan destinasi) ──

@@ -9,7 +9,9 @@ import {
   getPriceItems,
   overStock,
   type BookingForCount,
+  type BookingLine,
 } from '@/lib/destination';
+import { createSnapTransaction, HOLD_MENIT, SNAP_JS } from '@/lib/midtrans';
 
 export const runtime = 'nodejs';
 
@@ -38,9 +40,6 @@ export const runtime = 'nodejs';
  *   berjam-jam, daftar "menunggu pembayaran" akan penuh sampah tanpa penyapu.
  */
 
-/** Batas jumlah tamu — cocokkan dengan min/max input di halaman booking. */
-const MAX_GUESTS = 100;
-
 type Ctx = { uid: string; role: string };
 
 function bad(error: string, status: number) {
@@ -52,19 +51,37 @@ function bad(error: string, status: number) {
 // salinan yang ada di sini. Alasan lengkapnya ditulis di sana.
 
 /**
- * Booking berbayar pada satu destinasi + tanggal — dasar hitungan stok.
+ * Booking yang menahan kursi pada satu destinasi + tanggal — dasar hitungan stok.
  *
- * Hanya yang `paid`: booking yang menunggu pembayaran sengaja tidak menahan
- * stok (keputusan produk, lihat catatan di lib/destination). Yang dibatalkan
- * ikut tersaring belakangan di bookedPerItem, bukan di query, supaya tidak
- * perlu filter ketidaksamaan yang menuntut composite index.
+ * Dua golongan ikut: yang sudah lunas, dan yang sedang dibayar. Yang kedua
+ * masuk sejak Midtrans dipasang — uang diambil sebelum webhook memberi tahu
+ * kita, jadi kursinya harus ditahan selama jendela itu.
+ *
+ * `in` dua nilai, bukan dua query terpisah: Firestore menjalankannya sebagai
+ * gabungan query kesamaan, jadi syarat index-nya sama saja dengan sebelumnya.
+ *
+ * Batas waktu penahanan TIDAK disaring di sini melainkan di bookedPerItem,
+ * sama seperti pembatalan — filter ketidaksamaan menuntut composite index yang
+ * belum ada, dan menyaringnya di memori jauh lebih murah daripada mengurus itu.
  */
-function paidQuery(destinationId: string, date: string) {
+function stokQuery(destinationId: string, date: string) {
   return adminDb()
     .collection('bookings')
     .where('destinationId', '==', destinationId)
     .where('date', '==', date)
-    .where('paymentStatus', '==', 'paid');
+    .where('paymentStatus', 'in', ['paid', 'pending']);
+}
+
+/**
+ * Ada pembayaran yang sedang berjalan untuk booking ini?
+ *
+ * Penjaga yang menutup lubang eskalasi: tanpa ini, booking 500rb bisa diubah
+ * jadi 2 juta SESUDAH transaksi Midtrans-nya dibuat, lalu dibayar dengan
+ * tagihan lama. Tanda tangan webhooknya akan sah sempurna — Midtrans jujur
+ * melaporkan jumlah yang kita sendiri beritahukan kepadanya.
+ */
+function pembayaranHidup(b: FirebaseFirestore.DocumentData): boolean {
+  return b.paymentStatus === 'pending' && Number(b.holdUntil) > Date.now();
 }
 
 /**
@@ -93,7 +110,7 @@ export async function GET(req: Request) {
   const items = getPriceItems(destSnap.data() ?? {});
 
   if (!banyakTanggal) {
-    const paid = await paidQuery(destinationId, date).get();
+    const paid = await stokQuery(destinationId, date).get();
     const booked = bookedPerItem(paid.docs.map((d) => d.data() as BookingForCount));
     return NextResponse.json({ items: availability(items, booked) });
   }
@@ -113,7 +130,7 @@ export async function GET(req: Request) {
   const semua = await adminDb()
     .collection('bookings')
     .where('destinationId', '==', destinationId)
-    .where('paymentStatus', '==', 'paid')
+    .where('paymentStatus', 'in', ['paid', 'pending'])
     .get();
 
   const perTanggal: Record<string, BookingForCount[]> = {};
@@ -167,6 +184,8 @@ export async function POST(req: Request) {
   switch (body.action) {
     case 'create':
       return create(ctx, body);
+    case 'update':
+      return update(ctx, body);
     case 'pay':
       return pay(ctx, body);
     case 'cancel':
@@ -176,6 +195,23 @@ export async function POST(req: Request) {
     default:
       return bad('bad-action', 400);
   }
+}
+
+/**
+ * Nama yang dicetak di tiket — dibaca dari akun, bukan dari body permintaan.
+ * Layar booking sudah tidak menawarkan kolomnya, dan yang dicocokkan petugas di
+ * gerbang justru nama ini.
+ *
+ * Sumbernya Auth, bukan dokumen users: Profil › Pengaturan hanya menulis
+ * displayName di Auth, jadi `users/{uid}.name` bisa tertinggal berbulan-bulan
+ * dan tiketnya keluar dengan nama lama.
+ */
+async function namaPemesan(uid: string): Promise<string> {
+  const akun = await adminAuth().getUser(uid);
+  // Fallback bagian email sebelum "@" — sama dengan nama awal yang dipasang
+  // saat akun dibuat (lihat verify-code). Akun tanpa nama sama sekali tidak
+  // boleh berarti booking yang gagal terkirim.
+  return str(akun.displayName, 120) || str(akun.email, 120).split('@')[0];
 }
 
 /**
@@ -190,12 +226,11 @@ export async function POST(req: Request) {
 async function create(ctx: Ctx, body: Record<string, unknown>) {
   const destinationId = docId(body.destinationId);
   const date = str(body.date, 10);
-  const name = str(body.name, 120);
   const phone = str(body.phone, 32);
   const notes = str(body.notes, 500);
   const qty = (body.qty ?? {}) as Record<string, unknown>;
 
-  if (!destinationId || !name || !phone) return bad('missing-field', 400);
+  if (!destinationId || !phone) return bad('missing-field', 400);
   if (typeof qty !== 'object' || Array.isArray(qty)) return bad('bad-qty', 400);
 
   // Tanggal: bentuk ketat + tidak boleh sebelum hari ini menurut UTC. UTC
@@ -204,10 +239,7 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return bad('bad-date', 400);
   if (date < new Date().toISOString().slice(0, 10)) return bad('past-date', 400);
 
-  const guests = Math.floor(Number(body.guests));
-  if (!Number.isFinite(guests) || guests < 1 || guests > MAX_GUESTS) {
-    return bad('bad-guests', 400);
-  }
+  const name = await namaPemesan(ctx.uid);
 
   const destSnap = await adminDb().doc(`destinations/${destinationId}`).get();
   if (!destSnap.exists) return bad('destination-notfound', 404);
@@ -230,8 +262,8 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
   // yang belum dibayar tidak menahan stok, jadi antara sini dan pembayaran
   // stoknya masih bisa habis diambil orang lain — dan di sanalah penolakan
   // yang sebenarnya terjadi, di dalam transaksi.
-  const paidSnap = await paidQuery(destinationId, date).get();
-  const booked = bookedPerItem(paidSnap.docs.map((d) => d.data() as BookingForCount));
+  const stokSnap = await stokQuery(destinationId, date).get();
+  const booked = bookedPerItem(stokSnap.docs.map((d) => d.data() as BookingForCount));
   const penuh = overStock(items, getPriceItems(dest), booked);
   if (penuh.length > 0) {
     return NextResponse.json({ error: 'full', full: penuh }, { status: 409 });
@@ -242,7 +274,6 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
     destinationId,
     destinationName: dest.name ?? '',
     date,
-    guests,
     name,
     phone,
     notes,
@@ -257,29 +288,123 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
 }
 
 /**
- * Tandai lunas, lalu naikkan status ke 'confirmed' — di sinilah tiket terbit.
+ * Ubah booking yang BELUM dibayar: tanggal, item, jumlah, durasi, telepon,
+ * catatan. Menggantikan "batalkan lalu pesan ulang" — yang sebelumnya jadi
+ * satu-satunya cara menambah satu tiket.
  *
- * Isinya masih tiruan (belum ada gateway), tapi keputusannya sudah di server
- * dan bentuk alurnya sudah benar. Menyambungkan gateway nanti berarti memecah
- * fungsi ini jadi dua: satu membuat transaksi pembayaran, satu lagi webhook
- * yang menjalankan bagian bawah ini setelah dananya benar-benar dikonfirmasi.
+ * Yang TIDAK bisa diubah, dan alasannya:
+ * - Destinasi. Dibaca dari dokumennya sendiri, tidak pernah dari body: pindah
+ *   destinasi berarti daftar harga, stok, dan pengelola yang lain sama sekali —
+ *   itu booking baru, bukan perubahan.
+ * - Harga & total. Dihitung ulang server dari daftar harga destinasi, persis
+ *   seperti di create. Bagian ini yang membuat "ubah" tidak jadi pintu belakang
+ *   untuk menulis `amount` sendiri.
+ * - Status & pembayaran. Tidak disentuh sama sekali di sini.
  *
- * Di sinilah pula kuota ditegakkan.
+ * Di dalam transaksi, bukan baca-lalu-tulis biasa. Tanpa itu, pembayaran yang
+ * masuk di tab lain tepat setelah pemeriksaan `paymentStatus` akan menemukan
+ * item & tagihannya berubah SESUDAH uangnya diterima.
+ */
+async function update(ctx: Ctx, body: Record<string, unknown>) {
+  const id = docId(body.bookingId);
+  const date = str(body.date, 10);
+  const phone = str(body.phone, 32);
+  const notes = str(body.notes, 500);
+  const qty = (body.qty ?? {}) as Record<string, unknown>;
+
+  if (!id || !phone) return bad('missing-field', 400);
+  if (typeof qty !== 'object' || Array.isArray(qty)) return bad('bad-qty', 400);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return bad('bad-date', 400);
+  if (date < new Date().toISOString().slice(0, 10)) return bad('past-date', 400);
+
+  // Ikut diperbarui: kalau namanya diganti di Profil sejak booking dibuat,
+  // yang tersimpan di sini harus ikut, bukan tertinggal sebagai satu-satunya
+  // tempat nama lama masih hidup.
+  const name = await namaPemesan(ctx.uid);
+  const ref = adminDb().doc(`bookings/${id}`);
+
+  const outcome = await adminDb().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return { kind: 'notfound' as const };
+    const b = snap.data() ?? {};
+    if (b.userId !== ctx.uid) return { kind: 'forbidden' as const };
+    if (b.status === 'cancelled') return { kind: 'cancelled' as const };
+    if (b.paymentStatus === 'paid') return { kind: 'already-paid' as const };
+    // Inti penjagaannya: selama transaksi Midtrans-nya masih hidup, isinya
+    // dibekukan. Kalau tidak, tagihan yang sedang dibuka pembeli tidak lagi
+    // mewakili apa yang akan diterimanya. Bukan penolakan permanen — begitu
+    // penahanannya kedaluwarsa, booking ini bisa diubah lagi seperti biasa.
+    if (pembayaranHidup(b)) return { kind: 'payment-pending' as const };
+
+    const destSnap = await tx.get(adminDb().doc(`destinations/${b.destinationId}`));
+    if (!destSnap.exists) return { kind: 'destination-notfound' as const };
+    const priceItems = getPriceItems(destSnap.data() ?? {});
+
+    const items = bookingLines(priceItems, qty, body.hours);
+    if (items.length === 0) return { kind: 'no-items' as const };
+    const amount = bookingTotal(items);
+    if (!Number.isFinite(amount) || amount < 0) return { kind: 'bad-amount' as const };
+
+    // Stok diperiksa untuk tanggal BARU, bukan `b.date` yang sedang diganti.
+    //
+    // Booking ini sendiri dikeluarkan lewat id, bukan lewat penalaran status.
+    // Dulu cukup beralasan "yang dihitung hanya yang lunas, dan yang sedang
+    // diubah belum" — sejak `pending` ikut menahan kursi, alasan itu tidak
+    // berlaku lagi dan booking bisa dinyatakan penuh oleh dirinya sendiri.
+    const stokSnap = await tx.get(stokQuery(b.destinationId, date));
+    const booked = bookedPerItem(
+      stokSnap.docs.filter((d) => d.id !== id).map((d) => d.data() as BookingForCount),
+    );
+    const penuh = overStock(items, priceItems, booked);
+    if (penuh.length > 0) return { kind: 'full' as const, full: penuh };
+
+    tx.update(ref, { date, name, phone, notes, items, amount });
+    return { kind: 'success' as const, amount };
+  });
+
+  if (outcome.kind === 'notfound') return bad('notfound', 404);
+  if (outcome.kind === 'forbidden') return bad('forbidden', 403);
+  if (outcome.kind === 'cancelled') return bad('cancelled', 409);
+  // Terminal, bukan "coba lagi": booking yang sudah lunas tidak boleh berubah
+  // isinya, dan layar yang menampilkannya sudah basi.
+  if (outcome.kind === 'already-paid') return bad('already-paid', 409);
+  // Sementara, bukan terminal: layar menyuruh menyelesaikan atau menunggu
+  // pembayarannya kedaluwarsa, lalu mengubahnya lagi.
+  if (outcome.kind === 'payment-pending') return bad('payment-pending', 409);
+  if (outcome.kind === 'destination-notfound') return bad('destination-notfound', 404);
+  if (outcome.kind === 'no-items') return bad('no-items', 400);
+  if (outcome.kind === 'bad-amount') return bad('bad-amount', 500);
+  if (outcome.kind === 'full') {
+    return NextResponse.json({ error: 'full', full: outcome.full }, { status: 409 });
+  }
+  return NextResponse.json({ id, amount: outcome.amount });
+}
+
+/**
+ * Buka pembayaran: tahan kursinya, lalu buat transaksi Snap.
  *
- * Karena booking yang belum dibayar tidak menahan stok, pembayaran adalah
- * satu-satunya titik yang tahu pasti berapa kursi sudah terjual. Hitungannya
- * dilakukan DI DALAM transaksi: Admin SDK memakai transaksi berkunci di
- * server, jadi query di sini benar-benar menahan pesaing — sudah diuji dengan
- * 8 pembayaran serentak pada stok 2, dan tepat 2 yang lolos, lima ronde
- * berturut-turut (lihat scripts/bookings.probe.mjs).
+ * Fungsi ini TIDAK menandai lunas — itu wewenang webhook, satu-satunya pihak
+ * yang tahu uangnya benar-benar masuk. Yang dulu terjadi di sini (paid +
+ * confirmed) sekarang ada di /api/payments/midtrans.
  *
- * Semua pembacaan harus selesai sebelum penulisan pertama — itu syarat
- * transaksi Firestore, dan urutan di bawah sudah mematuhinya.
+ * Di sinilah kuota ditegakkan.
+ *
+ * Titik pengikatnya bergeser dari "menekan bayar" ke "membuat tagihan", dan
+ * harus begitu: gateway mengambil uang sebelum memberi tahu kita, jadi kursi
+ * sudah harus jadi milik orang ini sejak QR-nya terbit. Hitungannya di DALAM
+ * transaksi — Admin SDK memakai transaksi berkunci di server, jadi query di
+ * sini benar-benar menahan pesaing (diuji 8 pembayaran serentak pada stok 2,
+ * tepat 2 yang lolos, lima ronde berturut-turut; lihat scripts/bookings.probe.mjs).
+ *
+ * Panggilan ke Midtrans sengaja DI LUAR transaksi. Transaksi Firestore bisa
+ * diulang otomatis saat bentrok, dan mengulang panggilan jaringan di dalamnya
+ * berarti menerbitkan beberapa tagihan untuk satu booking. Urutannya: klaim
+ * penahanannya dulu, terbitkan tagihan setelahnya, lepaskan penahanan kalau
+ * penerbitannya gagal.
  */
 async function pay(ctx: Ctx, body: Record<string, unknown>) {
   const id = docId(body.bookingId);
-  const method = str(body.method, 40);
-  if (!id || !method) return bad('missing-field', 400);
+  if (!id) return bad('missing-field', 400);
 
   const ref = adminDb().doc(`bookings/${id}`);
 
@@ -291,30 +416,74 @@ async function pay(ctx: Ctx, body: Record<string, unknown>) {
     if (b.status === 'cancelled') return { kind: 'cancelled' as const };
     if (b.paymentStatus === 'paid') return { kind: 'already-paid' as const };
 
+    // Popup ditutup lalu tombol ditekan lagi: kembalikan token yang SAMA.
+    // Menerbitkan token baru akan menahan kursinya dua kali untuk satu orang,
+    // dan tagihan lama tetap hidup di sisi Midtrans sampai kedaluwarsa.
+    if (pembayaranHidup(b) && b.snapToken) {
+      return { kind: 'reuse' as const, token: b.snapToken as string };
+    }
+
     const destSnap = await tx.get(adminDb().doc(`destinations/${b.destinationId}`));
-    const paidSnap = await tx.get(paidQuery(b.destinationId, b.date));
-    const booked = bookedPerItem(paidSnap.docs.map((d) => d.data() as BookingForCount));
+    const stokSnap = await tx.get(stokQuery(b.destinationId, b.date));
+    // Booking ini sendiri tidak boleh ikut dihitung — penahanannya yang lama
+    // (yang sudah kedaluwarsa) akan menyatakan dirinya penuh saat dicoba lagi.
+    const booked = bookedPerItem(
+      stokSnap.docs.filter((d) => d.id !== id).map((d) => d.data() as BookingForCount),
+    );
     const penuh = overStock(b.items ?? [], getPriceItems(destSnap.data() ?? {}), booked);
     if (penuh.length > 0) return { kind: 'full' as const, full: penuh };
 
+    // order_id tidak boleh dipakai ulang di Midtrans. Percobaan kedua setelah
+    // QR pertama kedaluwarsa butuh nomor baru, kalau tidak permintaannya
+    // ditolak dan tombolnya jadi mati tanpa sebab yang terlihat.
+    const attempt = Number(b.payAttempt ?? 0) + 1;
     tx.update(ref, {
-      paymentStatus: 'paid',
-      paymentMethod: method,
-      paidAt: new Date(),
-      status: 'confirmed',
+      paymentStatus: 'pending',
+      holdUntil: Date.now() + HOLD_MENIT * 60_000,
+      orderId: `${id}-${attempt}`,
+      payAttempt: attempt,
+      snapToken: null,
     });
-    return { kind: 'success' as const };
+    return {
+      kind: 'charge' as const,
+      attempt,
+      params: {
+        orderId: `${id}-${attempt}`,
+        amount: Number(b.amount ?? 0),
+        items: (b.items ?? []) as BookingLine[],
+        name: String(b.name ?? ''),
+        phone: String(b.phone ?? ''),
+        destinationName: String(b.destinationName ?? ''),
+      },
+    };
   });
 
   if (outcome.kind === 'notfound') return bad('notfound', 404);
   if (outcome.kind === 'forbidden') return bad('forbidden', 403);
   if (outcome.kind === 'cancelled') return bad('cancelled', 409);
+  if (outcome.kind === 'already-paid') return bad('already-paid', 409);
   if (outcome.kind === 'full') {
     // 409, bukan 500: bukan kesalahan, kursinya memang keburu diambil orang
     // lain antara booking dibuat dan tombol Bayar ditekan.
     return NextResponse.json({ error: 'full', full: outcome.full }, { status: 409 });
   }
-  return NextResponse.json({ ok: true, outcome: outcome.kind });
+  if (outcome.kind === 'reuse') {
+    return NextResponse.json({ token: outcome.token, snapUrl: SNAP_JS });
+  }
+
+  let token: string;
+  try {
+    token = await createSnapTransaction(outcome.params);
+  } catch (err) {
+    // Penahanannya dilepas lagi — dibiarkan, kursinya mati 15 menit untuk
+    // tagihan yang tidak pernah ada, dan pemesannya tidak bisa mencoba ulang.
+    await ref.update({ paymentStatus: 'unpaid', holdUntil: null, orderId: null });
+    console.error('[bookings] snap gagal', err);
+    return bad('gateway-error', 502);
+  }
+
+  await ref.update({ snapToken: token });
+  return NextResponse.json({ token, snapUrl: SNAP_JS });
 }
 
 /**
@@ -326,7 +495,8 @@ async function pay(ctx: Ctx, body: Record<string, unknown>) {
  *
  * ponytail: pembatalan booking yang sudah lunas tetap diizinkan dan uangnya
  * tidak dikembalikan otomatis — belum ada jalur refund sama sekali. Pasang
- * saat gateway sungguhan masuk, bareng dengan endpoint refund-nya.
+ * bareng endpoint refund Midtrans; sampai itu ada, membatalkan tiket yang
+ * sudah dibayar berarti uangnya harus dikembalikan pengelola secara manual.
  */
 async function cancel(ctx: Ctx, body: Record<string, unknown>) {
   const id = docId(body.bookingId);
@@ -339,6 +509,11 @@ async function cancel(ctx: Ctx, body: Record<string, unknown>) {
     const b = snap.data() ?? {};
     if (b.userId !== ctx.uid && ctx.role !== 'admin') return 'forbidden';
     if (b.status === 'used') return 'already-used';
+    // Sama seperti di update: selama QRIS-nya masih hidup, booking ini beku.
+    // Membatalkannya sekarang berarti uang bisa masuk untuk booking yang sudah
+    // tidak ada — dan itu langsung jadi kasus refund yang belum ada jalurnya.
+    // Admin pun tidak dikecualikan: yang bermasalah uangnya, bukan wewenangnya.
+    if (pembayaranHidup(b)) return 'payment-pending';
     tx.update(ref, { status: 'cancelled' });
     return 'success';
   });
@@ -346,6 +521,7 @@ async function cancel(ctx: Ctx, body: Record<string, unknown>) {
   if (outcome === 'notfound') return bad('notfound', 404);
   if (outcome === 'forbidden') return bad('forbidden', 403);
   if (outcome === 'already-used') return bad('already-used', 409);
+  if (outcome === 'payment-pending') return bad('payment-pending', 409);
   return NextResponse.json({ ok: true });
 }
 

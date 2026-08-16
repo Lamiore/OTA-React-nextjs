@@ -15,9 +15,13 @@ import {
   descendantIds,
   destinationCameraIds,
   getPriceItems,
+  hoursFromLines,
   isHourly,
   isTopLevel,
+  itemCount,
+  itemSummary,
   lineTotal,
+  qtyFromLines,
   MAX_HOURS,
   MAX_QTY,
   overStock,
@@ -189,6 +193,49 @@ assert.deepEqual(
   'baris tanpa id diabaikan, bukan ditebak dari label',
 );
 
+// ── Penahanan kursi selama pembayaran ──
+//
+// Ini pasangan yang harus dijaga bersamaan, dan salahnya berbeda arah:
+// menahan terlalu lama = kursi mati padahal tak ada yang bayar; tidak menahan
+// sama sekali = uang diterima untuk kursi yang sudah terjual ke orang lain.
+
+const SEKARANG = 1_700_000_000_000;
+const menunggu = (holdUntil: number | undefined) => ({
+  paymentStatus: 'pending',
+  holdUntil,
+  items: [{ id: 'kapal', label: 'K', price: 1, qty: 2 }],
+});
+
+assert.deepEqual(
+  bookedPerItem([menunggu(SEKARANG + 60_000)], SEKARANG),
+  { kapal: 2 },
+  'pembayaran berjalan menahan kursinya',
+);
+assert.deepEqual(
+  bookedPerItem([menunggu(SEKARANG - 1)], SEKARANG),
+  {},
+  'penahanan yang kedaluwarsa melepas kursi — popup ditutup tidak mengunci selamanya',
+);
+assert.deepEqual(
+  bookedPerItem([menunggu(undefined)], SEKARANG),
+  {},
+  'pending tanpa holdUntil tidak menahan apa pun',
+);
+
+// Dibatalkan tetap menang atas penahanan yang masih hidup.
+assert.deepEqual(
+  bookedPerItem([{ ...menunggu(SEKARANG + 60_000), status: 'cancelled' }], SEKARANG),
+  {},
+  'pembatalan melepas kursi walau pembayarannya belum kedaluwarsa',
+);
+
+// Lunas tidak peduli holdUntil sama sekali — uangnya sudah masuk.
+assert.deepEqual(
+  bookedPerItem([lunas('kapal', 1, { holdUntil: SEKARANG - 999_999 })], SEKARANG),
+  { kapal: 1 },
+  'yang lunas tidak pernah dilepas gara-gara batas waktu lewat',
+);
+
 // Inti sentinel stok: undefined = tanpa batas, 0 = habis. Membalik keduanya
 // menjual habis-habisan item yang justru sedang ditutup.
 const stokItems = [
@@ -327,5 +374,90 @@ assert.deepEqual(
 assert.deepEqual(dateFit([avB], { b: 'abc' }), { remaining: null, fits: true });
 assert.deepEqual(dateFit([avB], { b: -3 }), { remaining: null, fits: true });
 assert.deepEqual(dateFit([avB], { b: 2.9 }), { remaining: 3, fits: true }, 'dibulatkan ke bawah jadi 2');
+
+// ── Rincian isi booking (pengganti "jumlah orang") ──
+//
+// Yang dijaga di sini cuma satu hal: booking lama yang belum punya `items`
+// harus menghasilkan string kosong dan angka nol — BUKAN "undefined ×NaN".
+// Tampilan memakai nilai itu sebagai pemicu fallback ke `guests` lama, jadi
+// kalau di sini bocor nilai truthy, tiket lama kehilangan angkanya di layar.
+assert.equal(itemSummary(undefined), '');
+assert.equal(itemCount(undefined), 0);
+assert.equal(itemSummary([]), '');
+assert.equal(
+  itemSummary([
+    { label: 'Tiket Masuk', price: 25000, qty: 2 },
+    { label: 'Sewa Alat', price: 50000, qty: 1, hours: 3 },
+  ]),
+  'Tiket Masuk ×2 · Sewa Alat ×1'
+);
+// Jam TIDAK ikut dikali: yang dihitung barangnya, sama seperti bookedPerItem.
+assert.equal(
+  itemCount([
+    { label: 'Tiket Masuk', price: 25000, qty: 2 },
+    { label: 'Sewa Alat', price: 50000, qty: 1, hours: 3 },
+  ]),
+  3
+);
+
+// ── Mengisi ulang formulir saat booking diubah ──
+//
+// Ini jalan sebaliknya dari bookingLines, dan dua kasus di bawah adalah alasan
+// fungsinya ada: keduanya menghasilkan formulir yang tampak wajar tapi
+// menyimpan booking yang isinya bukan lagi yang dipesan.
+const daftarHarga = [
+  { id: 'tiket', label: 'Tiket Masuk', price: 25000, unit: '/pax' },
+  { id: 'selam', label: 'Sewa Alat', price: 50000, unit: '/jam' },
+];
+
+assert.deepEqual(
+  qtyFromLines(
+    [
+      { id: 'tiket', label: 'Tiket Masuk', price: 25000, qty: 2 },
+      { id: 'selam', label: 'Sewa Alat', price: 50000, qty: 1, hours: 3 },
+    ],
+    daftarHarga
+  ),
+  { tiket: 2, selam: 1 }
+);
+
+// Baris tanpa id — booking dari sebelum stok per item ada. Tidak bisa
+// dicocokkan ke item mana pun, jadi tidak boleh ikut mengisi formulir.
+assert.deepEqual(
+  qtyFromLines([{ label: 'Tiket Masuk', price: 25000, qty: 2 }], daftarHarga),
+  {},
+  'baris tanpa id tidak boleh dicocokkan lewat label'
+);
+
+// Item yang sudah dihapus pengelola dari daftar harga ikut gugur — persis
+// seperti yang akan dilakukan bookingLines di server saat menyimpan. Kalau di
+// sini lolos, yang dilihat pemesan beda dari yang ditagihkan.
+assert.deepEqual(
+  qtyFromLines(
+    [
+      { id: 'tiket', label: 'Tiket Masuk', price: 25000, qty: 2 },
+      { id: 'kano', label: 'Sewa Kano', price: 75000, qty: 1 },
+    ],
+    daftarHarga
+  ),
+  { tiket: 2 }
+);
+
+assert.deepEqual(qtyFromLines(undefined, daftarHarga), {});
+assert.deepEqual(qtyFromLines([], daftarHarga), {});
+
+// Durasi: dari baris per jam pertama, dan booking tanpa item per jam sama
+// sekali jatuh ke 1 — bukan 0, yang akan membuat tagihannya nol.
+assert.equal(
+  hoursFromLines([
+    { id: 'tiket', label: 'Tiket Masuk', price: 25000, qty: 2 },
+    { id: 'selam', label: 'Sewa Alat', price: 50000, qty: 1, hours: 6 },
+  ]),
+  6
+);
+assert.equal(hoursFromLines([{ id: 'tiket', label: 'Tiket Masuk', price: 25000, qty: 2 }]), 1);
+assert.equal(hoursFromLines(undefined), 1);
+// Lewat resolveHours, jadi angka rusak yang terlanjur tersimpan tetap dijinakkan.
+assert.equal(hoursFromLines([{ id: 'selam', label: 'Sewa Alat', price: 1, qty: 1, hours: 1e9 }]), MAX_HOURS);
 
 console.log('destination.ts OK');

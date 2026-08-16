@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Booking } from '@/lib/firestore';
+import { itemSummary } from '@/lib/destination';
 import { useLang } from '@/lib/useLang';
 
 /** Kode tiket yang ditampilkan ke user, diturunkan dari ID booking. */
@@ -27,7 +28,10 @@ function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
       <p className="text-sm font-semibold text-navy">{label}</p>
-      <p className="mt-0.5 truncate text-sm font-medium text-navy">{value}</p>
+      {/* break-words, bukan truncate: rincian item ("Tiket Masuk ×2 · Sewa
+          Alat ×1") lebih panjang dari satu baris sel, dan yang terpotong di
+          tiket justru bagian yang diperiksa petugas. */}
+      <p className="mt-0.5 break-words text-sm font-medium text-navy">{value}</p>
     </div>
   );
 }
@@ -98,7 +102,12 @@ export default function TicketModal({ booking, onClose }: TicketModalProps) {
 
             <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4">
               <Detail label={t('ticket.holder')} value={booking.name} />
-              <Detail label={t('ticket.guests')} value={`${booking.guests} ${t('common.people')}`} />
+              {/* Rincian item menggantikan "jumlah orang". Booking lama yang
+                  belum punya items tetap menampilkan angka lamanya. */}
+              <Detail
+                label={itemSummary(booking.items) ? t('ticket.items') : t('ticket.guests')}
+                value={itemSummary(booking.items) || `${booking.guests ?? 0} ${t('common.people')}`}
+              />
               <Detail label={t('ticket.phone')} value={booking.phone} />
               <Detail label={t('ticket.code')} value={ticketCode(booking.id)} />
             </div>
