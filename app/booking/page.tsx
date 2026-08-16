@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -29,6 +30,14 @@ import Footer from '@/components/desktop/Footer';
 import BottomNav from '@/components/mobile/BottomNav';
 import BookingHistory from '@/components/booking/BookingHistory';
 import DateStrip from '@/components/booking/DateStrip';
+
+function ArrowLeftIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
 
 function CheckCircleIcon() {
   return (
@@ -180,6 +189,12 @@ function BookingContent() {
         if (!b) return setEditError('booking.editNotFound');
         if (b.paymentStatus === 'paid' || b.status === 'cancelled') {
           return setEditError('booking.editLocked');
+        }
+        // Tagihan QRIS-nya masih hidup. Server menolak simpanannya (lihat
+        // penjaga 'payment-pending' di /api/bookings), jadi menampilkan
+        // formulirnya cuma mengundang orang mengisi lalu ditolak di ujung.
+        if (b.paymentStatus === 'pending' && Number(b.holdUntil) > Date.now()) {
+          return setEditError('booking.editPaying');
         }
         const isi = qtyFromLines(b.items, getPriceItems(destination));
         // Kosong berarti tidak ada satu pun item yang masih bisa dipesan:
@@ -438,6 +453,21 @@ function BookingContent() {
 
   return (
     <div className="w-full max-w-5xl mx-auto animate-fade-in">
+      {/* Tautan ke destinasinya, bukan router.back(): tujuannya pasti sama
+          entah pengunjung tiba dari halaman destinasi, kartu di beranda, atau
+          tautan yang dibagikan — dan back pada tab yang baru dibuka justru
+          melempar keluar dari aplikasi. Mode ubah tidak memakainya; jalan
+          keluarnya tombol "Batal" di ringkasan, yang kembali ke daftar
+          booking, bukan ke destinasi. */}
+      {!editId && (
+        <Link
+          href={`/destinations/${destId}`}
+          className="btn-text mb-3 inline-flex items-center gap-1.5 text-sm"
+        >
+          <ArrowLeftIcon />
+          {t('common.back')}
+        </Link>
+      )}
       <h1 className="section-title">{t(editId ? 'booking.editTitle' : 'booking.title')}</h1>
       <p className="section-lede">{t(editId ? 'booking.editLede' : 'booking.lede')}</p>
 

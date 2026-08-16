@@ -193,6 +193,49 @@ assert.deepEqual(
   'baris tanpa id diabaikan, bukan ditebak dari label',
 );
 
+// ── Penahanan kursi selama pembayaran ──
+//
+// Ini pasangan yang harus dijaga bersamaan, dan salahnya berbeda arah:
+// menahan terlalu lama = kursi mati padahal tak ada yang bayar; tidak menahan
+// sama sekali = uang diterima untuk kursi yang sudah terjual ke orang lain.
+
+const SEKARANG = 1_700_000_000_000;
+const menunggu = (holdUntil: number | undefined) => ({
+  paymentStatus: 'pending',
+  holdUntil,
+  items: [{ id: 'kapal', label: 'K', price: 1, qty: 2 }],
+});
+
+assert.deepEqual(
+  bookedPerItem([menunggu(SEKARANG + 60_000)], SEKARANG),
+  { kapal: 2 },
+  'pembayaran berjalan menahan kursinya',
+);
+assert.deepEqual(
+  bookedPerItem([menunggu(SEKARANG - 1)], SEKARANG),
+  {},
+  'penahanan yang kedaluwarsa melepas kursi — popup ditutup tidak mengunci selamanya',
+);
+assert.deepEqual(
+  bookedPerItem([menunggu(undefined)], SEKARANG),
+  {},
+  'pending tanpa holdUntil tidak menahan apa pun',
+);
+
+// Dibatalkan tetap menang atas penahanan yang masih hidup.
+assert.deepEqual(
+  bookedPerItem([{ ...menunggu(SEKARANG + 60_000), status: 'cancelled' }], SEKARANG),
+  {},
+  'pembatalan melepas kursi walau pembayarannya belum kedaluwarsa',
+);
+
+// Lunas tidak peduli holdUntil sama sekali — uangnya sudah masuk.
+assert.deepEqual(
+  bookedPerItem([lunas('kapal', 1, { holdUntil: SEKARANG - 999_999 })], SEKARANG),
+  { kapal: 1 },
+  'yang lunas tidak pernah dilepas gara-gara batas waktu lewat',
+);
+
 // Inti sentinel stok: undefined = tanpa batas, 0 = habis. Membalik keduanya
 // menjual habis-habisan item yang justru sedang ditutup.
 const stokItems = [

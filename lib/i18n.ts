@@ -141,6 +141,11 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Booking yang mau diubah tidak ditemukan.",
     en: "The booking you are trying to edit could not be found.",
   },
+  // Bedanya dengan editLocked: yang ini sementara, dan menyebut jalan keluarnya.
+  "booking.editPaying": {
+    id: "Pembayarannya sedang berjalan, jadi isinya dikunci dulu. Selesaikan pembayarannya, atau tunggu 15 menit sampai kedaluwarsa lalu ubah lagi.",
+    en: "A payment is in progress, so the contents are locked. Finish the payment, or wait 15 minutes for it to expire and edit again.",
+  },
   "booking.editUnsupported": {
     id: "Booking ini tidak bisa diubah — itemnya sudah tidak ada di daftar harga destinasi. Batalkan lalu pesan ulang.",
     en: "This booking cannot be edited — its items are no longer on the destination's price list. Cancel it and book again.",
@@ -234,6 +239,12 @@ const DICT: Record<string, Record<Lang, string>> = {
     id: "Tiket ini sudah dipakai check-in, jadi tidak bisa dibatalkan.",
     en: "This ticket has already been checked in, so it cannot be cancelled.",
   },
+  // Bukan galat permanen — sengaja menyebut berapa lama, supaya orang menunggu
+  // alih-alih menekan tombolnya berkali-kali.
+  "history.cancelPayingError": {
+    id: "Pembayarannya sedang berjalan. Selesaikan dulu, atau tunggu 15 menit sampai kedaluwarsa lalu batalkan.",
+    en: "A payment is in progress. Finish it, or wait 15 minutes for it to expire and then cancel.",
+  },
 
   // ── Tiket ──
   "ticket.closeLabel": { id: "Tutup tiket", en: "Close ticket" },
@@ -263,15 +274,29 @@ const DICT: Record<string, Record<Lang, string>> = {
 
   // ── Pembayaran ──
   "payment.title": { id: "Pembayaran", en: "Payment" },
-  "payment.method": { id: "Metode Pembayaran", en: "Payment Method" },
-  "payment.transfer": { id: "Transfer Bank", en: "Bank Transfer" },
-  "payment.ewallet": { id: "E-wallet", en: "E-wallet" },
-  "payment.cash": { id: "Tunai di lokasi", en: "Cash on site" },
-  "payment.cashDesc": { id: "Bayar langsung ke petugas", en: "Pay the staff on arrival" },
   "payment.pay": { id: "Bayar", en: "Pay" },
   "payment.paying": { id: "Memproses...", en: "Processing..." },
   "payment.paid": { id: "Pembayaran Berhasil", en: "Payment Successful" },
   "payment.failed": { id: "Gagal memproses pembayaran. Coba lagi.", en: "Payment failed. Please try again." },
+  "payment.qris": { id: "Bayar dengan QRIS", en: "Pay with QRIS" },
+  "payment.qrisDesc": {
+    id: "Scan pakai GoPay, DANA, OVO, ShopeePay, atau aplikasi bank apa pun.",
+    en: "Scan with GoPay, DANA, OVO, ShopeePay, or any banking app.",
+  },
+  // Muncul setelah popup Midtrans ditutup tanpa pembayaran selesai. Bukan
+  // galat: QR-nya masih hidup dan tombolnya membuka yang sama, bukan yang baru.
+  "payment.waiting": {
+    id: "Menunggu pembayaran. Kalau QR-nya sudah dibayar, halaman ini berubah sendiri.",
+    en: "Waiting for payment. This page updates itself once the QR is paid.",
+  },
+  "payment.expired": {
+    id: "Waktu pembayaran habis. Tekan bayar lagi untuk QR yang baru.",
+    en: "The payment window expired. Tap pay again for a fresh QR.",
+  },
+  "payment.gatewayError": {
+    id: "Gagal menghubungi penyedia pembayaran. Coba lagi sebentar lagi.",
+    en: "Could not reach the payment provider. Please try again shortly.",
+  },
   // Penolakan karena stok habis TIDAK boleh terdengar seperti "coba lagi":
   // mengulang tidak akan pernah berhasil, jadi jalan keluarnya yang disebut.
   "payment.full": {
@@ -283,8 +308,6 @@ const DICT: Record<string, Record<Lang, string>> = {
     en: "Thank you. Your payment for {dest} has been recorded.",
   },
   "payment.done": { id: "Selesai", en: "Done" },
-  "payment.transferDesc": { id: "BCA / Mandiri / BNI", en: "BCA / Mandiri / BNI" },
-  "payment.ewalletDesc": { id: "GoPay / OVO / DANA", en: "GoPay / OVO / DANA" },
   "payment.confirm": { id: "Konfirmasi Pembayaran", en: "Confirm Payment" },
 
   // ── Destinasi ──

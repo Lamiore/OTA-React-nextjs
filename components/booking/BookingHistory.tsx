@@ -103,7 +103,11 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
       setCancelError(
         code === 'already-used'
           ? t('history.cancelUsedError')
-          : t('history.cancelFailed'),
+          : // Sementara: QRIS-nya masih hidup. Membatalkan sekarang berarti uang
+            // bisa masuk untuk booking yang sudah tidak ada.
+            code === 'payment-pending'
+            ? t('history.cancelPayingError')
+            : t('history.cancelFailed'),
       );
     } finally {
       setCancelling(false);

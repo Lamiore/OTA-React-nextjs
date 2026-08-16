@@ -8,11 +8,18 @@
  * bisa ditulis sendiri, satu QR hanya bisa dipakai sekali, dan tiket yang belum
  * dibayar ditolak di gerbang check-in. Bonekanya dihapus di `finally`.
  *
+ * Sejak Midtrans dipasang, jalur lunasnya ikut diuji di sini: tagihan sungguhan
+ * diterbitkan ke sandbox Midtrans, lalu notifikasi webhooknya DIPALSUKAN dengan
+ * tanda tangan yang dihitung sendiri. Itu sengaja — hanya dengan begitu
+ * notifikasi bertanda tangan SALAH bisa ikut diuji, dan Midtrans tidak pernah
+ * mengirim yang salah.
+ *
  * Jalankan (butuh dev server hidup di port 3111):
- *   npx next dev -p 3111
- *   node bookings.probe.mjs
+ *   ./node_modules/.bin/next dev --port 3111
+ *   node scripts/bookings.probe.mjs
  */
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { cert, initializeApp as initAdmin } from 'firebase-admin/app';
 import { getAuth as adminAuth } from 'firebase-admin/auth';
 import { getFirestore as adminDb } from 'firebase-admin/firestore';
@@ -52,6 +59,40 @@ async function post(token, body) {
     body: JSON.stringify(body),
   });
   return { status: res.status, body: await res.json().catch(() => ({})) };
+}
+
+// ── webhook Midtrans ──
+//
+// Notifikasi dipalsukan di sini, bukan ditunggu dari Midtrans sungguhan.
+// Tanda tangannya dihitung dengan rumus yang sama persis, jadi seluruh jalur
+// lunas bisa diuji tanpa membayar apa pun — dan yang paling penting, notifikasi
+// dengan tanda tangan SALAH bisa ikut diuji, dan itu mustahil dilakukan lewat
+// Midtrans karena dia tidak pernah mengirim yang salah.
+const HOOK = `${BASE}/api/payments/midtrans`;
+
+function tandaTangan(orderId, statusCode, gross) {
+  return createHash('sha512')
+    .update(`${orderId}${statusCode}${gross}${env.MIDTRANS_SERVER_KEY}`)
+    .digest('hex');
+}
+
+async function webhook(fields) {
+  const n = { status_code: '200', transaction_status: 'settlement', payment_type: 'qris', ...fields };
+  n.signature_key ??= tandaTangan(n.order_id, n.status_code, n.gross_amount);
+  const res = await fetch(HOOK, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(n),
+  });
+  return { status: res.status, body: await res.json().catch(() => ({})) };
+}
+
+/** Lunasi booking lewat jalur asli: terbitkan tagihan, lalu kabari webhook. */
+async function lunasi(token, id) {
+  const bayar = await post(token, { action: 'pay', bookingId: id });
+  const doc = (await adminDb().doc(`bookings/${id}`).get()).data();
+  const hasil = await webhook({ order_id: doc.orderId, gross_amount: `${doc.amount}.00` });
+  return { bayar, orderId: doc.orderId, amount: doc.amount, hasil };
 }
 
 // ── boneka ──
@@ -176,17 +217,62 @@ try {
   const ciUser = await post(tokUser, { action: 'checkin', bookingId: id });
   check('user biasa tidak bisa check-in', ciUser.status === 403, `status ${ciUser.status}`);
 
-  // 7. Bayar → naik ke confirmed.
-  const bayar = await post(tokUser, { action: 'pay', bookingId: id, method: 'transfer' });
-  check('bayar berhasil', bayar.status === 200, JSON.stringify(bayar.body));
+  // 7. Terbitkan tagihan → menahan kursi, TAPI belum lunas.
+  const tagih = await post(tokUser, { action: 'pay', bookingId: id });
+  check('tagihan QRIS terbit', tagih.status === 200 && !!tagih.body.token, JSON.stringify(tagih.body));
+  const docTahan = (await adminDb().doc(`bookings/${id}`).get()).data();
+  check('menerbitkan tagihan TIDAK melunasi',
+    docTahan.paymentStatus === 'pending' && docTahan.status === 'pending',
+    `${docTahan.status}/${docTahan.paymentStatus}`);
+  check('kursinya ditahan berbatas waktu', docTahan.holdUntil > Date.now(), `${docTahan.holdUntil}`);
+
+  // INTI: selama tagihan hidup, isinya beku. Tanpa ini, booking 350rb bisa
+  // diubah jadi berapa pun lalu dibayar dengan tagihan lama yang murah.
+  const ubahSaatBayar = await post(tokUser, {
+    action: 'update', bookingId: id, date: besok,
+    phone: '08', notes: '', qty: { tiket: 50 },
+  });
+  check('tidak bisa diubah selagi tagihan hidup',
+    ubahSaatBayar.body.error === 'payment-pending', ubahSaatBayar.body.error);
+  const batalSaatBayar = await post(tokUser, { action: 'cancel', bookingId: id });
+  check('tidak bisa dibatalkan selagi tagihan hidup',
+    batalSaatBayar.body.error === 'payment-pending', batalSaatBayar.body.error);
+
+  // Tekan bayar lagi = token yang SAMA, bukan tagihan kedua.
+  const tagih2 = await post(tokUser, { action: 'pay', bookingId: id });
+  check('tekan bayar lagi memakai tagihan yang sama',
+    tagih2.body.token === tagih.body.token, 'token berbeda = kursi tertahan dobel');
+
+  // Notifikasi palsu ditolak — ini satu-satunya autentikasi webhook.
+  const palsuTtd = await webhook({
+    order_id: docTahan.orderId, gross_amount: `${docTahan.amount}.00`,
+    signature_key: 'a'.repeat(128),
+  });
+  check('webhook tanda tangan palsu ditolak', palsuTtd.status === 403, `status ${palsuTtd.status}`);
+  const belumLunas = (await adminDb().doc(`bookings/${id}`).get()).data();
+  check('tanda tangan palsu tidak melunasi apa pun',
+    belumLunas.paymentStatus === 'pending', belumLunas.paymentStatus);
+
+  // Jumlah yang tidak cocok dengan tagihan ditolak — sabuk pengaman kedua
+  // kalau penjaga 'payment-pending' di atas suatu saat bocor.
+  const jumlahBeda = await webhook({ order_id: docTahan.orderId, gross_amount: '1000.00' });
+  check('webhook jumlah tidak cocok tidak melunasi',
+    jumlahBeda.body.hasil === 'jumlah-beda', JSON.stringify(jumlahBeda.body));
+
+  // Sekarang yang asli.
+  const lunas = await webhook({ order_id: docTahan.orderId, gross_amount: `${docTahan.amount}.00` });
+  check('webhook sah melunasi', lunas.body.hasil === 'lunas', JSON.stringify(lunas.body));
   const doc2 = (await adminDb().doc(`bookings/${id}`).get()).data();
-  check('setelah bayar jadi confirmed+paid',
+  check('setelah webhook jadi confirmed+paid',
     doc2.status === 'confirmed' && doc2.paymentStatus === 'paid',
     `${doc2.status}/${doc2.paymentStatus}`);
+  check('penahanan dilepas setelah lunas', !doc2.holdUntil, `${doc2.holdUntil}`);
 
-  // 8. Bayar dua kali ditolak.
-  const bayar2 = await post(tokUser, { action: 'pay', bookingId: id, method: 'transfer' });
-  check('bayar ulang tidak dobel', bayar2.body.outcome === 'already-paid', bayar2.body.outcome);
+  // 8. Notifikasi yang sama datang dua kali tidak boleh menulis ulang.
+  const ulang = await webhook({ order_id: docTahan.orderId, gross_amount: `${docTahan.amount}.00` });
+  check('webhook diulang idempoten', ulang.body.hasil === 'sudah-lunas', JSON.stringify(ulang.body));
+  const bayar2 = await post(tokUser, { action: 'pay', bookingId: id });
+  check('bayar ulang tidak dobel', bayar2.body.error === 'already-paid', bayar2.body.error);
 
   // 9. Orang lain tidak bisa membayar/membatalkan booking ini.
   const tokLain = await idTokenFor(UID_PETUGAS);
@@ -270,7 +356,7 @@ try {
   // Booking sewa 2 set × 3 jam dilunasi, supaya bisa dibuktikan yang terpakai
   // 2 (jumlah setnya) dan bukan 6 (set × jam). Kalau jam ikut memakan stok,
   // alat yang masih ada di gudang akan tampil habis.
-  await post(tokUser, { action: 'pay', bookingId: jam.body.id, method: 'transfer' });
+  await lunasi(tokUser, jam.body.id);
 
   // GET sisa stok: tanpa autentikasi, dan cuma angka agregat.
   const av = await (await fetch(`${API}?dest=${DEST}&date=${besok}`)).json();
@@ -302,7 +388,12 @@ try {
   //
   // Stok kursi 2, belum terjual sama sekali. Bikin 4 booking (@1 kursi) — semuanya lolos,
   // karena booking yang belum dibayar memang tidak menahan stok. Lalu keempatnya
-  // MEMBAYAR SERENTAK. Tepat 2 boleh lolos; kalau lebih, kuotanya jebol.
+  // MENERBITKAN TAGIHAN SERENTAK. Tepat 2 boleh lolos; kalau lebih, kuotanya jebol.
+  //
+  // Titik pengikatnya sekarang penerbitan tagihan, bukan pelunasan — dan justru
+  // di situlah letak seluruh gunanya: kalau empat orang sama-sama dapat QR untuk
+  // dua kursi, dua di antaranya membayar uang sungguhan untuk kursi yang tidak
+  // ada, dan itu jadi kasus refund, bukan sekadar pesan galat.
   const balap = [];
   for (let i = 0; i < 4; i++) {
     const b = await post(tokUser, {
@@ -315,14 +406,21 @@ try {
   check('4 booking belum bayar semua lolos', balap.every(Boolean), 'stok tidak ditahan sebelum bayar');
 
   const hasilBayar = await Promise.all(
-    balap.map((id) => post(tokUser, { action: 'pay', bookingId: id, method: 'transfer' })),
+    balap.map((id) => post(tokUser, { action: 'pay', bookingId: id })),
   );
   const sukses = hasilBayar.filter((r) => r.status === 200).length;
   const ditolak = hasilBayar.filter((r) => r.body.error === 'full').length;
-  check('bayar serentak: tepat 2 lolos', sukses === 2, `${sukses} lolos`);
+  check('tagihan serentak: tepat 2 lolos', sukses === 2, `${sukses} lolos`);
   check('sisanya ditolak karena penuh', ditolak === 2, `${ditolak} ditolak`);
 
-  // Verifikasi ke DATABASE, bukan cuma percaya nilai balik route.
+  // Verifikasi ke DATABASE, bukan cuma percaya nilai balik route. Yang dihitung
+  // termasuk yang masih menahan: kursinya sudah tidak bisa dijual lagi walau
+  // uangnya belum masuk, dan itulah yang sedang dibuktikan.
+  const lunasIds = balap.filter((_, i) => hasilBayar[i].status === 200);
+  for (const bid of lunasIds) {
+    const d = (await adminDb().doc(`bookings/${bid}`).get()).data();
+    await webhook({ order_id: d.orderId, gross_amount: `${d.amount}.00` });
+  }
   const terjual = (await adminDb().collection('bookings')
     .where('destinationId', '==', DEST).where('date', '==', besok)
     .where('paymentStatus', '==', 'paid').get())
@@ -332,7 +430,6 @@ try {
   check('kursi terjual di DB tepat 2 (= stok)', terjual === 2, `terjual ${terjual}`);
 
   // Pembatalan mengembalikan stok.
-  const lunasIds = balap.filter((_, i) => hasilBayar[i].status === 200);
   await post(tokUser, { action: 'cancel', bookingId: lunasIds[0] });
   const av2 = await (await fetch(`${API}?dest=${DEST}&date=${besok}`)).json();
   const kursi2 = av2.items.find((a) => a.id === 'kursi');

@@ -378,25 +378,48 @@ export function hoursFromLines(lines?: BookingLine[]): number {
 // saat booking dibuat — kalau tidak, dua orang bisa sama-sama lolos di kursi
 // terakhir lalu membayar berdua. Lihat cabang "pay" di /api/bookings.
 //
-// ponytail: aturan ini utuh selama pembayarannya seketika. Gateway sungguhan
-// mengambil uang SEBELUM webhook memberi tahu kita, jadi begitu Midtrans (atau
-// gateway mana pun) dipasang, di sini perlu tambahan golongan kedua — kursi
-// yang ditahan sementara selama jendela pembayaran, dengan waktu kedaluwarsa.
-// Tanpa itu, pembayaran yang sampai belakangan bisa menemukan kursinya sudah
-// habis padahal uangnya sudah diterima, dan itu jadi urusan refund.
+// Sejak Midtrans dipasang ada golongan KEDUA yang ikut menahan: booking yang
+// sedang dibayar. Gateway mengambil uang sebelum webhook memberi tahu kita,
+// jadi tanpa penahanan sementara, pembayaran yang sampai belakangan bisa
+// menemukan kursinya sudah habis padahal uangnya sudah diterima — dan itu jadi
+// urusan refund yang belum ada jalurnya sama sekali.
+//
+// Penahanan itu berbatas waktu (`holdUntil`), bukan selamanya: orang yang buka
+// QRIS lalu pergi tidak boleh mengunci kursi sampai hari kunjungan lewat.
 
 /** Bentuk minimal booking yang dibutuhkan penghitung stok. */
 export interface BookingForCount {
   status?: string;
   paymentStatus?: string;
   items?: BookingLine[];
+  /**
+   * Batas penahanan kursi selama pembayaran, dalam milidetik epoch.
+   *
+   * Angka biasa, bukan Date atau Timestamp: fungsi ini harus tetap murni dan
+   * bisa diuji tanpa Firestore, dan Timestamp menyeret seluruh SDK-nya masuk.
+   */
+  holdUntil?: number;
+}
+
+/**
+ * Apakah booking ini sedang menahan kursi?
+ *
+ * Dua golongan: yang sudah lunas (permanen), dan yang sedang dibayar tapi
+ * belum kedaluwarsa. `pending` yang sudah lewat batas TIDAK menahan apa pun —
+ * kalau tidak, satu orang yang menutup popup QRIS akan mengunci kursinya
+ * selamanya, dan tidak ada yang pernah membersihkannya.
+ */
+function menahanStok(b: BookingForCount, now: number): boolean {
+  if (b.paymentStatus === "paid") return true;
+  return b.paymentStatus === "pending" && Number(b.holdUntil) > now;
 }
 
 /**
  * Jumlah terjual per id item, dari daftar booking pada SATU tanggal.
  *
  * Pemanggil yang menyaring tanggalnya, bukan fungsi ini — supaya fungsi ini
- * tetap murni dan bisa diuji tanpa Firestore.
+ * tetap murni dan bisa diuji tanpa Firestore. `now` disuntikkan dengan alasan
+ * yang sama: kedaluwarsanya penahanan harus bisa diuji tanpa menunggu.
  *
  * Yang dijumlahkan `qty` saja, SENGAJA tanpa `hours`. Stok menghitung barangnya
  * — 10 set alat selam tetap 10 set, dipinjam sejam atau enam jam. Mengalikan
@@ -408,10 +431,13 @@ export interface BookingForCount {
  * booking, bukan cuma durasi. Pasang itu kalau pengelola mulai mengeluh alatnya
  * "habis" padahal sudah kembali.
  */
-export function bookedPerItem(bookings: BookingForCount[]): Record<string, number> {
+export function bookedPerItem(
+  bookings: BookingForCount[],
+  now: number = Date.now(),
+): Record<string, number> {
   const out: Record<string, number> = {};
   for (const b of bookings) {
-    if (b.paymentStatus !== "paid") continue;
+    if (!menahanStok(b, now)) continue;
     // Dibatalkan setelah dibayar mengembalikan stoknya. Kalau baris ini hilang,
     // pembatalan tidak pernah melepas kursi dan tanggal itu penuh selamanya.
     if (b.status === "cancelled") continue;
