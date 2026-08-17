@@ -9,7 +9,8 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { updateUserPhone } from '@/lib/firestore';
+import { updateUserProfile } from '@/lib/firestore';
+import { kelengkapanProfil, nikBerbentukSah } from '@/lib/profile';
 import { useLang } from '@/lib/useLang';
 
 function GoogleIcon() {
@@ -56,9 +57,11 @@ export default function AccountSettings({ user }: { user: User }) {
   const providers = user.providerData.map((p) => p.providerId);
   const [googleLinked, setGoogleLinked] = useState(providers.includes('google.com'));
 
-  // ── Profil: nama + telepon ──
+  // ── Profil: nama + telepon + kota + NIK ──
   const [name, setName] = useState(user.displayName ?? '');
   const [phone, setPhone] = useState('');
+  const [city, setCity] = useState('');
+  const [nik, setNik] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState<{ ok: boolean; key: string } | null>(null);
 
@@ -66,8 +69,17 @@ export default function AccountSettings({ user }: { user: User }) {
     if (!db) return;
     getDoc(doc(db, 'users', user.uid)).then((snap) => {
       setPhone((snap.data()?.phone as string) ?? '');
+      setCity((snap.data()?.city as string) ?? '');
+      setNik((snap.data()?.nik as string) ?? '');
     });
   }, [user.uid]);
+
+  /**
+   * Dihitung dari isi kolom yang SEDANG diketik, bukan dari yang tersimpan:
+   * batangnya bergerak sambil mengetik, jadi jelas kolom mana yang menaikkannya.
+   * Rumusnya sama dengan yang dipakai lonceng notifikasi — lihat lib/profile.
+   */
+  const lengkap = kelengkapanProfil({ name, phone, city, nik, emailVerified: user.emailVerified });
 
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,13 +89,25 @@ export default function AccountSettings({ user }: { user: User }) {
       setProfileMsg({ ok: false, key: 'account.nameRequired' });
       return;
     }
+    // Kosong tetap boleh disimpan — NIK memang tidak wajib, cuma salah satu
+    // syarat kelengkapan. Yang ditolak adalah yang diisi tapi bukan 16 angka:
+    // menyimpannya diam-diam berarti batangnya tidak naik dan tidak ada satu
+    // pun petunjuk kenapa.
+    if (nik.trim() && !nikBerbentukSah(nik)) {
+      setProfileMsg({ ok: false, key: 'account.nikInvalid' });
+      return;
+    }
     setProfileMsg(null);
     setSavingProfile(true);
     try {
       if (nm !== (user.displayName ?? '')) {
         await updateProfile(auth.currentUser, { displayName: nm });
       }
-      await updateUserPhone(user.uid, phone.trim());
+      await updateUserProfile(user.uid, {
+        phone: phone.trim(),
+        city: city.trim(),
+        nik: nik.trim(),
+      });
       setProfileMsg({ ok: true, key: 'account.profileSaved' });
     } catch {
       setProfileMsg({ ok: false, key: 'common.saveFailed' });
@@ -138,6 +162,53 @@ export default function AccountSettings({ user }: { user: User }) {
       {/* Profil */}
       <form onSubmit={saveProfile} className="px-5 py-4">
         <p className="mb-3 text-sm font-semibold text-navy">{t('account.profile')}</p>
+
+        {/* Kelengkapan profil. Tetap ditampilkan setelah 100% — hilang begitu
+            lengkap malah membuat orang mengira bagian ini rusak; yang berhenti
+            mengganggu cuma lonceng di navbar. */}
+        <div className="mb-4 rounded-md border border-shore-200 bg-shore-50 px-4 py-3">
+          <div className="flex items-baseline justify-between">
+            <p className="text-xs font-medium text-navy">{t('complete.title')}</p>
+            <p className="text-sm font-semibold text-navy">{lengkap.persen}%</p>
+          </div>
+          <div
+            className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-shore-200"
+            role="progressbar"
+            aria-valuenow={lengkap.persen}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={t('complete.title')}
+          >
+            <div
+              className="h-full rounded-full bg-teal-500 transition-all duration-long"
+              style={{ width: `${lengkap.persen}%` }}
+            />
+          </div>
+          <ul className="mt-2.5 space-y-1">
+            {lengkap.items.map((it) => (
+              <li key={it.key} className="flex items-center gap-2 text-2xs">
+                <span
+                  aria-hidden
+                  className={
+                    it.done
+                      ? 'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-teal-500 text-white'
+                      : 'h-3.5 w-3.5 shrink-0 rounded-full border border-shore-300'
+                  }
+                >
+                  {it.done && (
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </span>
+                <span className={it.done ? 'text-navy-soft line-through' : 'text-navy'}>
+                  {t(it.key)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         <div className="space-y-3">
           <div>
             <label className="block text-xs font-medium text-navy mb-1.5">{t('account.name')}</label>
@@ -153,6 +224,30 @@ export default function AccountSettings({ user }: { user: User }) {
               inputMode="tel"
             />
             <p className="text-2xs text-navy-soft mt-1.5">{t('account.phoneHint')}</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-navy mb-1.5">{t('account.city')}</label>
+            <input aria-label={t('account.city')}
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className={inputClass}
+              placeholder={t('account.cityPlaceholder')}
+            />
+            <p className="text-2xs text-navy-soft mt-1.5">{t('account.cityHint')}</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-navy mb-1.5">{t('account.nik')}</label>
+            <input aria-label={t('account.nik')}
+              value={nik}
+              // Angka saja, dipotong di 16: kolom NIK yang menerima huruf cuma
+              // menunda penolakannya sampai tombol simpan ditekan.
+              onChange={(e) => setNik(e.target.value.replace(/\D/g, '').slice(0, 16))}
+              className={inputClass}
+              placeholder={t('account.nikPlaceholder')}
+              inputMode="numeric"
+              autoComplete="off"
+            />
+            <p className="text-2xs text-navy-soft mt-1.5">{t('account.nikHint')}</p>
           </div>
         </div>
         {banner(profileMsg)}

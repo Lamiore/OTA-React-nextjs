@@ -304,6 +304,16 @@ export interface AppUser {
   photoURL: string;
   /** No. HP/WhatsApp kontak — diisi sendiri di Pengaturan Akun. */
   phone?: string;
+  /** Kota/kabupaten asal — diisi sendiri di Pengaturan Akun. */
+  city?: string;
+  /**
+   * NIK KTP, 16 angka. Diisi sendiri dan TIDAK diverifikasi ke Dukcapil —
+   * yang diperiksa cuma bentuknya. Jangan pernah dipakai sebagai bukti
+   * identitas, dan jangan disalin ke dokumen lain (booking, tiket, Midtrans):
+   * dokumen users hanya terbaca pemiliknya dan admin, dan di situlah dia harus
+   * berhenti.
+   */
+  nik?: string;
   role: "user" | "pengelola" | "admin";
   /** Id destinasi tersimpan (wishlist) — di-toggle dari tombol hati di kartu destinasi. */
   saved?: string[];
@@ -356,10 +366,13 @@ export async function deleteUserAccount(uid: string) {
   if (!res.ok) throw new Error("delete-failed");
 }
 
-/** Simpan/ubah no. HP kontak di profil pengguna. */
-export async function updateUserPhone(uid: string, phone: string) {
+/** Simpan/ubah isian profil yang dipegang dokumen users (bukan Auth). */
+export async function updateUserProfile(
+  uid: string,
+  data: { phone: string; city: string; nik: string },
+) {
   if (!db) return;
-  await updateDoc(doc(db, "users", uid), { phone });
+  await updateDoc(doc(db, "users", uid), data);
 }
 
 /** Id destinasi tersimpan milik user (real-time dari users/{uid}.saved). */

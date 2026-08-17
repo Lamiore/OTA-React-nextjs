@@ -9,6 +9,7 @@ import { useAuthState } from '@/lib/useAuth';
 import {
   createBooking,
   getPriceItems,
+  getUser,
   isHourly,
   updateBooking,
   MAX_HOURS,
@@ -91,6 +92,37 @@ function BookingContent() {
    * (lihat create di /api/bookings), jadi kolom ini tidak ikut terkirim.
    */
   const namaAkun = user?.displayName?.trim() || user?.email?.split('@')[0] || '';
+
+  /**
+   * No. HP bawaan dari profil. Kolomnya tetap ada dan tetap bisa diubah — yang
+   * hilang cuma keharusan mengetik ulang nomor yang sama tiap kali memesan.
+   *
+   * Disimpan terpisah dari form supaya "Booking Lagi" bisa mengosongkan
+   * formulir tanpa ikut membuang bawaannya.
+   */
+  const [hpProfil, setHpProfil] = useState('');
+
+  useEffect(() => {
+    // Mode ubah mengisi nomornya sendiri dari booking yang tersimpan; bacaan
+    // ini bisa datang belakangan dan menimpanya dengan nomor profil.
+    if (!user || editId) return;
+    let batal = false;
+    getUser(user.uid)
+      .then((u) => {
+        const hp = u?.phone?.trim();
+        if (batal || !hp) return;
+        setHpProfil(hp);
+        // Yang sudah terlanjur diketik sendiri menang: prefill yang mendarat
+        // belakangan tidak boleh menghapus ketikan orang di tengah jalan.
+        setForm((f) => (f.phone ? f : { ...f, phone: hp }));
+      })
+      // Gagal membacanya bukan alasan memblokir apa pun — server jatuh ke
+      // nomor yang sama dari profil kalau kolomnya terkirim kosong.
+      .catch(() => {});
+    return () => {
+      batal = true;
+    };
+  }, [user, editId]);
 
   const [qty, setQty] = useState<Record<string, number>>({});
   /**
@@ -352,9 +384,11 @@ function BookingContent() {
       setError(
         code === 'full'
           ? t('booking.itemFull')
-          : code === 'already-paid' || code === 'cancelled'
-            ? t('booking.editLocked')
-            : t('booking.failed'),
+          : code === 'too-many-unpaid'
+            ? t('booking.tooManyUnpaid')
+            : code === 'already-paid' || code === 'cancelled'
+              ? t('booking.editLocked')
+              : t('booking.failed'),
       );
     } finally {
       setSubmitting(false);
@@ -421,7 +455,7 @@ function BookingContent() {
               <button
                 onClick={() => {
                   setSuccess(false);
-                  setForm({ date: '', phone: '', notes: '' });
+                  setForm({ date: '', phone: hpProfil, notes: '' });
                   setQty(priceItems.length > 0 ? { [priceItems[0].id]: 1 } : {});
                   setHours(1);
                 }}
