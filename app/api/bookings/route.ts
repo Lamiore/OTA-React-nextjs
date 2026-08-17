@@ -42,6 +42,18 @@ export const runtime = 'nodejs';
 
 type Ctx = { uid: string; role: string };
 
+/**
+ * Batas booking belum-bayar yang boleh menggantung sekaligus per akun.
+ *
+ * Bukan penjaga uang — yang menjaga stok adalah penahanan 15 menit di cabang
+ * "pay". Ini penjaga sampah: tanpa batas, satu akun bisa menyemprot ratusan
+ * booking yang tidak akan pernah dibayar, dan daftar pengelola tenggelam. Yang
+ * dibatasi cuma yang MENGGANTUNG — membayar atau membatalkan langsung
+ * mengembalikan jatahnya, jadi orang yang benar-benar memesan tidak pernah
+ * menyentuh angka ini.
+ */
+const MAX_UNPAID = 3;
+
 function bad(error: string, status: number) {
   return NextResponse.json({ error }, { status });
 }
@@ -215,6 +227,27 @@ async function namaPemesan(uid: string): Promise<string> {
 }
 
 /**
+ * No. HP kontak, plus penyimpanan nomor pertama ke profil.
+ *
+ * Kolomnya di layar sudah terisi dari profil, tapi yang menentukan tetap
+ * server: prefill yang belum sempat termuat (jaringan lambat, bacaan gagal)
+ * tidak boleh berubah jadi 'missing-field' padahal nomornya jelas ada.
+ *
+ * Ditulis balik HANYA kalau profilnya masih kosong. Nomor yang sengaja diatur
+ * di Pengaturan Akun tidak boleh diam-diam tertimpa oleh satu booking yang
+ * nomornya dipinjam dari orang lain.
+ */
+async function nomorHp(uid: string, diminta: string): Promise<string> {
+  const ref = adminDb().doc(`users/${uid}`);
+  const tersimpan = str((await ref.get()).data()?.phone, 32);
+  if (!diminta) return tersimpan;
+  // merge, bukan update(): dokumen users yang belum ada melempar di update()
+  // dan itu akan menggagalkan seluruh bookingnya cuma karena menyimpan bawaan.
+  if (!tersimpan) await ref.set({ phone: diminta }, { merge: true });
+  return diminta;
+}
+
+/**
  * Buat booking. Harga TIDAK diterima dari klien: server membaca dokumen
  * destinasinya sendiri, memakai daftar harga di situ, dan menghitung ulang
  * totalnya lewat rumus yang sama dengan yang dipakai ringkasan di layar
@@ -226,11 +259,10 @@ async function namaPemesan(uid: string): Promise<string> {
 async function create(ctx: Ctx, body: Record<string, unknown>) {
   const destinationId = docId(body.destinationId);
   const date = str(body.date, 10);
-  const phone = str(body.phone, 32);
   const notes = str(body.notes, 500);
   const qty = (body.qty ?? {}) as Record<string, unknown>;
 
-  if (!destinationId || !phone) return bad('missing-field', 400);
+  if (!destinationId) return bad('missing-field', 400);
   if (typeof qty !== 'object' || Array.isArray(qty)) return bad('bad-qty', 400);
 
   // Tanggal: bentuk ketat + tidak boleh sebelum hari ini menurut UTC. UTC
@@ -238,6 +270,24 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
   // salah menolak booking untuk hari yang di tempat pengguna masih berjalan.
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return bad('bad-date', 400);
   if (date < new Date().toISOString().slice(0, 10)) return bad('past-date', 400);
+
+  // Dihitung sebelum apa pun ditulis. Batalan tidak ikut — dokumennya tetap
+  // 'unpaid' selamanya, jadi menghitungnya berarti jatah yang habis sekali lalu
+  // tidak pernah kembali. Disaring di memori, bukan lewat `!=` di query, karena
+  // ketidaksamaan menuntut composite index yang belum ada (sama alasannya
+  // dengan stokQuery).
+  const gantung = await adminDb()
+    .collection('bookings')
+    .where('userId', '==', ctx.uid)
+    .where('paymentStatus', 'in', ['unpaid', 'pending'])
+    .get();
+  const belumBayar = gantung.docs.filter((d) => d.data().status !== 'cancelled').length;
+  if (belumBayar >= MAX_UNPAID) {
+    return NextResponse.json({ error: 'too-many-unpaid', max: MAX_UNPAID }, { status: 409 });
+  }
+
+  const phone = await nomorHp(ctx.uid, str(body.phone, 32));
+  if (!phone) return bad('missing-field', 400);
 
   const name = await namaPemesan(ctx.uid);
 
@@ -308,14 +358,18 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
 async function update(ctx: Ctx, body: Record<string, unknown>) {
   const id = docId(body.bookingId);
   const date = str(body.date, 10);
-  const phone = str(body.phone, 32);
   const notes = str(body.notes, 500);
   const qty = (body.qty ?? {}) as Record<string, unknown>;
 
-  if (!id || !phone) return bad('missing-field', 400);
+  if (!id) return bad('missing-field', 400);
   if (typeof qty !== 'object' || Array.isArray(qty)) return bad('bad-qty', 400);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return bad('bad-date', 400);
   if (date < new Date().toISOString().slice(0, 10)) return bad('past-date', 400);
+
+  // Di luar transaksi: nomorHp menulis sendiri, dan transaksi di bawah bisa
+  // diulang berkali-kali saat berebut dokumen yang sama.
+  const phone = await nomorHp(ctx.uid, str(body.phone, 32));
+  if (!phone) return bad('missing-field', 400);
 
   // Ikut diperbarui: kalau namanya diganti di Profil sejak booking dibuat,
   // yang tersimpan di sini harus ikut, bukan tertinggal sebagai satu-satunya

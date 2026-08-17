@@ -170,6 +170,13 @@ const DICT: Record<string, Record<Lang, string>> = {
   "booking.failed": { id: "Gagal membuat booking. Coba lagi.", en: "Could not create the booking. Please try again." },
   "booking.remaining": { id: "Sisa {n}", en: "{n} left" },
   "booking.soldOut": { id: "Habis untuk tanggal ini", en: "Sold out for this date" },
+  // Angka 3-nya ikut MAX_UNPAID di /api/bookings — kalau di sana diubah, kalimat
+  // ini ikut diubah. Sengaja tidak diimpor: mengimpor berkas route ke komponen
+  // klien menyeret Admin SDK ke bundel browser.
+  "booking.tooManyUnpaid": {
+    id: "Kamu punya 3 booking yang belum dibayar. Selesaikan atau batalkan salah satunya dulu sebelum memesan lagi.",
+    en: "You have 3 unpaid bookings. Pay or cancel one of them before booking again.",
+  },
   "booking.itemFull": {
     id: "Maaf, salah satu item yang kamu pilih sudah habis untuk tanggal ini. Kurangi jumlahnya atau pilih tanggal lain.",
     en: "Sorry, one of the items you picked just sold out for this date. Reduce the quantity or choose another date.",
@@ -378,9 +385,42 @@ const DICT: Record<string, Record<Lang, string>> = {
   "account.phone": { id: "Nomor Telepon", en: "Phone Number" },
   "account.phonePlaceholder": { id: "cth: 0812-3456-7890", en: "e.g. 0812-3456-7890" },
   "account.phoneHint": {
-    id: "Dipakai admin untuk menghubungi kamu (mis. via WhatsApp).",
-    en: "Used by admins to reach you (e.g. via WhatsApp).",
+    id: "Dipakai admin untuk menghubungi kamu (mis. via WhatsApp), dan jadi isian bawaan saat booking.",
+    en: "Used by admins to reach you (e.g. via WhatsApp), and prefilled when you book.",
   },
+  "account.city": { id: "Kota Asal", en: "Home City" },
+  "account.cityPlaceholder": { id: "cth: Manado", en: "e.g. Manado" },
+  "account.cityHint": {
+    id: "Dipakai pengelola untuk tahu pengunjungnya datang dari mana.",
+    en: "Helps managers see where their visitors come from.",
+  },
+
+  "account.nik": { id: "Nomor KTP (NIK)", en: "ID Card Number (NIK)" },
+  "account.nikPlaceholder": { id: "16 angka", en: "16 digits" },
+  // Sengaja menyebut "tidak dicek ke Dukcapil": nomor ini tidak diverifikasi
+  // ke mana pun, dan membiarkan orang mengira sebaliknya jauh lebih buruk
+  // daripada tidak punya kolomnya sama sekali.
+  "account.nikHint": {
+    id: "Opsional. Disimpan untuk pendataan pengunjung, tidak dicek ke Dukcapil, dan hanya terlihat olehmu dan admin.",
+    en: "Optional. Stored for visitor records only, not checked against Dukcapil, and visible only to you and admins.",
+  },
+  "account.nikInvalid": {
+    id: "Nomor KTP harus 16 angka. Kosongkan kalau belum mau mengisi.",
+    en: "ID card number must be 16 digits. Leave it blank if you'd rather not fill it in.",
+  },
+
+  // ── Kelengkapan profil ──
+  "complete.title": { id: "Kelengkapan Profil", en: "Profile Completeness" },
+  "complete.notif": {
+    id: "{n} data lagi. Lengkapi biar pengelola gampang menghubungi kamu.",
+    en: "{n} field(s) left. Complete it so managers can reach you easily.",
+  },
+  "complete.name": { id: "Nama lengkap", en: "Full name" },
+  "complete.phone": { id: "Nomor telepon", en: "Phone number" },
+  "complete.city": { id: "Kota asal", en: "Home city" },
+  "complete.nik": { id: "Nomor KTP", en: "ID card number" },
+  "complete.email": { id: "Email terverifikasi", en: "Verified email" },
+
   "account.linked": { id: "Akun Tertaut", en: "Linked Accounts" },
   "account.linkGoogle": { id: "Hubungkan Google", en: "Link Google" },
   "account.linkGoogleHint": {

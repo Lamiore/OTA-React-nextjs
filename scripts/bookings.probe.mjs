@@ -52,6 +52,34 @@ async function idTokenFor(uid) {
   const cred = await signInWithCustomToken(getAuth(web), custom);
   return cred.user.getIdToken();
 }
+
+/** uid boneka tambahan yang dibuat di tengah jalan; dibersihkan di `finally`. */
+const boneka = [];
+
+/**
+ * Pengunjung baru lengkap dengan tokennya.
+ *
+ * Ada sejak /api/bookings membatasi booking belum-bayar per AKUN: tes yang
+ * memerlukan banyak booking menggantung sekaligus (balapan pembayaran) memang
+ * harus datang dari banyak orang — memakai satu akun untuk itu bukan cuma
+ * kena batasnya, tapi juga tidak pernah mewakili keadaan yang diuji.
+ */
+async function userBaru(label) {
+  const uid = `probe-${label}-${Date.now()}-${boneka.length}`;
+  await adminAuth().createUser({ uid, email: `${uid}@probe.local`, emailVerified: true });
+  await adminDb().doc(`users/${uid}`).set({ role: 'user' });
+  boneka.push(uid);
+  return idTokenFor(uid);
+}
+
+/**
+ * Buang booking yang sudah selesai diperiksa, supaya tidak memakan jatah
+ * belum-bayar akun ujinya. Hapus, bukan batalkan: dokumen batal tetap terbaca
+ * oleh tes stok di bawah, dan yang ini tidak boleh ikut terhitung di mana pun.
+ */
+async function lepas(...ids) {
+  for (const id of ids) if (id) await adminDb().doc(`bookings/${id}`).delete();
+}
 async function post(token, body) {
   const res = await fetch(API, {
     method: 'POST',
@@ -173,6 +201,9 @@ try {
   });
   if (jamGila.body.id) created.push(jamGila.body.id);
   check('durasi raksasa dibatasi 24 jam', jamGila.body.amount === 50000 * 24, `dapat ${jamGila.body.amount}`);
+  // Dilepas SEBELUM booking berikutnya, bukan sesudah: nilai baliknya sudah
+  // diperiksa, dan jatah belum-bayar akun ini cuma tiga.
+  await lepas(jamGila.body.id);
 
   const jamNol = await post(tokUser, {
     action: 'create', destinationId: DEST, date: besok, guests: 1,
@@ -180,6 +211,35 @@ try {
   });
   if (jamNol.body.id) created.push(jamNol.body.id);
   check('durasi 0 tidak menggratiskan', jamNol.body.amount === 50000, `dapat ${jamNol.body.amount}`);
+  await lepas(jamNol.body.id);
+
+  // 2c. No. HP: nomor pertama jadi bawaan profil, dan booking berikutnya tidak
+  // perlu mengirimnya lagi. Kalau salah satu setengahnya putus, yang muncul
+  // bukan error melainkan kolom yang tiba-tiba wajib diisi ulang.
+  const profil1 = (await adminDb().doc(`users/${UID_USER}`).get()).data();
+  check('no. HP pertama tersimpan ke profil', profil1.phone === '0800', String(profil1.phone));
+
+  const tanpaHp = await post(tokUser, {
+    action: 'create', destinationId: DEST, date: besok, qty: { tiket: 1 },
+  });
+  if (tanpaHp.body.id) created.push(tanpaHp.body.id);
+  check('booking tanpa no. HP diterima', tanpaHp.status === 200, `status ${tanpaHp.status}`);
+  const docHp = (await adminDb().doc(`bookings/${tanpaHp.body.id}`).get()).data();
+  check('no. HP diambil dari profil', docHp?.phone === '0800', String(docHp?.phone));
+  await lepas(tanpaHp.body.id);
+
+  // Nomor lain untuk satu booking tidak mengganti bawaan profilnya —
+  // memesankan untuk orang lain sekali bukan berarti pindah nomor.
+  const hpLain = await post(tokUser, {
+    action: 'create', destinationId: DEST, date: besok, phone: '0899', qty: { tiket: 1 },
+  });
+  if (hpLain.body.id) created.push(hpLain.body.id);
+  // Diperiksa terpisah: booking yang justru DITOLAK juga meninggalkan profil
+  // tidak tertimpa, dan tanpa baris ini kegagalan itu terbaca sebagai lolos.
+  check('booking dengan nomor lain dibuat', hpLain.status === 200, `status ${hpLain.status} ${hpLain.body.error ?? ''}`);
+  const profil2 = (await adminDb().doc(`users/${UID_USER}`).get()).data();
+  check('bawaan profil tidak tertimpa nomor booking lain', profil2.phone === '0800', String(profil2.phone));
+  await lepas(hpLain.body.id);
 
   // 2b. Email belum diverifikasi → ditolak server, bukan cuma disembunyikan UI.
   const UID_MENTAH = 'probe-mentah-' + Date.now();
@@ -394,19 +454,26 @@ try {
   // di situlah letak seluruh gunanya: kalau empat orang sama-sama dapat QR untuk
   // dua kursi, dua di antaranya membayar uang sungguhan untuk kursi yang tidak
   // ada, dan itu jadi kasus refund, bukan sekadar pesan galat.
+  //
+  // Empat AKUN berbeda, bukan satu akun empat kali: sejak booking belum-bayar
+  // dibatasi 3 per akun, satu akun tidak akan sampai ke booking keempat — dan
+  // empat orang memang yang sebenarnya diwakili di sini.
   const balap = [];
+  const tokBalap = [];
   for (let i = 0; i < 4; i++) {
-    const b = await post(tokUser, {
+    const tok = await userBaru(`balap${i}`);
+    const b = await post(tok, {
       action: 'create', destinationId: DEST, date: besok, guests: 1,
       name: 'Balap', phone: '08', notes: '', qty: { kursi: 1 },
     });
     balap.push(b.body.id);
+    tokBalap.push(tok);
     created.push(b.body.id);
   }
   check('4 booking belum bayar semua lolos', balap.every(Boolean), 'stok tidak ditahan sebelum bayar');
 
   const hasilBayar = await Promise.all(
-    balap.map((id) => post(tokUser, { action: 'pay', bookingId: id })),
+    balap.map((id, i) => post(tokBalap[i], { action: 'pay', bookingId: id })),
   );
   const sukses = hasilBayar.filter((r) => r.status === 200).length;
   const ditolak = hasilBayar.filter((r) => r.body.error === 'full').length;
@@ -416,7 +483,8 @@ try {
   // Verifikasi ke DATABASE, bukan cuma percaya nilai balik route. Yang dihitung
   // termasuk yang masih menahan: kursinya sudah tidak bisa dijual lagi walau
   // uangnya belum masuk, dan itulah yang sedang dibuktikan.
-  const lunasIds = balap.filter((_, i) => hasilBayar[i].status === 200);
+  const lunasIdx = balap.map((_, i) => i).filter((i) => hasilBayar[i].status === 200);
+  const lunasIds = lunasIdx.map((i) => balap[i]);
   for (const bid of lunasIds) {
     const d = (await adminDb().doc(`bookings/${bid}`).get()).data();
     await webhook({ order_id: d.orderId, gross_amount: `${d.amount}.00` });
@@ -429,11 +497,46 @@ try {
     .reduce((s, it) => s + it.qty, 0);
   check('kursi terjual di DB tepat 2 (= stok)', terjual === 2, `terjual ${terjual}`);
 
-  // Pembatalan mengembalikan stok.
-  await post(tokUser, { action: 'cancel', bookingId: lunasIds[0] });
+  // Pembatalan mengembalikan stok. Dibatalkan oleh pemiliknya sendiri —
+  // booking ini sekarang milik salah satu boneka balapan, bukan tokUser.
+  await post(tokBalap[lunasIdx[0]], { action: 'cancel', bookingId: lunasIds[0] });
   const av2 = await (await fetch(`${API}?dest=${DEST}&date=${besok}`)).json();
   const kursi2 = av2.items.find((a) => a.id === 'kursi');
   check('batal mengembalikan stok', kursi2.remaining === 1, `sisa ${kursi2.remaining}`);
+
+  // ── Batas booking belum-bayar per akun ──
+  //
+  // Penjaga sampah, bukan penjaga uang: yang menahan kursi tetap tagihan 15
+  // menit. Yang dijaga di sini adalah satu akun menyemprot booking yang tidak
+  // akan pernah dibayar sampai daftar pengelola tidak terbaca lagi.
+  //
+  // Akun sendiri, bukan tokUser: yang diuji justru angka per akunnya.
+  const tokBatas = await userBaru('batas');
+  const pesanSatu = () => post(tokBatas, {
+    action: 'create', destinationId: DEST, date: besok, phone: '08', qty: { tiket: 1 },
+  });
+
+  const batasIds = [];
+  for (let i = 0; i < 3; i++) {
+    const b = await pesanSatu();
+    batasIds.push(b.body.id);
+    if (b.body.id) created.push(b.body.id);
+  }
+  check('3 booking belum bayar masih boleh', batasIds.every(Boolean), batasIds.join(', '));
+
+  const keempat = await pesanSatu();
+  check(
+    'booking keempat ditolak',
+    keempat.status === 409 && keempat.body.error === 'too-many-unpaid',
+    `${keempat.status} ${keempat.body.error}`,
+  );
+
+  // Jatahnya harus kembali. Kalau tidak, satu akun yang salah pesan tiga kali
+  // terkunci selamanya — dan itu bukan penjaga sampah lagi, itu pintu tertutup.
+  await post(tokBatas, { action: 'cancel', bookingId: batasIds[0] });
+  const lagi = await pesanSatu();
+  if (lagi.body.id) created.push(lagi.body.id);
+  check('batal mengembalikan jatah', lagi.status === 200, `status ${lagi.status} ${lagi.body.error ?? ''}`);
 
   // Path injection: id berisi garis miring tidak boleh menunjuk dokumen lain.
   const injeksi = await post(tokUser, {
@@ -449,6 +552,10 @@ try {
   await adminDb().doc(`users/${UID_PETUGAS}`).delete();
   await adminAuth().deleteUser(UID_USER);
   await adminAuth().deleteUser(UID_PETUGAS);
+  for (const uid of boneka) {
+    await adminDb().doc(`users/${uid}`).delete();
+    await adminAuth().deleteUser(uid);
+  }
 }
 
 console.log(`\n${pass} lolos, ${fail} gagal`);
