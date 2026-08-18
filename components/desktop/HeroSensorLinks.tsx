@@ -12,8 +12,7 @@ import { useLang } from '@/lib/useLang';
  *
  * Sumbernya RTDB `monitoring/<stationId>/latest` lewat stationPath, sama dengan
  * yang dibaca kartu destinasi dan LiveMonitorPanel. Bukan `monitoring_data` di
- * Firestore yang dipakai DesktopSensorStrip/SensorScroll: koleksi itu tidak
- * pernah diisi firmware dan kedua komponennya tidak dirender di mana pun.
+ * Firestore: koleksi itu tidak pernah diisi firmware.
  */
 
 type Station = { id: string; name: string; location?: string; path: string };
