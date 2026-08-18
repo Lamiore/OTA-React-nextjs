@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
-import { docId, str } from '@/lib/format';
+import { docId, hariIniWIT, str } from '@/lib/format';
 import {
   availability,
   bookedPerItem,
@@ -271,17 +271,36 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return bad('bad-date', 400);
   if (date < new Date().toISOString().slice(0, 10)) return bad('past-date', 400);
 
-  // Dihitung sebelum apa pun ditulis. Batalan tidak ikut — dokumennya tetap
-  // 'unpaid' selamanya, jadi menghitungnya berarti jatah yang habis sekali lalu
-  // tidak pernah kembali. Disaring di memori, bukan lewat `!=` di query, karena
-  // ketidaksamaan menuntut composite index yang belum ada (sama alasannya
-  // dengan stokQuery).
+  // Dihitung sebelum apa pun ditulis. Dua golongan tidak ikut, dan keduanya
+  // karena alasan yang sama: dokumennya tetap 'unpaid' selamanya, jadi
+  // menghitungnya berarti jatah yang habis sekali lalu tidak pernah kembali.
+  //
+  // 1. Yang dibatalkan, dan yang QR-nya sudah dipakai.
+  // 2. Yang tanggalnya sudah lewat. Ini yang dulu bocor: kartunya sudah tidak
+  //    ditampilkan di "booking berlangsung" (BookingHistory menyembunyikan yang
+  //    lewat tanggal), tapi di sini masih dihitung — orang ditolak "sudah 3"
+  //    sambil di layarnya cuma kelihatan 2, tanpa satu pun petunjuk kenapa.
+  //    Yang harus dijaga: batas ini dan daftar itu WAJIB memakai definisi
+  //    "masih berlangsung" yang sama — tiga klausa di bawah ini cerminan
+  //    persis dari filter variant 'active' di BookingHistory. 'used' ikut
+  //    disalin walau hari ini mestinya mustahil ('used' menuntut lunas, dan
+  //    yang lunas tidak lolos query di atas): dokumen 'confirmed' + 'unpaid'
+  //    peninggalan sebelum pembayaran dipasang juga mestinya mustahil, dan
+  //    dokumen itu ADA di koleksi ini. Mencocokkan definisinya lebih murah
+  //    daripada menalar ulang state mana yang bisa muncul.
+  //
+  // Disaring di memori, bukan lewat `!=`/`<` di query, karena ketidaksamaan
+  // menuntut composite index yang belum ada (sama alasannya dengan stokQuery).
   const gantung = await adminDb()
     .collection('bookings')
     .where('userId', '==', ctx.uid)
     .where('paymentStatus', 'in', ['unpaid', 'pending'])
     .get();
-  const belumBayar = gantung.docs.filter((d) => d.data().status !== 'cancelled').length;
+  const hariIni = hariIniWIT();
+  const belumBayar = gantung.docs.filter((d) => {
+    const b = d.data();
+    return b.status !== 'cancelled' && b.status !== 'used' && str(b.date, 10) >= hariIni;
+  }).length;
   if (belumBayar >= MAX_UNPAID) {
     return NextResponse.json({ error: 'too-many-unpaid', max: MAX_UNPAID }, { status: 409 });
   }

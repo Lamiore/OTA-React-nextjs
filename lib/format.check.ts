@@ -7,6 +7,7 @@
 import assert from 'node:assert/strict';
 import {
   formatTimestamp,
+  hariIniWIT,
   isoDate,
   nextDays,
   normalizeViewerEmail,
@@ -104,6 +105,40 @@ for (const jam of [0, 1, 7, 12, 16, 23]) {
 // kemarin menurut UTC, dan justru itulah bug yang fungsi ini ada untuk cegah.
 const lewatTengahMalam = new Date(2026, 7, 14, 0, 5);
 assert.equal(isoDate(lewatTengahMalam), '2026-08-14');
+
+// ── hariIniWIT ──
+//
+// Yang dijaga: ARAHNYA. Fungsi ini melepas jatah booking belum-bayar, dan
+// daftar "booking berlangsung" menyembunyikan kartunya pada tengah malam LOKAL.
+// Jadi hariIniWIT tidak boleh pernah TERTINGGAL di belakang tanggal lokal mana
+// pun di Indonesia — kalau tertinggal, ada jam-jam saat orang ditolak "sudah 3"
+// padahal di layarnya cuma kelihatan 2.
+//
+// Titik paling rawan: tengah malam WIB (UTC+7), zona yang berganti hari paling
+// belakangan. Pada detik itu WIT sudah dua jam masuk hari yang sama.
+{
+  // 2026-08-18 00:00 WIB = 2026-08-17 17:00 UTC
+  const tengahMalamWIB = new Date('2026-08-17T17:00:00Z');
+  assert.equal(hariIniWIT(tengahMalamWIB), '2026-08-18', 'tidak boleh tertinggal dari WIB');
+
+  // Sedetik sebelumnya masih hari kemarin di seluruh Indonesia.
+  assert.equal(hariIniWIT(new Date('2026-08-17T14:59:59Z')), '2026-08-17');
+
+  // Sebaliknya: kalau suatu saat diganti toISOString() polos, assert ini yang
+  // jatuh — UTC di jam ini masih 08-17 sementara tiga zona Indonesia sudah 08-18.
+  assert.notEqual(
+    hariIniWIT(tengahMalamWIB),
+    tengahMalamWIB.toISOString().slice(0, 10),
+    'UTC polos akan salah di sini — itulah gunanya fungsi ini',
+  );
+
+  // Perbandingan string yang jadi dasar penyaringannya benar-benar bekerja.
+  const hariIni = hariIniWIT(new Date('2026-08-18T05:00:00Z'));
+  assert.ok('2026-06-27' < hariIni, 'tanggal lampau harus lepas dari hitungan');
+  assert.ok('2026-08-19' >= hariIni, 'tanggal depan harus tetap dihitung');
+  assert.ok(hariIni >= hariIni, 'hari ini sendiri masih dihitung');
+  assert.ok(!('' >= hariIni), 'dokumen tanpa tanggal tidak ikut menghabiskan jatah');
+}
 
 // nextDays: maju saja, dimulai dari harinya sendiri, dan pergantian bulan benar.
 assert.deepEqual(nextDays(3, new Date(2026, 7, 14)), ['2026-08-14', '2026-08-15', '2026-08-16']);

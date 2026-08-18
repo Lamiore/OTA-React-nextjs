@@ -71,6 +71,30 @@ export function isoDate(d: Date = new Date()): string {
 }
 
 /**
+ * Tanggal YYYY-MM-DD menurut WIT (UTC+9) — zona Indonesia yang paling dulu
+ * berganti hari.
+ *
+ * Untuk kode SERVER, yang tidak pernah tahu zona penggunanya: di Vercel
+ * isoDate() memulangkan tanggal UTC, dan UTC tertinggal 7–9 jam di belakang
+ * seluruh Indonesia.
+ *
+ * Zona paling timur dipilih sengaja, karena fungsi ini dipakai untuk MELEPAS
+ * jatah booking belum-bayar. Kartunya menghilang dari daftar "booking
+ * berlangsung" pada tengah malam LOKAL pengguna; karena WIT berganti hari
+ * paling awal, jatahnya lepas paling lambat berbarengan dengan kartunya
+ * hilang, tidak pernah setelahnya. Kalau dibalik memakai UTC, ada jendela
+ * sampai 9 jam tiap hari saat orang ditolak "sudah 3" padahal yang kelihatan
+ * di layarnya cuma 2 — persis keluhan yang fungsi ini ada untuk menutupnya.
+ *
+ * Bandingkan dengan penolakan 'past-date' di create(), yang justru memakai UTC:
+ * di sana yang harus dihindari kebalikannya, yaitu menolak tanggal yang di
+ * tempat pengguna masih berjalan.
+ */
+export function hariIniWIT(now: Date = new Date()): string {
+  return new Date(now.getTime() + 9 * 3600_000).toISOString().slice(0, 10);
+}
+
+/**
  * `count` tanggal berturut-turut mulai dari `start` (default hari ini), maju
  * ke depan saja.
  *
