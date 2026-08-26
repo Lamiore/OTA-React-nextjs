@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { kelengkapanProfil, nikBerbentukSah } from './profile';
+import { kelengkapanProfil, nikBerbentukSah } from './profile.ts';
 
 /**
  * Uji mandiri lib/profile — jalankan: npx tsx lib/profile.check.ts

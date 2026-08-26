@@ -1,6 +1,6 @@
 import assert from 'assert';
 import nodemailer from 'nodemailer';
-import { tanpaKutip } from './mailer';
+import { tanpaKutip } from './mailer.ts';
 
 /**
  * Uji mandiri lib/mailer — jalankan: npx tsx lib/mailer.check.ts

@@ -1,6 +1,6 @@
 import assert from 'assert';
 import crypto from 'crypto';
-import { verifySignature, bacaStatus, notificationUrl } from './midtrans';
+import { verifySignature, bacaStatus, notificationUrl } from './midtrans.ts';
 
 /**
  * Uji mandiri lib/midtrans — jalankan: npx tsx lib/midtrans.check.ts
