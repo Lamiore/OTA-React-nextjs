@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { useAuthState } from '@/lib/useAuth';
 import type { Booking } from '@/lib/firestore';
 import { kelengkapanProfil } from '@/lib/profile';
-import { formatIDR } from '@/lib/format';
+import { formatIDR, perluDibayar } from '@/lib/format';
 import { useLang } from '@/lib/useLang';
 import PaymentModal from '@/components/notifications/PaymentModal';
 
@@ -64,7 +64,12 @@ export default function NotificationBell({ variant }: NotificationBellProps) {
         // tiket yang belum lunas — jadi lonceng ini akan diam selamanya kalau
         // filternya dibiarkan. Diarahkan ulang ke arah yang benar sekarang:
         // booking yang menunggu pembayaran, sebelum tiketnya terbit.
-        .filter((b) => b.status === 'pending' && b.paymentStatus !== 'paid');
+        //
+        // perluDibayar, bukan syarat tersendiri: kartu di daftar booking dan
+        // tagihan di lonceng ini WAJIB sepakat. Versi lokal di sini lupa
+        // klausa tanggal, jadi booking lewat tanggal hilang dari daftar tapi
+        // tetap menagih di sini.
+        .filter((b) => perluDibayar(b));
       setUnpaid(list);
     });
     return () => unsub();

@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { lineTotal, type BookingLine } from './destination';
+import { lineTotal, type BookingLine } from './destination.ts';
 
 /**
  * Midtrans Snap — membuat transaksi dan memeriksa keaslian webhook.
@@ -16,6 +16,12 @@ import { lineTotal, type BookingLine } from './destination';
 const PRODUKSI = process.env.MIDTRANS_IS_PRODUCTION === 'true';
 
 const HOST = PRODUKSI ? 'https://app.midtrans.com' : 'https://app.sandbox.midtrans.com';
+
+/**
+ * Host API inti — beda dari HOST di atas (app.* melayani Snap, api.* melayani
+ * pemeriksaan status). Saklarnya tetap satu: PRODUKSI yang sama.
+ */
+const API_HOST = PRODUKSI ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com';
 
 /**
  * Alamat snap.js dikirim ke klien bersama tokennya, bukan dibaca ulang di sana
@@ -127,6 +133,32 @@ export async function createSnapTransaction(p: SnapParams): Promise<string> {
     throw new Error(data.error_messages?.join('; ') || `midtrans-${res.status}`);
   }
   return data.token;
+}
+
+/**
+ * Tanya Midtrans langsung: tagihan ini sudah dibayar atau belum?
+ *
+ * Pasangan TARIK untuk webhook yang mendorong. Ada karena webhook bisa tidak
+ * pernah sampai, dan satu keadaan itu terjadi setiap hari selama pengembangan:
+ * dari localhost notificationUrl() null, jadi Midtrans tidak punya alamat sama
+ * sekali dan uang yang sudah masuk tidak pernah jadi tiket.
+ *
+ * Jawabannya TIDAK diperiksa tanda tangan, dan tidak boleh: ini balasan dari
+ * panggilan keluar yang kita mulai sendiri, ke host Midtrans, dengan server
+ * key kita. Yang mengautentikasinya TLS + Basic auth, bukan SHA512 — dan
+ * balasan /v2/status tidak selalu menyertakan signature_key.
+ *
+ * Bukan pengganti webhook: yang ditanyakan cuma order_id yang sedang dipegang
+ * booking. Percobaan lama yang dibayar di detik terakhir tetap hanya terlihat
+ * oleh webhook (lihat cabang 'order-basi' di terapkanStatus).
+ */
+export async function cekStatus(orderId: string): Promise<SnapNotification> {
+  const res = await fetch(`${API_HOST}/v2/${encodeURIComponent(orderId)}/status`, {
+    headers: { Accept: 'application/json', Authorization: authHeader() },
+  });
+  // 404 = tagihannya tidak pernah ada di Midtrans. Dikembalikan apa adanya;
+  // bacaStatus() memulangkan 'menunggu' untuk itu, dan tidak ada yang berubah.
+  return (await res.json()) as SnapNotification;
 }
 
 /** Bentuk notifikasi yang dipakai — sisanya diabaikan. */

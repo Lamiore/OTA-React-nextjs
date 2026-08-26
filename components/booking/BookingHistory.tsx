@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthState } from '@/lib/useAuth';
-import { cancelBooking, type Booking as BookingType } from '@/lib/firestore';
+import { cancelBooking, syncPayment, type Booking as BookingType } from '@/lib/firestore';
 import { itemSummary } from '@/lib/destination';
+import { perluDibayar, tanggalLewat } from '@/lib/format';
 import { useLang } from '@/lib/useLang';
 import TicketModal from '@/components/booking/TicketModal';
 import PaymentModal from '@/components/notifications/PaymentModal';
@@ -41,13 +42,6 @@ function bisaDiubah(b: BookingType) {
   return (b.items?.length ?? 0) > 0 && (b.items ?? []).every((l) => !!l.id);
 }
 
-/** Booking dianggap "lewat" jika tanggalnya sebelum hari ini (waktu lokal). Hari ini masih berlangsung. */
-function isPast(b: BookingType) {
-  // en-CA menghasilkan format YYYY-MM-DD di zona waktu lokal, sehingga aman dibandingkan string.
-  const todayStr = new Date().toLocaleDateString('en-CA');
-  return b.date < todayStr;
-}
-
 interface BookingHistoryProps {
   /** 'all' shows every booking (riwayat lengkap); 'active' hides cancelled/used/past ones (booking berlangsung). */
   variant?: 'all' | 'active';
@@ -60,6 +54,8 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
 
   const [bookings, setBookings] = useState<BookingType[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
+  /** Booking yang statusnya sudah ditanyakan ke Midtrans — sekali saja per kunjungan. */
+  const disinkron = useRef<Set<string>>(new Set());
 
   const [cancellingBooking, setCancellingBooking] = useState<BookingType | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -83,6 +79,24 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
       data.sort((a, b) => (b.date > a.date ? 1 : -1));
       setBookings(data);
       setLoadingBookings(false);
+
+      // 'pending' = tagihan Midtrans sudah terbit tapi kabar lunasnya belum
+      // datang. Ditanyakan sekali per booking per kunjungan halaman, karena
+      // webhooknya bisa memang tidak akan pernah datang: dari localhost
+      // Midtrans tidak punya alamat untuk mengabari. Tanpa ini, orang yang
+      // sudah membayar melihat "menunggu pembayaran" selamanya, tanpa QR.
+      //
+      // Di sini, bukan di lonceng notifikasi: lonceng ikut ter-render di
+      // setiap halaman, jadi tempat itu berarti satu panggilan tiap pindah
+      // halaman. Jumlahnya di sini dibatasi kuota belum-bayar (maks 3).
+      for (const b of data) {
+        if (b.paymentStatus !== 'pending' || disinkron.current.has(b.id)) continue;
+        disinkron.current.add(b.id);
+        // Hasilnya sengaja tidak ditunggu & kegagalannya tidak ditampilkan:
+        // yang menyalakan tiket adalah onSnapshot di atas begitu server
+        // menulis 'paid'. Gagal di sini = layarnya tetap seperti sebelumnya.
+        syncPayment(b.id).catch(() => {});
+      }
     });
     return () => unsub();
   }, [user]);
@@ -117,7 +131,7 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
   // 'active' hanya menampilkan tiket yang masih berlangsung: belum dibatalkan, belum dipakai, & belum lewat tanggal.
   const visibleBookings =
     variant === 'active'
-      ? bookings.filter((b) => b.status !== 'cancelled' && b.status !== 'used' && !isPast(b))
+      ? bookings.filter((b) => b.status !== 'cancelled' && b.status !== 'used' && !tanggalLewat(b.date))
       : bookings;
 
   return (
@@ -225,13 +239,13 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
             {visibleBookings.map((b) => {
               const used = b.status === 'used';
               const cancelled = b.status === 'cancelled';
-              const past = isPast(b);
+              const past = tanggalLewat(b.date);
               // Yang menentukan tiket keluar adalah LUNAS, bukan status.
               // Sebelumnya 'pending' disamakan dengan 'confirmed' di sini —
               // itulah sebabnya QR bisa dilihat tanpa membayar. Sekarang
               // 'pending' artinya menunggu pembayaran.
               const paid = b.paymentStatus === 'paid';
-              const unpaid = !paid && !used && !cancelled && !past;
+              const unpaid = perluDibayar(b);
               const activeConfirmed = paid && !used && !cancelled && !past;
               return (
                 <div key={b.id} className="card p-5 animate-fade-in">
@@ -295,6 +309,21 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                         className="btn-ghost flex-1 px-4 py-2 text-xs hover:border-danger-rule hover:text-danger"
                       >
                         {t('history.cancelShort')}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Tiket yang sudah discan pengelola: satu-satunya aksi yang
+                      masih masuk akal adalah memesan lagi. Tanggal lewat tanpa
+                      scan sengaja tidak ikut — tiketnya tidak pernah terpakai,
+                      jadi "pesan lagi" salah kata untuk keadaan itu. */}
+                  {used && (
+                    <div className="mt-4 pt-4 border-t border-shore-200">
+                      <button
+                        onClick={() => router.push(`/booking?dest=${encodeURIComponent(b.destinationId)}`)}
+                        className="btn-ghost w-full px-4 py-2 text-xs"
+                      >
+                        {t('history.bookAgain')}
                       </button>
                     </div>
                   )}

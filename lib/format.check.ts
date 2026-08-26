@@ -12,6 +12,8 @@ import {
   nextDays,
   normalizeViewerEmail,
   parseCoords,
+  perluDibayar,
+  tanggalLewat,
   waLink,
 } from './format.ts';
 
@@ -165,5 +167,28 @@ assert.deepEqual(nextDays(0), [], 'nol hari = tidak ada kartu');
 const awal = new Date(2026, 7, 14);
 nextDays(5, awal);
 assert.equal(isoDate(awal), '2026-08-14', 'argumennya tidak dimutasi');
+
+// ── perluDibayar ──
+// Satu definisi dipakai dua permukaan (kartu booking & lonceng notifikasi).
+// Yang dijaga di sini: tidak ada satu pun klausa yang boleh hilang lagi —
+// klausa tanggalnya yang dulu bocor di lonceng.
+{
+  const hariIni = '2026-08-26';
+  const dasar = { date: '2026-08-29', status: 'pending', paymentStatus: 'unpaid' };
+  assert.ok(perluDibayar(dasar, hariIni), 'belum bayar & tanggal depan = menagih');
+  assert.ok(perluDibayar({ ...dasar, date: hariIni }, hariIni), 'hari ini masih berlangsung');
+  assert.ok(!perluDibayar({ ...dasar, date: '2026-08-21' }, hariIni), 'tanggal lewat tidak menagih');
+  assert.ok(!perluDibayar({ ...dasar, status: 'cancelled' }, hariIni), 'yang dibatalkan tidak menagih');
+  assert.ok(!perluDibayar({ ...dasar, status: 'used' }, hariIni), 'yang sudah dipakai tidak menagih');
+  assert.ok(!perluDibayar({ ...dasar, paymentStatus: 'paid' }, hariIni), 'yang lunas tidak menagih');
+  assert.ok(!perluDibayar({ ...dasar, date: undefined }, hariIni), 'tanpa tanggal tidak menagih');
+  // Peninggalan sebelum pembayaran dipasang: 'confirmed' tapi belum lunas.
+  // Dokumen ini ADA di koleksi, dan harus tampil sama di dua permukaan.
+  assert.ok(
+    perluDibayar({ ...dasar, status: 'confirmed' }, hariIni),
+    "'confirmed' + belum lunas tetap ditagih"
+  );
+  assert.ok(tanggalLewat(undefined, hariIni) && !tanggalLewat(hariIni, hariIni));
+}
 
 console.log('format.ts OK');

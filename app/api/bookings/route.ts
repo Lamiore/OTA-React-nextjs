@@ -11,7 +11,8 @@ import {
   type BookingForCount,
   type BookingLine,
 } from '@/lib/destination';
-import { createSnapTransaction, HOLD_MENIT, SNAP_JS } from '@/lib/midtrans';
+import { cekStatus, createSnapTransaction, HOLD_MENIT, SNAP_JS } from '@/lib/midtrans';
+import { terapkanStatus } from '@/lib/pembayaran';
 
 export const runtime = 'nodejs';
 
@@ -200,6 +201,8 @@ export async function POST(req: Request) {
       return update(ctx, body);
     case 'pay':
       return pay(ctx, body);
+    case 'sync':
+      return sync(ctx, body);
     case 'cancel':
       return cancel(ctx, body);
     case 'checkin':
@@ -282,8 +285,9 @@ async function create(ctx: Ctx, body: Record<string, unknown>) {
   //    sambil di layarnya cuma kelihatan 2, tanpa satu pun petunjuk kenapa.
   //    Yang harus dijaga: batas ini dan daftar itu WAJIB memakai definisi
   //    "masih berlangsung" yang sama — tiga klausa di bawah ini cerminan
-  //    persis dari filter variant 'active' di BookingHistory. 'used' ikut
-  //    disalin walau hari ini mestinya mustahil ('used' menuntut lunas, dan
+  //    persis dari perluDibayar() di lib/format, dieja ulang di sini karena
+  //    versi klien memakai tanggal lokal pengguna yang server tidak tahu.
+  //    'used' ikut disalin walau hari ini mestinya mustahil ('used' menuntut lunas, dan
   //    yang lunas tidak lolos query di atas): dokumen 'confirmed' + 'unpaid'
   //    peninggalan sebelum pembayaran dipasang juga mestinya mustahil, dan
   //    dokumen itu ADA di koleksi ini. Mencocokkan definisinya lebih murah
@@ -571,6 +575,41 @@ async function pay(ctx: Ctx, body: Record<string, unknown>) {
  * bareng endpoint refund Midtrans; sampai itu ada, membatalkan tiket yang
  * sudah dibayar berarti uangnya harus dikembalikan pengelola secara manual.
  */
+/**
+ * Tanyakan status tagihan ke Midtrans, lalu terapkan hasilnya.
+ *
+ * Ada karena webhook bisa tidak pernah sampai, dan satu keadaan itu bukan
+ * kemungkinan teoretis: dari localhost notificationUrl() memulangkan null,
+ * jadi Midtrans tidak punya alamat untuk mengabari sama sekali. Uangnya masuk,
+ * bookingnya tetap 'pending' selamanya, dan QR tiketnya tidak pernah terbit —
+ * persis yang terjadi pada satu booking Rp1.205.000 yang settle di Midtrans
+ * sementara dokumennya di sini masih menunggu.
+ *
+ * Yang diterima dari klien HANYA bookingId. Status pembayarannya dibaca dari
+ * Midtrans lewat panggilan keluar server ini sendiri — badan permintaan klien
+ * tidak menyentuh keputusan lunas sedikit pun.
+ *
+ * Aman dipanggil berkali-kali: terapkanStatus idempoten, dan tanpa orderId
+ * atau saat sudah lunas fungsi ini pulang tanpa menyentuh jaringan.
+ */
+async function sync(ctx: Ctx, body: Record<string, unknown>) {
+  const id = docId(body.bookingId);
+  if (!id) return bad('missing-field', 400);
+
+  const snap = await adminDb().doc(`bookings/${id}`).get();
+  if (!snap.exists) return bad('notfound', 404);
+  const b = snap.data() ?? {};
+  if (b.userId !== ctx.uid && ctx.role !== 'admin') return bad('forbidden', 403);
+  if (b.paymentStatus === 'paid') return NextResponse.json({ ok: true, hasil: 'sudah-lunas' });
+
+  const orderId = str(b.orderId, 60);
+  // Belum pernah menekan bayar: tidak ada tagihan yang bisa ditanyakan.
+  if (!orderId) return NextResponse.json({ ok: true, hasil: 'menunggu' });
+
+  const hasil = await terapkanStatus(id, await cekStatus(orderId));
+  return NextResponse.json({ ok: true, hasil });
+}
+
 async function cancel(ctx: Ctx, body: Record<string, unknown>) {
   const id = docId(body.bookingId);
   if (!id) return bad('missing-field', 400);

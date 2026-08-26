@@ -913,6 +913,21 @@ export async function payBooking(id: string): Promise<PaymentSession> {
   return bookingAction<PaymentSession>("pay", { bookingId: id });
 }
 
+/**
+ * Minta server menanyakan status tagihan ke Midtrans, lalu menerapkannya.
+ *
+ * Jaring pengaman untuk webhook yang tidak sampai — di localhost itu SELALU
+ * terjadi (Midtrans tidak bisa menjangkau localhost, jadi alamat webhooknya
+ * tidak dikirim sama sekali), dan di produksi sesekali cukup untuk membuat
+ * orang yang sudah membayar terjebak di layar "menunggu pembayaran".
+ *
+ * Nilai baliknya tidak dipakai untuk memutuskan apa pun di layar: yang menulis
+ * 'paid' tetap server, dan layar mengetahuinya dari onSnapshot dokumennya.
+ */
+export async function syncPayment(id: string): Promise<void> {
+  await bookingAction<{ hasil: string }>("sync", { bookingId: id });
+}
+
 // ── Reviews (ulasan destinasi) ──
 
 export interface Review {

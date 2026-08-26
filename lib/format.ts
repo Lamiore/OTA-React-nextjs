@@ -94,6 +94,36 @@ export function hariIniWIT(now: Date = new Date()): string {
   return new Date(now.getTime() + 9 * 3600_000).toISOString().slice(0, 10);
 }
 
+/** Tanggal booking sudah lewat? Hari ini masih berlangsung; tanpa tanggal dianggap lewat. */
+export function tanggalLewat(date: string | undefined, hariIni = isoDate()): boolean {
+  return !date || date < hariIni;
+}
+
+/**
+ * Booking ini masih menunggu pembayaran?
+ *
+ * Definisi TUNGGAL untuk semua permukaan yang menagih: kartu di daftar booking
+ * dan lonceng notifikasi. Batas jatah belum-bayar di server (create() di
+ * app/api/bookings) menyalin klausa yang sama, cuma dengan hariIniWIT karena
+ * di sana zona penggunanya tidak diketahui.
+ *
+ * Klausa tanggalnya yang paling sering lupa disalin: loncengnya dulu hanya
+ * memeriksa status + status bayar, jadi booking yang tanggalnya sudah lewat
+ * hilang dari daftar tapi tetap menagih di lonceng — lengkap dengan tombol
+ * Bayar untuk hari yang sudah terlewat.
+ */
+export function perluDibayar(
+  b: { date?: string; status?: string; paymentStatus?: string },
+  hariIni = isoDate(),
+): boolean {
+  return (
+    b.paymentStatus !== 'paid' &&
+    b.status !== 'cancelled' &&
+    b.status !== 'used' &&
+    !tanggalLewat(b.date, hariIni)
+  );
+}
+
 /**
  * `count` tanggal berturut-turut mulai dari `start` (default hari ini), maju
  * ke depan saja.
