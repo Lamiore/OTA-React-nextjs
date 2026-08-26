@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
@@ -18,7 +18,6 @@ import { useLang } from '@/lib/useLang';
 import { LANGS } from '@/lib/i18n';
 import { waLink } from '@/lib/format';
 import { ADMIN_EMAIL, ADMIN_WA } from '@/lib/contact';
-import { useCameraAccess } from '@/lib/useCameraAccess';
 
 function LogOutIcon() {
   return (
@@ -146,17 +145,6 @@ function ChatIcon() {
 /** `key` yang menautkan item ke aksinya; labelnya diterjemahkan saat render. */
 const menuItems = [
   {
-    key: 'camera',
-    labelKey: 'profile.camera',
-    descKey: 'profile.cameraDesc',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-        <circle cx="12" cy="13" r="3" />
-      </svg>
-    ),
-  },
-  {
     key: 'history',
     labelKey: 'profile.bookingHistory',
     descKey: 'profile.historyDesc',
@@ -220,7 +208,6 @@ const TABS = ['menu', 'riwayat', 'tersimpan', 'pengaturan', 'bantuan'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function ProfileView({ user, role }: { user: User; role: UserRole | null }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   // ?view= dibuka untuk semua tab, bukan cuma riwayat: tautan footer menunjuk
   // ke tab tertentu, dan nilai yang tidak dikenal jatuh ke menu — bukan layar
@@ -229,7 +216,6 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
     const v = searchParams.get('view');
     return TABS.includes(v as Tab) ? (v as Tab) : 'menu';
   });
-  const { allowed: canSeeCameras } = useCameraAccess();
   const { theme, setTheme, mounted } = useTheme();
   const isDark = theme === 'dark';
   const { lang, setLang, t } = useLang();
@@ -242,7 +228,6 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
   const bookingCount = bookings.length;
 
   const menuActions: Record<string, () => void> = {
-    camera: () => router.push('/kamera'),
     history: () => setView('riwayat'),
     saved: () => setView('tersimpan'),
     settings: () => setView('pengaturan'),
@@ -534,17 +519,10 @@ export default function ProfileView({ user, role }: { user: User; role: UserRole
 
       {/* Menu items */}
       <div className="card mt-4 divide-y divide-shore-200/80 overflow-hidden">
-        {menuItems
-          // Monitoring cuma untuk yang punya kamera — pengelola/admin, atau
-          // pengguna yang emailnya sudah dimasukkan pemilik kamera ke viewers.
-          .filter((item) => item.key !== 'camera' || canSeeCameras)
-          .map((item) => (
+        {menuItems.map((item) => (
           <button
             key={item.key}
             onClick={menuActions[item.key]}
-            // Monitoring dulu `md:hidden` di sini karena TopNav desktop memuat
-            // tombolnya sendiri. Tombol itu sudah dicabut, jadi baris ini satu-
-            // satunya pintu ke sana — di lebar layar mana pun.
             className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-shore-50"
           >
             <div className="h-10 w-10 rounded-md bg-shore-100 flex items-center justify-center text-navy-soft shrink-0">

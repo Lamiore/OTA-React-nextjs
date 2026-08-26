@@ -10,7 +10,7 @@ import ScanPanel from '@/components/dashboard/ScanPanel';
 import DestinasiPanel from '@/components/dashboard/DestinasiPanel';
 import PengelolaDestinasiPanel from '@/components/dashboard/PengelolaDestinasiPanel';
 import PenggunaPanel from '@/components/dashboard/PenggunaPanel';
-import KameraPanel from '@/components/dashboard/KameraPanel';
+import CameraManager from '@/components/cameras/CameraManager';
 
 export default function Dashboard() {
   const { user, role, loading } = useUserRole();
@@ -47,7 +47,9 @@ export default function Dashboard() {
           {page === 'destinasi' &&
             (role === 'admin' ? <DestinasiPanel /> : <PengelolaDestinasiPanel uid={user.uid} />)}
           {page === 'pengguna' && role === 'admin' && <PenggunaPanel />}
-          {page === 'kamera' && (role === 'admin' || role === 'pengelola') && <KameraPanel role={role} uid={user.uid} />}
+          {page === 'kamera' && (role === 'admin' || role === 'pengelola') && (
+            <CameraManager user={user} isAdmin={role === 'admin'} />
+          )}
         </div>
       </main>
     </div>

@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { AGREEMENT } from '@/lib/verification';
 import { ADMIN_EMAIL, ADMIN_WA } from '@/lib/contact';
-import { useCameraAccess } from '@/lib/useCameraAccess';
 import { waLink } from '@/lib/format';
 
 // Ft1 · Mast-headed — wordmark + tagline menjangkar pita horizontal, kolom
@@ -17,7 +16,7 @@ import { waLink } from '@/lib/format';
 // hiasan. Rute baru berarti satu baris baru di KOLOM, bukan markup baru.
 const KOLOM: {
   headingKey: string;
-  links: { labelKey?: string; label?: string; href: string; needsCamera?: boolean }[];
+  links: { labelKey?: string; label?: string; href: string }[];
 }[] = [
   {
     headingKey: 'nav.explore',
@@ -26,9 +25,7 @@ const KOLOM: {
       // Grid destinasi punya id="destinasi" + scroll-mt, jadi anchor ini
       // mendarat di judul seksinya, bukan ketutup TopNav yang sticky.
       { labelKey: 'home.sectionTitle', href: '/beranda#destinasi' },
-      // Ikut disembunyikan bersama tombol Monitoring di TopNav — kalau tidak,
-      // footer jadi pintu belakang ke halaman yang sengaja ditutup.
-      { labelKey: 'nav.monitoring', href: '/kamera', needsCamera: true },
+      { labelKey: 'nav.monitoring', href: '/monitoring' },
       { labelKey: 'nav.booking', href: '/booking' },
     ],
   },
@@ -57,7 +54,6 @@ const KOLOM: {
 
 export default function Footer() {
   const { t } = useLang();
-  const { allowed: canSeeCameras } = useCameraAccess();
   const wa = waLink(ADMIN_WA, t('support.waMessage'));
 
   return (
@@ -80,9 +76,7 @@ export default function Footer() {
                   {t(kolom.headingKey)}
                 </h2>
                 <ul className="mt-3 space-y-2">
-                  {kolom.links
-                    .filter((l) => !l.needsCamera || canSeeCameras)
-                    .map((l) => (
+                  {kolom.links.map((l) => (
                     <li key={l.href}>
                       <Link href={l.href} className="btn-text text-sm">
                         {l.label ?? t(l.labelKey!)}

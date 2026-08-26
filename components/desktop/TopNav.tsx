@@ -8,8 +8,8 @@ import { useLang } from '@/lib/useLang';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
 // Monitoring di sini adalah halaman penonton (/monitoring): kamera yang emailnya
-// didaftarkan pengelola. Bukan panel Kamera pengelola/admin (/kamera) — yang itu
-// tetap satu pintu di menu profil, sama untuk desktop dan mobile.
+// didaftarkan pengelola. Bukan panel Kamera pengelola/admin — yang itu hidup di
+// dashboard, satu pintu dengan panel pengelola lainnya.
 //
 // Tampil untuk semua, termasuk yang belum masuk: halaman itu sendiri yang
 // menjelaskan keadaannya (belum masuk / belum didaftarkan), dan menyembunyikan

@@ -19,6 +19,7 @@ import {
 import { useLang } from '@/lib/useLang';
 import CameraLiveModal from './CameraLiveModal';
 import ServerAddressCard from './ServerAddressCard';
+import CameraViewers from '@/components/dashboard/CameraViewers';
 
 function TrashIcon() {
   return (
@@ -34,7 +35,7 @@ function TrashIcon() {
  * isAdmin memutuskan dua hal sekaligus, dan memang satu hal yang sama: admin
  * melihat seluruh kamera terdaftar dan boleh mendaftarkan yang baru; pengelola
  * hanya melihat kamera atas namanya dan tidak punya form. Perannya sendiri
- * dibaca CameraSection, bukan di sini, supaya aturannya tidak dobel.
+ * dibaca dashboard, bukan di sini, supaya aturannya tidak dobel.
  *
  * Sejak kamera didaftarkan atas nama pengelola, daftar "milikku" tidak lagi
  * berguna buat admin — kamera yang baru saja dia daftarkan pemiliknya orang
@@ -149,7 +150,7 @@ export default function CameraManager({ user, isAdmin = true }: { user: User; is
     'w-full rounded-md border border-shore-200 bg-surface px-4 py-2.5 text-sm text-navy outline-none transition-colors focus:border-teal-400';
 
   return (
-    <>
+    <div className="animate-fade-in">
       {liveCamera && <CameraLiveModal camera={liveCamera} onClose={() => setLiveCamera(null)} />}
 
       {/* Konfirmasi hapus — portal ke <body> */}
@@ -184,12 +185,20 @@ export default function CameraManager({ user, isAdmin = true }: { user: User; is
         document.body,
       )}
 
-      <div className="mb-4">
-        <ServerAddressCard />
-      </div>
+      <h1 className="font-serif text-2xl font-medium text-navy">{t('camera.title')}</h1>
+      <p className="mt-1 text-sm text-navy-soft">
+        {isAdmin ? t('camera.lede') : t('camera.ledeManager')}
+      </p>
+
+      {/* Alamat server kamera itu setelan global — pengelola tidak mengubahnya. */}
+      {isAdmin && (
+        <div className="mt-6">
+          <ServerAddressCard />
+        </div>
+      )}
 
       {/* Daftar kamera */}
-      <div className="space-y-3">
+      <div className={isAdmin ? 'mt-4 space-y-3' : 'mt-6 space-y-3'}>
         {loading ? (
           Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="card p-5 animate-pulse space-y-3">
@@ -290,6 +299,8 @@ export default function CameraManager({ user, isAdmin = true }: { user: User; is
                     {t('camera.viewLive')}
                   </button>
                 )}
+
+                <CameraViewers camera={c} editable={c.ownerUid === user.uid} />
               </div>
             );
           })
@@ -344,6 +355,6 @@ export default function CameraManager({ user, isAdmin = true }: { user: User; is
         </form>
       </div>
       )}
-    </>
+    </div>
   );
 }

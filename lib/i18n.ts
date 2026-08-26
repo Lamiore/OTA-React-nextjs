@@ -67,13 +67,11 @@ const DICT: Record<string, Record<Lang, string>> = {
   "profile.saved": { id: "Tersimpan", en: "Saved" },
   "profile.settings": { id: "Pengaturan", en: "Settings" },
   "profile.help": { id: "Bantuan & Dukungan", en: "Help & Support" },
-  "profile.camera": { id: "Kamera", en: "Cameras" },
   "profile.logout": { id: "Keluar", en: "Sign out" },
   "profile.statBookings": { id: "Booking", en: "Bookings" },
   "profile.statReviews": { id: "Ulasan", en: "Reviews" },
   "profile.accountRole": { id: "Peran Akun", en: "Account Role" },
   "profile.accountRoleDesc": { id: "Status akunmu di Nusa", en: "Your account status on Nusa" },
-  "profile.cameraDesc": { id: "Daftarkan & pantau kamera milikmu", en: "Register & monitor your cameras" },
   "profile.historyDesc": { id: "Lihat dan kelola reservasi", en: "View and manage your reservations" },
   "profile.savedDesc": { id: "Destinasi favorit yang kamu simpan", en: "Destinations you saved" },
   "profile.settingsDesc": { id: "Tema tampilan & preferensi", en: "Theme & preferences" },
@@ -211,6 +209,7 @@ const DICT: Record<string, Record<Lang, string>> = {
   "history.empty": { id: "Belum ada booking.", en: "No bookings yet." },
   "history.cancelBooking": { id: "Batalkan Booking", en: "Cancel Booking" },
   "history.viewTicket": { id: "Lihat Tiket", en: "View Ticket" },
+  "history.bookAgain": { id: "Pesan Lagi", en: "Book Again" },
   "history.activeTitle": { id: "Booking Berlangsung", en: "Active Bookings" },
   "history.activeLede": {
     id: "Booking yang masih berjalan — termasuk yang menunggu pembayaran",
@@ -708,14 +707,6 @@ const DICT: Record<string, Record<Lang, string>> = {
   "camera.loadFailed": {
     id: "Daftar kamera gagal dimuat. Coba muat ulang halaman.",
     en: "Couldn't load the camera list. Try reloading the page.",
-  },
-  "camera.ledeViewer": {
-    id: "Kamera yang boleh kamu tonton muncul di halaman Monitoring.",
-    en: "Cameras you're allowed to watch appear on the Monitoring page.",
-  },
-  "camera.viewerNote": {
-    id: "Kamera dipasang dan dikelola pengelola destinasi. Kamera publik tayang langsung di halaman destinasinya. Untuk kamera khusus, setelah kamu membeli paket dan pengelola menambahkan emailmu, siaran langsungnya muncul di halaman Monitoring.",
-    en: "Cameras are installed and managed by the destination's manager. Public cameras play right on the destination's page. For private ones, the live feed appears on your Monitoring page once you buy a package and the manager adds your email.",
   },
   "camera.empty": {
     id: "Belum ada kamera. Tambahkan kamera pertamamu.",
