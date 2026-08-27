@@ -1324,23 +1324,29 @@ ada di **[`panduan-semhas.md`](panduan-semhas.md) bagian 9**.
 
 ### Membuat ulang berkas `.docx`
 
-Versi Word dokumen ini dihasilkan dari berkas Markdown-nya dengan Pandoc,
-memakai `.docx` yang sudah ada sebagai acuan gaya — di situlah huruf, warna,
-dan nomor halaman di footer tersimpan. Judul dan daftar isi diambil dari
-metadata, jadi keduanya dibuang dulu dari salinan sementara berkas Markdown-nya:
+Versi Word dari dokumen ini dan dari Panduan Pengguna dihasilkan dari berkas
+Markdown-nya dengan Pandoc, memakai `.docx` yang sudah ada sebagai acuan gaya —
+di situlah huruf, warna, tema, dan nomor halaman di footer tersimpan. Judul dan
+daftar isi diambil dari metadata, jadi keduanya dibuang dulu dari salinan
+sementara berkas Markdown-nya.
 
 ```bash
-# Buang judul H1 dan blok "Daftar Isi" (Word memakai field TOC yang bisa disegarkan)
-python3 - <<'EOF'
-import re
-s = open('docs/manual-teknis.md').read()
-s = re.sub(r'\A# Manual Teknis — Nusa\n+', '', s, count=1)
+# 1. Buang judul H1 dan blok "Daftar Isi"
+#    (Word memakai field TOC-nya sendiri yang bisa disegarkan)
+DOK=manual-teknis          # atau: panduan-pengguna
+JUDUL="Manual Teknis — Nusa"
+python3 - "$DOK" "$JUDUL" <<'EOF'
+import re, sys
+dok, judul = sys.argv[1], sys.argv[2]
+s = open(f'docs/{dok}.md').read()
+s = re.sub(rf'\A# {re.escape(judul)}\n+', '', s, count=1)
 s = re.sub(r'## Daftar Isi\n.*?\n---\n\n', '', s, count=1, flags=re.S)
-open('/tmp/manual-untuk-docx.md', 'w').write(s)
+open(f'/tmp/{dok}-untuk-docx.md', 'w').write(s)
 EOF
 
+# 2. Salin .docx lama sebagai acuan gaya, lalu tulis ulang di tempatnya
 cp docs/Manual-Teknis-Nusa.docx /tmp/acuan.docx
-pandoc /tmp/manual-untuk-docx.md -o docs/Manual-Teknis-Nusa.docx \
+pandoc /tmp/manual-teknis-untuk-docx.md -o docs/Manual-Teknis-Nusa.docx \
   --reference-doc=/tmp/acuan.docx \
   --toc --toc-depth=2 \
   --metadata title="Manual Teknis — Nusa" \
@@ -1349,9 +1355,25 @@ pandoc /tmp/manual-untuk-docx.md -o docs/Manual-Teknis-Nusa.docx \
   --metadata lang=id
 ```
 
+Panduan Pengguna memakai perintah yang sama dengan tiga nilai berbeda:
+`--toc-depth=3`, `title="Panduan Pengguna — Nusa"`, dan
+`subtitle="Guide Book · Sistem OTA Nusa"`.
+
 Daftar isinya berupa *field* Word, bukan teks mati. Word dan LibreOffice
 menawarkan menyegarkannya saat berkas dibuka — terima tawaran itu, kalau tidak
 nomor halamannya kosong.
+
+Setelah membuat ulang, bandingkan gaya paragraf yang dipakai berkas lama dan
+baru; jumlahnya boleh berubah, tetapi **daftar nama gayanya tidak boleh**.
+Nama gaya yang hilang atau muncul baru berarti acuannya tidak terpakai.
+
+```bash
+for f in lama baru; do
+  unzip -qo "$f.docx" -d "/tmp/$f"
+  echo -n "$f: "; grep -o 'w:pStyle w:val="[^"]*"' "/tmp/$f/word/document.xml" \
+    | sort -u | wc -l
+done
+```
 
 ---
 
