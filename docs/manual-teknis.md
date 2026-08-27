@@ -1322,6 +1322,39 @@ ada di **[`panduan-semhas.md`](panduan-semhas.md) bagian 9**.
 | [design.md](../design.md) | Sistem desain: genre, tipografi, spasi, gerak |
 | [Proyek_Karang/README.md](../Proyek_Karang/README.md) | Dokumentasi server kamera dan pelatihan model |
 
+### Membuat ulang berkas `.docx`
+
+Versi Word dokumen ini dihasilkan dari berkas Markdown-nya dengan Pandoc,
+memakai `.docx` yang sudah ada sebagai acuan gaya — di situlah huruf, warna,
+dan nomor halaman di footer tersimpan. Judul dan daftar isi diambil dari
+metadata, jadi keduanya dibuang dulu dari salinan sementara berkas Markdown-nya:
+
+```bash
+# Buang judul H1 dan blok "Daftar Isi" (Word memakai field TOC yang bisa disegarkan)
+python3 - <<'EOF'
+import re
+s = open('docs/manual-teknis.md').read()
+s = re.sub(r'\A# Manual Teknis — Nusa\n+', '', s, count=1)
+s = re.sub(r'## Daftar Isi\n.*?\n---\n\n', '', s, count=1, flags=re.S)
+open('/tmp/manual-untuk-docx.md', 'w').write(s)
+EOF
+
+cp docs/Manual-Teknis-Nusa.docx /tmp/acuan.docx
+pandoc /tmp/manual-untuk-docx.md -o docs/Manual-Teknis-Nusa.docx \
+  --reference-doc=/tmp/acuan.docx \
+  --toc --toc-depth=2 \
+  --metadata title="Manual Teknis — Nusa" \
+  --metadata subtitle="Manual Book · Sistem OTA Nusa" \
+  --metadata toc-title="Daftar Isi" \
+  --metadata lang=id
+```
+
+Daftar isinya berupa *field* Word, bukan teks mati. Word dan LibreOffice
+menawarkan menyegarkannya saat berkas dibuka — terima tawaran itu, kalau tidak
+nomor halamannya kosong.
+
+---
+
 > **Catatan:** `panduan-semhas.md` ditulis 7 Agustus 2026 dan sebagian isinya
 > sudah tersalip perubahan kode — peran `mitra` sudah dihapus, autentikasi kata
 > sandi sudah diganti kode email, dan pembayaran Midtrans belum ada saat
