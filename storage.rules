@@ -1,0 +1,43 @@
+rules_version = '2';
+
+// Satu-satunya yang diunggah ke bucket ini adalah foto destinasi dari panel
+// dashboard: foto utama, galeri, dan foto item harga. Semuanya masuk ke
+// prefix `destinasi/` dengan nama acak — tidak ada folder per-pengguna.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /destinasi/{fileId} {
+      // Foto destinasi memang tampil di halaman publik tanpa login.
+      // `list` sengaja tidak diberikan: orang boleh membuka foto yang URL-nya
+      // sudah dipasang di dokumen, bukan menelusuri isi bucket.
+      allow get: if true;
+
+      // Sengaja `create`, bukan `write`: `write` ikut mencakup delete, dan pada
+      // delete `request.resource` bernilai null sehingga cek size/contentType
+      // di bawah jadi error evaluasi, bukan penolakan yang bersih. Nama file
+      // selalu acak jadi update juga tidak pernah terjadi.
+      //
+      // Rolenya dibaca dari Firestore (cross-service Rules). Itu menuntut grant
+      // IAM roles/firebaserules.firestoreServiceAgent untuk service agent
+      // firebaserules project ini — tanpa grant itu firestore.get() menolak
+      // SEMUA pemanggil, admin sekalipun, dan gejalanya sama persis dengan
+      // "belum login". Kalau unggah tiba-tiba ditolak menyeluruh, curigai grant
+      // itu dulu sebelum mengubah rules-nya.
+      allow create: if request.auth != null
+        && firestore.get(
+             /databases/(default)/documents/users/$(request.auth.uid)
+           ).data.role in ['admin', 'pengelola']
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+
+      // ponytail: file lama tidak pernah dihapus saat foto diganti — URL-nya
+      // cuma dilepas dari dokumen Firestore. Kalau sampah ini mulai terasa,
+      // tambahkan Cloud Function yang menyapu objek tak terpakai.
+    }
+
+    // Prefix lain tidak dipakai sama sekali.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

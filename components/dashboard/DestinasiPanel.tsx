@@ -18,6 +18,7 @@ import {
 import { cleanPriceItems, destinationCameraIds, parentOptions } from '@/lib/destination';
 import { sanitizeStationId, stationPath } from '@/lib/realtime';
 import { parseCoords, waLink } from '@/lib/format';
+import FotoUpload from './FotoUpload';
 
 const emptyForm: DestinationInput = {
   name: '',
@@ -84,10 +85,9 @@ export default function DestinasiPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<DestinationInput>(emptyForm);
   const [tagInput, setTagInput] = useState('');
-  // Koordinat & galeri disunting sebagai teks mentah, baru diurai saat simpan —
-  // biar admin bebas mengetik setengah jalan tanpa field ikut jadi invalid.
+  // Koordinat disunting sebagai teks mentah, baru diurai saat simpan — biar
+  // admin bebas mengetik setengah jalan tanpa field ikut jadi invalid.
   const [coordInput, setCoordInput] = useState('');
-  const [imagesInput, setImagesInput] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -111,7 +111,6 @@ export default function DestinasiPanel() {
     setForm(emptyForm);
     setTagInput('');
     setCoordInput('');
-    setImagesInput('');
     setEditingId(null);
     setShowForm(true);
   };
@@ -142,7 +141,6 @@ export default function DestinasiPanel() {
     setCoordInput(
       typeof d.lat === 'number' && typeof d.lng === 'number' ? `${d.lat}, ${d.lng}` : '',
     );
-    setImagesInput((d.images ?? []).join('\n'));
     setEditingId(d.id);
     setShowForm(true);
   };
@@ -180,7 +178,6 @@ export default function DestinasiPanel() {
       ...form,
       tags: tagInput.split(',').map((t) => t.trim()).filter(Boolean),
       priceItems: cleanPriceItems(form.priceItems ?? []),
-      images: imagesInput.split('\n').map((u) => u.trim()).filter(Boolean),
       lat: coords?.lat ?? null,
       lng: coords?.lng ?? null,
       whatsapp: (form.whatsapp ?? '').trim(),
@@ -435,23 +432,11 @@ export default function DestinasiPanel() {
                         placeholder="Deskripsi singkat (opsional) — mis. Sudah termasuk pemandu & alat"
                         className="w-full rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                       />
-                      <div className="flex items-center gap-2">
-                        <input
-                          aria-label="URL foto item"
-                          value={item.image ?? ''}
-                          onChange={(e) => updateItem(i, { image: e.target.value })}
-                          placeholder="URL foto (opsional) — item berfoto tampil sebagai kartu bergambar"
-                          className="min-w-0 flex-1 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
-                        />
-                        {item.image?.trim() && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={item.image}
-                            alt=""
-                            className="h-10 w-10 shrink-0 rounded-sm border border-shore-200 object-cover"
-                          />
-                        )}
-                      </div>
+                      <FotoUpload
+                        urls={item.image?.trim() ? [item.image] : []}
+                        onChange={(urls) => updateItem(i, { image: urls[0] ?? '' })}
+                        label="Unggah foto item (opsional)"
+                      />
                     </div>
                   ))}
                   <button type="button" onClick={addItem} className="btn-ghost w-full px-4 py-2.5 text-sm">
@@ -472,30 +457,32 @@ export default function DestinasiPanel() {
                 />
               </div>
 
-              {/* Image URL */}
+              {/* Foto utama */}
               <div>
-                <label className="block text-xs font-medium text-navy-soft mb-1.5">URL Gambar</label>
-                <input aria-label="URL Gambar"
-                  value={form.image}
-                  onChange={(e) => setForm({ ...form, image: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Foto Utama</label>
+                {/* setForm bentuk fungsi, bukan { ...form }: unggah berjalan
+                    beberapa detik, dan kolom lain tidak ikut dikunci selama itu
+                    — form yang tertangkap closure sudah basi saat unggah selesai
+                    dan akan menimpa apa pun yang sempat diketik. */}
+                <FotoUpload
+                  urls={form.image?.trim() ? [form.image] : []}
+                  onChange={(urls) => setForm((f) => ({ ...f, image: urls[0] ?? '' }))}
+                  label="Unggah foto utama"
                 />
               </div>
 
-              {/* Galeri — satu URL per baris; textarea, bukan daftar field
-                  dinamis, karena admin menempel beberapa tautan sekaligus. */}
+              {/* Galeri — beberapa berkas sekaligus; urutan unggahnya jadi
+                  urutan tampil di halaman publik. */}
               <div>
-                <label className="block text-xs font-medium text-navy-soft mb-1.5">Galeri (satu URL per baris)</label>
-                <textarea aria-label="Galeri"
-                  value={imagesInput}
-                  onChange={(e) => setImagesInput(e.target.value)}
-                  placeholder={'https://...\nhttps://...'}
-                  rows={3}
-                  className="w-full rounded-md border border-shore-200 bg-surface px-3.5 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors resize-none"
+                <label className="block text-xs font-medium text-navy-soft mb-1.5">Galeri</label>
+                <FotoUpload
+                  multiple
+                  urls={form.images ?? []}
+                  onChange={(urls) => setForm((f) => ({ ...f, images: urls }))}
+                  label="Unggah foto galeri"
                 />
                 <p className="mt-1.5 text-2xs text-navy-soft">
-                  Foto tambahan, tampil sebagai strip geser di bawah deskripsi. URL Gambar di atas tetap jadi foto utama.
+                  Foto tambahan, tampil sebagai strip geser di bawah deskripsi. Foto Utama di atas tidak diulang di sini.
                 </p>
               </div>
 

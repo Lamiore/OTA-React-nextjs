@@ -8,6 +8,7 @@ import {
 } from "firebase/firestore";
 import { getDatabase, type Database } from "firebase/database";
 import { getAuth, type Auth } from "firebase/auth";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -25,6 +26,7 @@ let _app: FirebaseApp | null = null;
 let _db: Firestore | null = null;
 let _rtdb: Database | null = null;
 let _auth: Auth | null = null;
+let _storage: FirebaseStorage | null = null;
 
 function getApp(): FirebaseApp | null {
   if (!isConfigured) return null;
@@ -71,4 +73,11 @@ export const auth: Auth | null = (() => {
   if (!app) return null;
   if (!_auth) _auth = getAuth(app);
   return _auth;
+})();
+
+export const storage: FirebaseStorage | null = (() => {
+  const app = getApp();
+  if (!app) return null;
+  if (!_storage) _storage = getStorage(app);
+  return _storage;
 })();

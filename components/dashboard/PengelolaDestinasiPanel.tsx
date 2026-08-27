@@ -12,6 +12,7 @@ import {
 } from '@/lib/firestore';
 import { cleanPriceItems } from '@/lib/destination';
 import { parseCoords, waLink } from '@/lib/format';
+import FotoUpload from './FotoUpload';
 
 /**
  * Panel destinasi untuk pengelola — sengaja terpisah dari DestinasiPanel milik
@@ -73,7 +74,7 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
 
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
-  const [imagesInput, setImagesInput] = useState('');
+  const [images, setImages] = useState<string[]>([]);
   const [coordInput, setCoordInput] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [priceItems, setPriceItems] = useState<PriceItem[]>([]);
@@ -94,7 +95,7 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
     setSaved(false);
     setDescription(d.description ?? '');
     setImage(d.image ?? '');
-    setImagesInput((d.images ?? []).join('\n'));
+    setImages(d.images ?? []);
     // Koordinat digabung satu kolom: Google Maps menyalin "lat, lng" sekaligus.
     setCoordInput(d.lat != null && d.lng != null ? `${d.lat}, ${d.lng}` : '');
     setWhatsapp(d.whatsapp ?? '');
@@ -128,7 +129,7 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
       await updateDestination(editingId, {
         description: description.trim(),
         image: image.trim(),
-        images: imagesInput.split('\n').map((u) => u.trim()).filter(Boolean),
+        images,
         lat: coords?.lat ?? null,
         lng: coords?.lng ?? null,
         whatsapp: whatsapp.trim(),
@@ -362,23 +363,21 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-navy-soft mb-1.5">URL Foto Utama</label>
-            <input aria-label="URL Foto Utama"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              placeholder="https://..."
-              className={inputClass}
+            <label className="block text-xs font-medium text-navy-soft mb-1.5">Foto Utama</label>
+            <FotoUpload
+              urls={image.trim() ? [image] : []}
+              onChange={(urls) => setImage(urls[0] ?? '')}
+              label="Unggah foto utama"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-navy-soft mb-1.5">Galeri (satu URL per baris)</label>
-            <textarea aria-label="Galeri"
-              value={imagesInput}
-              onChange={(e) => setImagesInput(e.target.value)}
-              rows={3}
-              placeholder={'https://...\nhttps://...'}
-              className={`${inputClass} resize-none`}
+            <label className="block text-xs font-medium text-navy-soft mb-1.5">Galeri</label>
+            <FotoUpload
+              multiple
+              urls={images}
+              onChange={setImages}
+              label="Unggah foto galeri"
             />
             <p className="mt-1.5 text-2xs text-navy-soft">
               Foto tambahan, tampil sebagai strip geser di bawah deskripsi.
@@ -490,26 +489,11 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
                     placeholder="Deskripsi singkat (opsional) — mis. Sudah termasuk pemandu & alat"
                     className="w-full rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
                   />
-                  <div className="flex items-center gap-2">
-                    <input
-                      aria-label="URL foto item"
-                      value={item.image ?? ''}
-                      onChange={(e) => updateItem(i, { image: e.target.value })}
-                      placeholder="URL foto (opsional) — item berfoto tampil sebagai kartu bergambar"
-                      className="min-w-0 flex-1 rounded-md border border-shore-200 bg-surface px-3 py-2.5 text-sm text-navy outline-none focus:border-teal-400 transition-colors"
-                    />
-                    {/* Pratinjau sekecil ini bukan hiasan: URL foto paling sering
-                        salah tempel, dan tanpa ini pengelola baru tahu setelah
-                        menyimpan lalu membuka halaman publiknya. */}
-                    {item.image?.trim() && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.image}
-                        alt=""
-                        className="h-10 w-10 shrink-0 rounded-sm border border-shore-200 object-cover"
-                      />
-                    )}
-                  </div>
+                  <FotoUpload
+                    urls={item.image?.trim() ? [item.image] : []}
+                    onChange={(urls) => updateItem(i, { image: urls[0] ?? '' })}
+                    label="Unggah foto item (opsional)"
+                  />
                 </div>
               ))}
               <button type="button" onClick={addItem} className="btn-ghost w-full px-4 py-2.5 text-sm">
