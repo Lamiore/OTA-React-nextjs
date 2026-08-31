@@ -10,7 +10,7 @@ import {
   type Destination,
   type PriceItem,
 } from '@/lib/firestore';
-import { cleanPriceItems } from '@/lib/destination';
+import { cleanPriceItems, isHourly } from '@/lib/destination';
 import { parseCoords, waLink } from '@/lib/format';
 import FotoUpload from './FotoUpload';
 
@@ -482,6 +482,15 @@ export default function PengelolaDestinasiPanel({ uid }: Props) {
                       <TrashIcon />
                     </button>
                   </div>
+                  {/* Satuannya teks bebas, jadi "1/jam" yang dimaksud "satu
+                      jam" pun ikut terbaca sebagai sewa per jam. Akibatnya
+                      ditampilkan di sini, bukan cuma di tooltip: selisihnya
+                      baru ketahuan saat tagihan sudah terbit. */}
+                  {isHourly(item) && (
+                    <p className="text-xs text-navy-soft">
+                      Ditagih <span className="font-medium text-navy">per jam</span> — harganya dikali durasi sewa yang dipilih pemesan.
+                    </p>
+                  )}
                   <input
                     aria-label="Deskripsi item"
                     value={item.description ?? ''}

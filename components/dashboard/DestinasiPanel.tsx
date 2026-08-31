@@ -15,7 +15,7 @@ import {
   type Camera,
   type AppUser,
 } from '@/lib/firestore';
-import { cleanPriceItems, destinationCameraIds, parentOptions } from '@/lib/destination';
+import { cleanPriceItems, destinationCameraIds, isHourly, parentOptions } from '@/lib/destination';
 import { sanitizeStationId, stationPath } from '@/lib/realtime';
 import { parseCoords, waLink } from '@/lib/format';
 import FotoUpload from './FotoUpload';
@@ -426,6 +426,15 @@ export default function DestinasiPanel() {
                           <TrashIcon />
                         </button>
                       </div>
+                      {/* Satuannya teks bebas, jadi "1/jam" yang dimaksud
+                          "satu jam" pun ikut terbaca sebagai sewa per jam.
+                          Akibatnya ditampilkan di sini, bukan cuma di tooltip:
+                          selisihnya baru ketahuan saat tagihan sudah terbit. */}
+                      {isHourly(item) && (
+                        <p className="text-xs text-navy-soft">
+                          Ditagih <span className="font-medium text-navy">per jam</span> — harganya dikali durasi sewa yang dipilih pemesan.
+                        </p>
+                      )}
                       <input
                         value={item.description ?? ''}
                         onChange={(e) => updateItem(i, { description: e.target.value })}
