@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent, type CSSProperties } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthState } from '@/lib/useAuth';
@@ -40,14 +41,19 @@ export default function HeroBanner() {
 
   return (
     <section className="grain relative isolate overflow-hidden">
-      {/* Elemen LCP: prioritas tinggi, tidak pernah lazy. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      {/* Elemen LCP: prioritas tinggi, tidak pernah lazy.
+          Lewat next/image, bukan <img> polos. Berkas asli di Wikimedia berukuran
+          7,2 MB dan dulu memakan 5,6 detik sendirian — LCP beranda 7,9 s, skor
+          Lighthouse 60. next/image mengecilkannya dan menyajikan WebP/AVIF sesuai
+          lebar layar. `fill` sekaligus memesan ruang tata letak sehingga
+          pergeseran (CLS 0,299) hilang. */}
+      <Image
         src={heroImageUrl}
         alt="Perairan dangkal Pantai Liang, Bunaken"
-        fetchPriority="high"
-        decoding="async"
-        className="absolute inset-0 -z-10 h-full w-full object-cover object-[center_42%]"
+        fill
+        priority
+        sizes="100vw"
+        className="-z-10 object-cover object-[center_42%]"
       />
 
       {/* Scrim kedalaman — dibangun di atas token `ink` yang selalu gelap, jadi
