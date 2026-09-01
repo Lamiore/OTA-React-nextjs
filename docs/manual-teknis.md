@@ -3,11 +3,8 @@
 **Manual Book · Sistem OTA "Nusa"**
 Pemasangan, arsitektur, referensi API, penerapan, dan pemeliharaan.
 
-Versi dokumen: 1.1 · Disusun 21 Agustus 2026 · Diperbarui 27 Agustus 2026
-(perubahan 1.1: foto destinasi pindah ke Cloud Storage — bagian 9, 18, 19, 20)
 Cakupan: aplikasi web `OTA/` (Next.js) beserta dua sub-sistem pendukungnya —
 server kamera AI (`Proyek_Karang/`) dan firmware stasiun sensor (`firmware/`).
-Aplikasi Flutter di `ota_mobile/` **tidak** dibahas di dokumen ini.
 
 > Untuk cara memakai aplikasinya dari sisi pengguna, lihat
 > **[Panduan Pengguna](panduan-pengguna.md)**.
@@ -35,7 +32,6 @@ Aplikasi Flutter di `ota_mobile/` **tidak** dibahas di dokumen ini.
 17. [Penerapan (Deployment)](#17-penerapan-deployment)
 18. [Pengujian](#18-pengujian)
 19. [Pemeliharaan dan Pemecahan Masalah](#19-pemeliharaan-dan-pemecahan-masalah)
-20. [Keterbatasan yang Diketahui](#20-keterbatasan-yang-diketahui)
 
 ---
 
@@ -1280,104 +1276,13 @@ Urutkan dugaan dari yang paling sering:
 
 ---
 
-## 20. Keterbatasan yang Diketahui
-
-Bagian ini mencatat keputusan yang **disengaja** beserta kapan perlu diubah.
-Penanda `ponytail:` di kode menandai hal yang sama.
-
-| # | Keterbatasan | Dampak | Kapan perlu ditangani |
-|---|---|---|---|
-| 1 | **Tulis ke RTDB tanpa autentikasi** | Pihak yang tahu URL basis data bisa menimpa angka sensor | Begitu cara autentikasi firmware diputuskan. Ganti `".write": true` menjadi pemeriksaan `auth.token.station`, dan hidupkan blok `.validate` yang sudah disiapkan |
-| 2 | **Tidak ada jalur refund** | Membatalkan booking yang sudah lunas tidak mengembalikan uang secara otomatis — pengelola harus menanganinya manual | Bersamaan dengan pemasangan endpoint refund Midtrans |
-| 3 | **Tanpa idempotensi pada `create`** | Kirim ganda menghasilkan dua booking `pending` yang belum dibayar. Tombol sudah dikunci saat submit, jadi belum merugikan | Kalau pengiriman ganda mulai terlihat di data |
-| 4 | **Tanpa penyapu booking menganggur** | Booking `unpaid` menumpuk tanpa batas waktu. Batas 3 per akun menahan sebagian besar dampaknya | Kalau daftar pengelola mulai penuh sampah |
-| 5 | **Rate limit hanya per email, bukan per IP** | `request-code` bisa disalahgunakan dengan menggilir banyak alamat berbeda | Kalau ada pola penyalahgunaan seperti itu |
-| 6 | **Query stok membaca seluruh booking destinasi** | Mode `days=1` membaca semua booking berbayar destinasi itu, bukan hanya tanggal yang diminta. Aman untuk puluhan sampai ratusan booking | Kalau satu destinasi sudah menyimpan ribuan booking. Ganti ke filter rentang + composite index |
-| 7 | **Stream kamera tidak diautentikasi** | Disengaja: `<img>` MJPEG tidak bisa mengirim header autentikasi. Dilindungi ID acak | Kalau kerahasiaan siaran jadi syarat, perlu pendekatan lain (proxy bertoken) |
-| 8 | **`firestore.indexes.json` kosong** | Semua query mengandalkan indeks bawaan dan zigzag merge. Query rentang bersama filter kesamaan tidak bisa dipakai | Bersamaan dengan poin 6 |
-| 9 | **Kredensial WiFi tertanam di firmware** | Berkas `.ino` yang sudah terisi tidak boleh dibagikan | Kalau stasiun dikelola banyak pihak, pindahkan ke portal konfigurasi (WiFiManager) |
-| 10 | **Foto lama tidak ikut terhapus** | Mengganti foto destinasi hanya melepas URL-nya dari dokumen Firestore; berkasnya tetap tinggal di Cloud Storage sebagai objek yatim | Kalau ukuran bucket mulai terasa. Tambahkan Cloud Function penyapu objek yang tidak dirujuk dokumen mana pun |
-| 11 | **Foto tidak dikompres sebelum diunggah** | Foto ponsel mendekati batas 10 MB diunggah apa adanya, sehingga galeri berat di jaringan lambat | Kalau halaman destinasi mulai lambat. Perkecil lewat `canvas` di `lib/storage.ts` sebelum `uploadBytes` |
-
-**Lokasi bucket Cloud Storage bersifat permanen.** Bucket proyek ini berada di
-`US-EAST1`, sedangkan Firestore-nya di `asia-southeast1`. Selisihnya terasa
-sebagai waktu unggah yang sedikit lebih lama dari Indonesia. Lokasi bucket tidak
-bisa dipindah setelah dibuat — mengubahnya berarti membuat bucket baru dan
-memindahkan seluruh isinya beserta URL yang sudah tersimpan di dokumen.
-
-Catatan lengkap mengenai keterbatasan dari sisi metodologi penelitian — kualitas
-dataset, indikasi overfitting, dan sifat heuristik klasifikasi kesehatan karang —
-ada di **[`panduan-semhas.md`](panduan-semhas.md) bagian 9**.
-
----
-
 ## Dokumen terkait
 
 | Dokumen | Isi |
 |---|---|
 | **[panduan-pengguna.md](panduan-pengguna.md)** | Guide Book — cara memakai aplikasi untuk wisatawan, pengelola, dan admin |
-| [panduan-semhas.md](panduan-semhas.md) | Penjelasan sistem untuk seminar hasil, termasuk sisi AI dan bank pertanyaan penguji |
 | [audit-keamanan-2026-08-14.md](audit-keamanan-2026-08-14.md) | Laporan audit keamanan beserta status perbaikannya |
 | [firestore-rules-kamera-mitra.md](firestore-rules-kamera-mitra.md) | Catatan perubahan aturan akses kamera |
 | [design.md](../design.md) | Sistem desain: genre, tipografi, spasi, gerak |
 | [Proyek_Karang/README.md](../Proyek_Karang/README.md) | Dokumentasi server kamera dan pelatihan model |
 
-### Membuat ulang berkas `.docx`
-
-Versi Word dari dokumen ini dan dari Panduan Pengguna dihasilkan dari berkas
-Markdown-nya dengan Pandoc, memakai `.docx` yang sudah ada sebagai acuan gaya —
-di situlah huruf, warna, tema, dan nomor halaman di footer tersimpan. Judul dan
-daftar isi diambil dari metadata, jadi keduanya dibuang dulu dari salinan
-sementara berkas Markdown-nya.
-
-```bash
-# 1. Buang judul H1 dan blok "Daftar Isi"
-#    (Word memakai field TOC-nya sendiri yang bisa disegarkan)
-DOK=manual-teknis          # atau: panduan-pengguna
-JUDUL="Manual Teknis — Nusa"
-python3 - "$DOK" "$JUDUL" <<'EOF'
-import re, sys
-dok, judul = sys.argv[1], sys.argv[2]
-s = open(f'docs/{dok}.md').read()
-s = re.sub(rf'\A# {re.escape(judul)}\n+', '', s, count=1)
-s = re.sub(r'## Daftar Isi\n.*?\n---\n\n', '', s, count=1, flags=re.S)
-open(f'/tmp/{dok}-untuk-docx.md', 'w').write(s)
-EOF
-
-# 2. Salin .docx lama sebagai acuan gaya, lalu tulis ulang di tempatnya
-cp docs/Manual-Teknis-Nusa.docx /tmp/acuan.docx
-pandoc /tmp/manual-teknis-untuk-docx.md -o docs/Manual-Teknis-Nusa.docx \
-  --reference-doc=/tmp/acuan.docx \
-  --toc --toc-depth=2 \
-  --metadata title="Manual Teknis — Nusa" \
-  --metadata subtitle="Manual Book · Sistem OTA Nusa" \
-  --metadata toc-title="Daftar Isi" \
-  --metadata lang=id
-```
-
-Panduan Pengguna memakai perintah yang sama dengan tiga nilai berbeda:
-`--toc-depth=3`, `title="Panduan Pengguna — Nusa"`, dan
-`subtitle="Guide Book · Sistem OTA Nusa"`.
-
-Daftar isinya berupa *field* Word, bukan teks mati. Word dan LibreOffice
-menawarkan menyegarkannya saat berkas dibuka — terima tawaran itu, kalau tidak
-nomor halamannya kosong.
-
-Setelah membuat ulang, bandingkan gaya paragraf yang dipakai berkas lama dan
-baru; jumlahnya boleh berubah, tetapi **daftar nama gayanya tidak boleh**.
-Nama gaya yang hilang atau muncul baru berarti acuannya tidak terpakai.
-
-```bash
-for f in lama baru; do
-  unzip -qo "$f.docx" -d "/tmp/$f"
-  echo -n "$f: "; grep -o 'w:pStyle w:val="[^"]*"' "/tmp/$f/word/document.xml" \
-    | sort -u | wc -l
-done
-```
-
----
-
-> **Catatan:** `panduan-semhas.md` ditulis 7 Agustus 2026 dan sebagian isinya
-> sudah tersalip perubahan kode — peran `mitra` sudah dihapus, autentikasi kata
-> sandi sudah diganti kode email, dan pembayaran Midtrans belum ada saat
-> dokumen itu ditulis. Untuk keadaan sistem saat ini, dokumen inilah rujukannya.
