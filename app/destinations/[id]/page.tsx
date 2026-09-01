@@ -483,10 +483,10 @@ export default function DestinationDetail() {
                         type="button"
                         onClick={() => toggleItem(item.id)}
                         aria-pressed={isSelected}
-                        className={`flex items-center gap-3 rounded-md border p-2.5 text-left transition-colors duration-micro ease-out ${
+                        className={`flex items-center gap-3 rounded-md border p-2.5 text-left transition duration-micro ease-out ${
                           isSelected
                             ? 'border-teal-600 bg-teal-50'
-                            : 'border-shore-200 bg-surface hover:border-shore-300'
+                            : 'border-shore-200 bg-surface hover:border-shore-300 hover:shadow-sm'
                         }`}
                       >
                         {/* Slotnya muncul untuk SEMUA item begitu ada satu saja
@@ -496,7 +496,7 @@ export default function DestinationDetail() {
                             sebaris kotak kosong tidak menyeragamkan apa pun,
                             cuma menyisakan ruang mati di kiri tiap kartu. */}
                         {anyItemImage && (
-                          <span className="h-14 w-14 shrink-0 overflow-hidden rounded-sm bg-shore-100">
+                          <span className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-shore-100">
                             {item.image && (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
@@ -515,9 +515,11 @@ export default function DestinationDetail() {
                             {item.label}
                           </span>
                           {item.description && (
-                            // Satu baris, dipotong: dua baris membuat kartu yang
-                            // punya keterangan lebih tinggi daripada yang tidak.
-                            <span className="mt-0.5 block truncate text-xs text-navy-soft">
+                            // Dua baris, baru dipotong. Aman meski tetangganya tanpa
+                            // keterangan: tiap kartu adalah sel grid tanpa self-*, jadi
+                            // align-self: stretch menyamakan tingginya dalam satu baris —
+                            // yang ikut tumbuh cuma barisnya.
+                            <span className="mt-0.5 block line-clamp-2 text-xs leading-snug text-navy-soft">
                               {item.description}
                             </span>
                           )}
