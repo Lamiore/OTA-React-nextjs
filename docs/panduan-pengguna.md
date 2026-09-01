@@ -4,9 +4,7 @@
 Platform pemesanan tiket destinasi selam & pesisir dengan pemantauan kondisi
 perairan secara langsung.
 
-Versi dokumen: 1.1 · Disusun 21 Agustus 2026 · Diperbarui 27 Agustus 2026
-(perubahan 1.1: foto destinasi kini diunggah langsung, tidak lagi menempel tautan)
-Berlaku untuk aplikasi web Nusa (Next.js) — bukan aplikasi Flutter di `ota_mobile/`.
+Berlaku untuk aplikasi web Nusa (Next.js).
 
 ---
 
@@ -299,6 +297,7 @@ tidak selalu bisa diandalkan.
 | **Belum Dibayar** | Booking sudah tercatat, pembayaran belum masuk. Masih bisa diubah atau dibatalkan. QR belum terbit |
 | **Dikonfirmasi** | Pembayaran diterima, tiket QR sudah terbit dan siap dipakai |
 | **Selesai** | Tiket sudah dipindai petugas di lokasi |
+| **Kedaluwarsa** | Tanggal kunjungan sudah lewat tanpa pembayaran. Tidak bisa dibayar maupun dipakai lagi — pesan ulang kalau masih mau berkunjung |
 | **Dibatalkan** | Booking dibatalkan. Tidak bisa dipakai maupun diubah |
 
 ### 5.10 Menonton pantauan langsung
@@ -633,8 +632,11 @@ Kuota sudah nol. Pilih tanggal lain.
 **Sudah bayar tapi masih "Belum Dibayar".**
 Tunggu beberapa detik — statusnya berubah sendiri begitu konfirmasi resmi
 masuk, tanpa perlu memuat ulang. Kalau lewat beberapa menit masih belum
-berubah, hubungi admin dengan menyertakan **kode tiket** (`OTA-XXXXXXXX`) dan
-bukti pembayaranmu.
+berubah, **buka lagi halaman Booking**: tiap kali daftar pemesanan dimuat,
+aplikasi menanyakan sendiri status tagihanmu ke penyedia pembayaran, dan
+pemesanan yang ternyata sudah lunas diperbaiki saat itu juga. Baru kalau itu
+pun tidak mengubah apa-apa, hubungi admin dengan menyertakan **kode tiket**
+(`OTA-XXXXXXXX`) dan bukti pembayaranmu.
 
 **QR pembayaran kedaluwarsa.**
 Tagihan QRIS berlaku 15 menit. Tekan tombol bayar lagi untuk membuat tagihan

@@ -307,8 +307,10 @@ OTA/
 │   ├── realtime.ts               Baca sensor dari RTDB (stationPath)
 │   ├── destination.ts            Hitung stok, ketersediaan, baris & total booking
 │   ├── midtrans.ts               Buat transaksi Snap, verifikasi tanda tangan
+│   ├── pembayaran.ts             ★ Satu-satunya penulis paymentStatus 'paid'
 │   ├── loginCode.ts              Pembuatan, hash, dan pemeriksaan kode masuk
 │   ├── mailer.ts                 Transport Nodemailer
+│   ├── sendVerification.ts       Kirim tautan verifikasi (sisa era kata sandi)
 │   ├── verification.ts           Validasi formulir pengelola + versi perjanjian
 │   ├── useAuth.ts                Hook: user login + peran (real-time)
 │   ├── storage.ts                Unggah foto ke Cloud Storage + penjaga ukuran
@@ -325,6 +327,8 @@ OTA/
 │   ├── desktop/  mobile/         Nav, hero, kartu, katalog, footer
 │   ├── booking/                  BookingHistory, DateStrip, TicketModal (QR)
 │   ├── dashboard/                Sidebar, Statistik, Scan, Destinasi, Pengguna
+│   │   ├── Pengelola*Panel.tsx   Versi panel destinasi & statistik utk pengelola
+│   │   ├── CameraViewers.tsx     Daftar email penonton kamera per destinasi
 │   │   └── FotoUpload.tsx        Unggah foto destinasi (dipakai kedua panel)
 │   ├── cameras/                  CameraManager, VerificationForm, LiveModal
 │   ├── destinations/             LiveMonitorPanel (kamera + sensor), Reviews
@@ -335,14 +339,19 @@ OTA/
 ├── docs/                         ← DOKUMENTASI
 │   ├── panduan-pengguna.md       Guide Book (dokumen pendamping)
 │   ├── manual-teknis.md          Manual Book (dokumen ini)
-│   ├── panduan-semhas.md         Penjelasan sistem untuk seminar hasil
+│   ├── *-Nusa.docx               Versi Word kedua dokumen di atas
 │   ├── audit-keamanan-*.md       Laporan audit keamanan
-│   └── firestore-rules-*.md      Catatan perubahan rules
+│   ├── firestore-rules-*.md      Catatan perubahan rules
+│   ├── sumber-harga-destinasi.md Rujukan harga tiap item destinasi
+│   ├── konten-maluku-utara.md    Bahan isi destinasi Maluku Utara
+│   └── Sistem-Kamera-*.pdf       Spesifikasi kamera Ezviz/DeepNorth
 │
 ├── scripts/                      ← SKRIP UJI
 │   ├── rules.probe.mjs           Uji firestore.rules sebagai pengguna asli
 │   ├── storage.probe.mjs         Uji storage.rules sebagai pengguna asli
-│   └── bookings.probe.mjs        Uji /api/bookings sebagai pengguna asli
+│   ├── bookings.probe.mjs        Uji /api/bookings sebagai pengguna asli
+│   ├── latency.probe.mjs         Ukur latensi sinkronisasi real-time
+│   └── seed-login-code.mjs       Tanam kode masuk akun uji tanpa lewat surel
 │
 ├── firestore.rules               ★ Aturan keamanan Firestore
 ├── storage.rules                 ★ Aturan keamanan Cloud Storage
@@ -351,6 +360,7 @@ OTA/
 ├── firebase.json / .firebaserc   Konfigurasi Firebase CLI
 ├── tokens.css                    Token desain (warna, spasi, radius, gerak)
 ├── tailwind.config.ts            Konfigurasi Tailwind
+├── next.config.mjs               Host gambar luar yang boleh dioptimasi
 ├── design.md                     Sistem desain (genre, tipografi, skala)
 ├── public/sw.js                  Service worker (mode luring)
 │
@@ -403,6 +413,35 @@ Contoh konkretnya:
 Koleksi `bookings` tertutup rapat untuk tulis dari klien — Admin SDK melewati
 rules, jadi seluruh perubahan status tiket **harus** lewat `/api/bookings`.
 
+### Gambar luar lewat `next/image`
+
+Hero beranda memuat foto dari Wikimedia yang berkas aslinya **7,2 MB**. Sebagai
+`<img>` polos, foto itu sendirian memakan 5,6 detik dan menahan LCP beranda di
+7,9 detik. Sekarang hero melewati `next/image`: gambarnya dikecilkan dan
+disajikan sebagai WebP/AVIF sesuai lebar layar, dan atribut `fill` memesan
+ruang tata letaknya lebih dulu sehingga pergeseran isi halaman ikut hilang.
+
+Host yang boleh dioptimasi didaftarkan **satu per satu** di `next.config.mjs`:
+
+```js
+images: {
+  remotePatterns: [
+    { protocol: 'https', hostname: 'upload.wikimedia.org' },
+    { protocol: 'https', hostname: 'commons.wikimedia.org' },
+  ],
+}
+```
+
+Bukan wildcard `'**'`. Wildcard menjadikan situs ini **proksi gambar terbuka**:
+siapa pun boleh menyuruhnya mengunduh dan mengecilkan gambar dari host mana
+saja, atas biaya dan atas nama domain kita.
+
+Yang melewati `next/image` sampai sekarang **hanya hero**. Enam belas `<img>`
+lainnya — termasuk foto destinasi dari Cloud Storage — masih polos, dan itu
+sebabnya `firebasestorage.googleapis.com` belum perlu ada di daftar. Kalau
+salah satunya kelak dipindah ke `next/image`, **hostnya harus ditambahkan lebih
+dulu**; kalau tidak, gambarnya gagal muat tanpa pesan yang menjelaskan kenapa.
+
 ---
 
 ## 8. Model Data
@@ -445,6 +484,12 @@ Dua kolom status berjalan berdampingan:
 Booking lahir sebagai `pending` + `unpaid`. **Tiket QR hanya terbit kalau
 `paymentStatus === 'paid'`**, dan satu-satunya yang boleh menulis `paid` adalah
 webhook Midtrans.
+
+Lencana status di layar tidak memetakan `status` satu lawan satu. Nilainya
+diturunkan `kunciStatusBooking()` (`lib/format.ts`) dari kombinasi `status`,
+`paymentStatus`, dan tanggal — termasuk **Kedaluwarsa** untuk booking yang
+tanggalnya sudah lewat tanpa pernah lunas. Tidak ada nilai `expired` yang
+tersimpan di Firestore; label itu murni turunan.
 
 ### Realtime Database
 
@@ -619,6 +664,7 @@ Satu-satunya pintu tulis koleksi `bookings`. **Wajib** ID token dan
 | `create` | `destinationId, date, phone, notes, qty, hours` | Membuat booking berstatus `pending` + `unpaid`. Harga dihitung ulang server |
 | `update` | `bookingId, date, phone, notes, qty, hours` | Mengubah booking yang belum dibayar |
 | `pay` | `bookingId` | Membuat transaksi Snap. Balasannya `{ token, snapUrl }` |
+| `sync` | `bookingId` | Menanyakan status tagihan ke Midtrans lalu menerapkannya. Jaring pengaman kalau webhook tidak sampai |
 | `cancel` | `bookingId` | Membatalkan booking sendiri |
 | `checkin` | `bookingId` | Menandai tiket terpakai. Hanya admin/pengelola |
 
@@ -797,13 +843,57 @@ harga.
       │
 7. Midtrans → POST /api/payments/midtrans (webhook)
       ├─ verifikasi tanda tangan SHA512
-      ├─ cocokkan order_id dan jumlah
-      └─ tulis paymentStatus: 'paid', status: 'confirmed'
+      └─ terapkanStatus() ─ cocokkan order_id & jumlah,
+                            tulis paymentStatus: 'paid', status: 'confirmed'
       │
 8. Listener onSnapshot di PaymentModal melihat perubahan → layar "Lunas"
 ```
 
+### Jalur cadangan: menarik status sendiri
+
+Langkah 7 mengandaikan webhooknya sampai. Kalau tidak — terowongan mati saat
+pengembangan, penerapan baru berjalan tepat di detik itu, atau alamat
+notifikasi di dasbor Midtrans salah — uangnya sudah masuk sementara bookingnya
+tinggal di `pending` selamanya, tanpa tiket dan tanpa jejak.
+
+Karena itu ada jalur kedua yang arahnya terbalik:
+
+```
+Daftar booking dimuat (BookingHistory)
+      │
+      ├─ untuk tiap booking berstatus 'pending' (sekali saja per sesi)
+      │
+      └─ POST /api/bookings { action: 'sync', bookingId }
+            ├─ periksa kepemilikan booking
+            ├─ cekStatus(orderId) — panggilan keluar ke Midtrans
+            └─ terapkanStatus() ← fungsi yang sama dengan langkah 7
+```
+
+**Klien hanya menyebut `bookingId`.** Status pembayaran tidak pernah datang
+dari badan permintaan klien; yang dipercaya cuma jawaban panggilan keluar kita
+sendiri ke Midtrans.
+
+Hasilnya sengaja tidak ditunggu dan kegagalannya tidak ditampilkan — yang
+menyalakan tiket tetap `onSnapshot` di langkah 8. Pemanggilannya diletakkan di
+`BookingHistory`, **bukan** di lonceng notifikasi: lonceng ikut ter-render di
+setiap halaman, jadi di sana artinya satu panggilan keluar tiap pindah halaman.
+Di tempatnya sekarang, jumlahnya dibatasi kuota tiga booking belum-bayar.
+
 ### Keputusan desain yang penting
+
+**Dorong dan tarik memakai satu fungsi yang sama.** Keduanya bermuara di
+`terapkanStatus()` pada `lib/pembayaran.ts` — satu-satunya tempat di seluruh
+kode yang boleh menulis `paymentStatus: 'paid'`. Salinan kedua dari aturan ini
+adalah salinan yang kelak longgar, dan yang longgar itu pintu masuk tiket
+gratis. Fungsinya idempoten: notifikasi yang sama boleh datang berkali-kali,
+dan webhook yang kebetulan tiba bersamaan dengan `sync` tidak menulis dua kali.
+
+**Dua keadaan yang sengaja tidak diselesaikan sendiri.** Pembayaran untuk
+`orderId` yang sudah basi (`order-basi`) dan jumlah yang tidak cocok dengan
+tagihan (`jumlah-beda`) sama-sama berarti uang sudah diterima untuk sesuatu
+yang tidak bisa dipetakan ke tiket. Keduanya tidak boleh diam-diam jadi tiket,
+dan tidak boleh diam-diam hilang — jadi ditulis ke `console.error` untuk
+ditangani manual, bukan ditebak.
 
 **Alamat skrip Snap dikirim server bersama tokennya**, bukan diambil dari
 variabel lingkungan di sisi klien. Kalau alamat skrip dan token berasal dari dua
@@ -1081,6 +1171,14 @@ mendorong berkas rules lain yang mungkin belum siap.
 Aturan yang baru diterapkan **butuh waktu menyebar**, kira-kira sampai dua
 menit. Probe yang dijalankan beberapa detik setelah penerapan bisa memberi
 hasil aturan yang lama — tunggu dulu, lalu ulangi sampai hasilnya sama dua kali.
+
+### Lokasi bucket Cloud Storage
+
+Bucket proyek ini berada di `US-EAST1`, sedangkan Firestore-nya di
+`asia-southeast1`. Selisihnya terasa sebagai waktu unggah yang sedikit lebih
+lama dari Indonesia. Lokasi bucket **tidak bisa dipindah setelah dibuat** —
+mengubahnya berarti membuat bucket baru dan memindahkan seluruh isinya beserta
+URL yang sudah tersimpan di dokumen.
 
 ### Server kamera
 
