@@ -235,6 +235,7 @@ const DICT: Record<string, Record<Lang, string>> = {
   "history.cancelShort": { id: "Batalkan", en: "Cancel" },
   "history.statusUsed": { id: "Sudah Digunakan", en: "Used" },
   "history.statusDone": { id: "Selesai", en: "Completed" },
+  "history.statusExpired": { id: "Kedaluwarsa", en: "Expired" },
   "history.payNow": { id: "Bayar Sekarang", en: "Pay Now" },
   "history.edit": { id: "Ubah", en: "Edit" },
   "history.cancelFailed": {

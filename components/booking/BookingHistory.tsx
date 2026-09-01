@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { useAuthState } from '@/lib/useAuth';
 import { cancelBooking, syncPayment, type Booking as BookingType } from '@/lib/firestore';
 import { itemSummary } from '@/lib/destination';
-import { perluDibayar, tanggalLewat } from '@/lib/format';
+import { kunciStatusBooking, perluDibayar, tanggalLewat } from '@/lib/format';
 import { useLang } from '@/lib/useLang';
 import TicketModal from '@/components/booking/TicketModal';
 import PaymentModal from '@/components/notifications/PaymentModal';
@@ -269,17 +269,7 @@ export default function BookingHistory({ variant = 'all' }: BookingHistoryProps)
                       unpaid && 'bg-warn-soft text-warn',
                       activeConfirmed && 'bg-teal-100 text-teal-700',
                     )}>
-                      {t(
-                        used
-                          ? 'history.statusUsed'
-                          : cancelled
-                            ? 'status.cancelled'
-                            : past
-                              ? 'history.statusDone'
-                              : unpaid
-                                ? 'status.pending'
-                                : 'status.confirmed'
-                      )}
+                      {t(kunciStatusBooking(b))}
                     </span>
                   </div>
 

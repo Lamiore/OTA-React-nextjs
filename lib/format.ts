@@ -125,6 +125,28 @@ export function perluDibayar(
 }
 
 /**
+ * Kunci i18n untuk lencana status di kartu booking.
+ *
+ * Tanggal lewat bukan berarti selesai. Dulu klausa `past` langsung memetakan ke
+ * 'history.statusDone', sehingga booking yang tidak pernah dibayar pun tampil
+ * "Selesai" — bertentangan dengan panduan pengguna yang mendefinisikan Selesai
+ * sebagai "tiket sudah dipindai petugas". `perluDibayar()` tidak bisa dipakai
+ * membedakannya karena sudah bernilai false untuk semua tanggal lewat, jadi
+ * kelunasan harus diperiksa sendiri.
+ */
+export function kunciStatusBooking(
+  b: { date?: string; status?: string; paymentStatus?: string },
+  hariIni = isoDate(),
+): string {
+  if (b.status === 'used') return 'history.statusUsed';
+  if (b.status === 'cancelled') return 'status.cancelled';
+  if (tanggalLewat(b.date, hariIni)) {
+    return b.paymentStatus === 'paid' ? 'history.statusDone' : 'history.statusExpired';
+  }
+  return perluDibayar(b, hariIni) ? 'status.pending' : 'status.confirmed';
+}
+
+/**
  * `count` tanggal berturut-turut mulai dari `start` (default hari ini), maju
  * ke depan saja.
  *

@@ -14,6 +14,7 @@ import {
   parseCoords,
   perluDibayar,
   tanggalLewat,
+  kunciStatusBooking,
   waLink,
 } from './format.ts';
 
@@ -189,6 +190,38 @@ assert.equal(isoDate(awal), '2026-08-14', 'argumennya tidak dimutasi');
     "'confirmed' + belum lunas tetap ditagih"
   );
   assert.ok(tanggalLewat(undefined, hariIni) && !tanggalLewat(hariIni, hariIni));
+}
+
+{
+  const hariIni = '2026-09-02';
+  const lewat = { date: '2026-08-01', status: 'confirmed' };
+  const nanti = { date: '2026-09-30', status: 'confirmed' };
+
+  // Regresi: yang tanggalnya lewat tapi tak pernah dibayar dulu tampil
+  // "Selesai" — padahal panduan mendefinisikan Selesai sebagai sudah dipindai.
+  assert.equal(
+    kunciStatusBooking({ ...lewat, paymentStatus: 'unpaid' }, hariIni),
+    'history.statusExpired',
+    'tanggal lewat + belum lunas = kedaluwarsa, bukan selesai'
+  );
+  assert.equal(
+    kunciStatusBooking({ ...lewat, paymentStatus: 'paid' }, hariIni),
+    'history.statusDone',
+    'tanggal lewat + lunas = selesai'
+  );
+  // Status eksplisit menang atas tanggal.
+  assert.equal(kunciStatusBooking({ ...lewat, status: 'used' }, hariIni), 'history.statusUsed');
+  assert.equal(kunciStatusBooking({ ...lewat, status: 'cancelled' }, hariIni), 'status.cancelled');
+  assert.equal(
+    kunciStatusBooking({ ...nanti, paymentStatus: 'unpaid' }, hariIni),
+    'status.pending',
+    'belum lewat + belum lunas = belum dibayar'
+  );
+  assert.equal(
+    kunciStatusBooking({ ...nanti, paymentStatus: 'paid' }, hariIni),
+    'status.confirmed',
+    'belum lewat + lunas = dikonfirmasi'
+  );
 }
 
 console.log('format.ts OK');
