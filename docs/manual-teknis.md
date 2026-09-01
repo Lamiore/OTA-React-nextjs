@@ -340,11 +340,13 @@ OTA/
 │   ├── panduan-pengguna.md       Guide Book (dokumen pendamping)
 │   ├── manual-teknis.md          Manual Book (dokumen ini)
 │   ├── *-Nusa.docx               Versi Word kedua dokumen di atas
+│   ├── panduan-semhas.md         Bahan seminar hasil (ditulis 7 Agustus 2026)
 │   ├── audit-keamanan-*.md       Laporan audit keamanan
 │   ├── firestore-rules-*.md      Catatan perubahan rules
 │   ├── sumber-harga-destinasi.md Rujukan harga tiap item destinasi
 │   ├── konten-maluku-utara.md    Bahan isi destinasi Maluku Utara
-│   └── Sistem-Kamera-*.pdf       Spesifikasi kamera Ezviz/DeepNorth
+│   ├── Sistem-Kamera-*.pdf       Spesifikasi kamera Ezviz/DeepNorth
+│   └── superpowers/              Rencana & spesifikasi desain tiap fitur
 │
 ├── scripts/                      ← SKRIP UJI
 │   ├── rules.probe.mjs           Uji firestore.rules sebagai pengguna asli
