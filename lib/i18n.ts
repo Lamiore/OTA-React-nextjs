@@ -915,13 +915,13 @@ const DICT: Record<string, Record<Lang, string>> = {
 
   "faq.howBook.q": { id: "Bagaimana cara memesan tiket?", en: "How do I book a ticket?" },
   "faq.howBook.a": {
-    id: "Buka halaman destinasi, tekan Booking, lalu pilih jenis tiket dan jumlahnya. Isi tanggal kunjungan, nama, dan nomor telepon, lalu kirim. Tiket langsung terbit dengan status Terkonfirmasi.",
-    en: "Open a destination page, tap Booking, then pick the ticket types and quantities. Fill in your visit date, name, and phone, then submit. The ticket is issued immediately with Confirmed status.",
+    id: "Buka halaman destinasi, tekan Booking, lalu pilih jenis tiket dan jumlahnya. Isi tanggal kunjungan, nama, dan nomor telepon, lalu kirim. Booking tersimpan dengan status Belum Dibayar — tiket QR baru terbit setelah pembayaran lunas.",
+    en: "Open a destination page, tap Booking, then pick the ticket types and quantities. Fill in your visit date, name, and phone, then submit. The booking is saved as Awaiting Payment — the QR ticket is only issued once payment is settled.",
   },
   "faq.payMethods.q": { id: "Metode pembayaran apa saja yang tersedia?", en: "Which payment methods are available?" },
   "faq.payMethods.a": {
-    id: "Transfer bank (BCA, Mandiri, BNI), e-wallet (GoPay, OVO, DANA), atau tunai di lokasi. Pilih metodenya lewat tombol Bayar di Riwayat Booking. Tiket tetap berlaku walau statusnya belum lunas — pembayaran tunai diselesaikan di loket.",
-    en: "Bank transfer (BCA, Mandiri, BNI), e-wallet (GoPay, OVO, DANA), or cash on site. Choose via the Pay button in Booking History. The ticket stays valid even while unpaid — cash is settled at the counter.",
+    id: "QRIS. Tekan tombol Bayar di Riwayat Booking, lalu pindai kode QRIS yang muncul memakai aplikasi bank atau e-wallet apa pun yang mendukung QRIS. Sesi pembayaran berlaku 15 menit. Tidak ada pembayaran tunai di lokasi — tiket QR hanya terbit setelah pembayaran lunas.",
+    en: "QRIS. Tap the Pay button in Booking History, then scan the QRIS code with any bank or e-wallet app that supports QRIS. The payment session lasts 15 minutes. There is no cash payment on site — the QR ticket is only issued once payment is settled.",
   },
   "faq.whereTicket.q": { id: "Di mana tiket dan QR-nya?", en: "Where do I find my ticket and QR code?" },
   "faq.whereTicket.a": {
@@ -938,8 +938,8 @@ const DICT: Record<string, Record<Lang, string>> = {
     en: "What if I need to change the date or number of guests?",
   },
   "faq.changeDate.a": {
-    id: "Pengubahan belum bisa dilakukan sendiri dari aplikasi. Hubungi pengelola destinasi lewat tombol WhatsApp di halaman destinasi, atau batalkan booking lalu pesan ulang dengan data yang benar.",
-    en: "Edits aren't self-service yet. Contact the destination manager via the WhatsApp button on the destination page, or cancel and rebook with the right details.",
+    id: "Selama booking belum dibayar, tekan Ubah di Riwayat Booking untuk mengganti tanggal, jenis tiket, atau jumlahnya — harganya dihitung ulang otomatis. Setelah lunas, booking tidak bisa diubah sendiri; hubungi pengelola destinasi lewat tombol WhatsApp di halaman destinasi.",
+    en: "While a booking is still unpaid, tap Edit in Booking History to change the date, ticket types, or quantities — the price is recalculated automatically. Once paid, a booking can no longer be edited yourself; contact the destination manager via the WhatsApp button on the destination page.",
   },
 
   "faq.sensorData.q": {
