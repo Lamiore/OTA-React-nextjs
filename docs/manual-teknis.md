@@ -1187,7 +1187,10 @@ Admin SDK, `.env*.local`, `Proyek_Karang/`, `firmware/`, dokumen, dan skrip uji
 
 - [ ] Kirim kode masuk ke satu email dan pastikan sampai (periksa juga spam).
 - [ ] `SMTP_FROM` tidak terbungkus tanda kutip tambahan.
-- [ ] Buat satu booking uji dan bayar dengan nominal kecil.
+- [ ] Buat satu booking uji dan selesaikan pembayarannya. Selama
+      `MIDTRANS_IS_PRODUCTION` belum dinyalakan, transaksinya memakai Sandbox
+      dan tidak memindahkan uang; setelah beralih ke produksi, ulangi dengan
+      nominal kecil sungguhan.
 - [ ] URL webhook Midtrans mengarah ke domain produksi.
 - [ ] Halaman destinasi menampilkan angka sensor.
 - [ ] Scan tiket berjalan dari perangkat lapangan.
@@ -1353,7 +1356,7 @@ tidak kompatibel dengan runtime Vercel di konfigurasi ini.
 4. `permission-denied` di konsol browser adalah **jalur normal** untuk penonton
    yang tidak berhak — bukan pertanda kerusakan.
 
-### Sensor menampilkan "—" atau "tidak live"
+### Sensor menampilkan "--" atau berlabel "Offline"
 
 1. Periksa Realtime Database di Firebase Console, cabang
    `monitoring/<stationId>/latest` dan kolom `updatedAt`.
