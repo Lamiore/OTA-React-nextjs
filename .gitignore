@@ -66,3 +66,6 @@ serviceAccount.json
 
 # Artefak browser-testing (Playwright MCP)
 .playwright-mcp/
+
+# State tool MCP (Serena) — bukan bagian proyek
+.serena/
