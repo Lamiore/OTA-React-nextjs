@@ -672,7 +672,7 @@ minta emailmu didaftarkan sebagai penonton — lihat [bagian 5.10](#510-menonton
 Server kamera sedang tidak menyala atau tidak terjangkau. Hubungi pengelola
 destinasi.
 
-**Angka sensor menampilkan "—" atau "tidak live".**
+**Angka sensor menampilkan "--" atau berlabel "Offline".**
 Stasiun IoT sedang tidak mengirim data — bisa karena mati listrik, sinyal
 WiFi hilang, atau perangkatnya sedang diperbaiki. Hubungi pengelola destinasi.
 
