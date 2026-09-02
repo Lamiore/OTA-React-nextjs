@@ -238,7 +238,7 @@ jendela konfirmasi lebih dulu — pembatalan tidak bisa dibatalkan balik.
 | **Ubah** | Selama belum dibayar |
 | **Batalkan** | Selama belum dipakai check-in |
 | **Lihat Tiket** | Setelah lunas |
-| **Booking Lagi** | Untuk booking yang sudah selesai |
+| **Pesan Lagi** | Untuk booking yang sudah selesai atau sudah dipindai |
 
 ### 5.7 Membayar dengan QRIS
 
@@ -263,6 +263,13 @@ jendela konfirmasi lebih dulu — pembatalan tidak bisa dibatalkan balik.
 - Status **Lunas hanya ditentukan oleh konfirmasi resmi dari Midtrans**, bukan
   oleh tampilan di browser.
 
+> **Catatan lingkungan uji.** Pada pemasangan saat ini Midtrans masih berjalan
+> di mode **Sandbox**, yaitu lingkungan pengujian resmi Midtrans. Alur
+> pembayarannya identik dengan yang sesungguhnya — QRIS terbit, webhook
+> mengonfirmasi, status berubah jadi Lunas — tetapi **tidak ada uang yang
+> berpindah**. Beralih ke transaksi sungguhan cukup dengan mengganti kunci
+> Midtrans dan menyalakan `MIDTRANS_IS_PRODUCTION`; tidak ada perubahan kode.
+
 ### 5.8 Tiket dan check-in
 
 Tiket terbit **hanya setelah pembayaran diterima**. Sebelum lunas, bagian QR
@@ -275,14 +282,14 @@ Kartu tiket berisi:
 |---|---|
 | Destinasi & tanggal | Tujuan dan hari kunjungan |
 | Pemesan | Nama dari akun |
-| Rincian | Item beserta jumlah dan lama sewanya |
+| Rincian | Item beserta jumlah dan lama sewanya. Untuk booking lama yang belum punya rincian item, kolom ini berganti nama jadi **Jumlah** dan menampilkan jumlah orang |
 | Telepon | Nomor kontak |
 | **Kode Tiket** | Format `OTA-XXXXXXXX` |
 | **QR** | Dipindai petugas saat check-in |
 
 **Saat tiba di lokasi:** buka **Booking** (atau **Profil › Riwayat Booking**),
 buka tiketnya, tunjukkan QR-nya ke petugas. Petugas memindai, dan status
-tiket berubah jadi **Selesai**.
+tiket berubah jadi **Sudah Digunakan**.
 
 > Satu tiket hanya bisa dipakai **sekali**. Pemindaian kedua ditolak dengan
 > keterangan bahwa tiketnya sudah digunakan.
@@ -296,7 +303,8 @@ tidak selalu bisa diandalkan.
 |---|---|
 | **Belum Dibayar** | Booking sudah tercatat, pembayaran belum masuk. Masih bisa diubah atau dibatalkan. QR belum terbit |
 | **Dikonfirmasi** | Pembayaran diterima, tiket QR sudah terbit dan siap dipakai |
-| **Selesai** | Tiket sudah dipindai petugas di lokasi |
+| **Sudah Digunakan** | Tiket sudah dipindai petugas di lokasi |
+| **Selesai** | Tanggal kunjungan sudah lewat dan booking-nya lunas, tapi tiketnya tidak pernah dipindai |
 | **Kedaluwarsa** | Tanggal kunjungan sudah lewat tanpa pembayaran. Tidak bisa dibayar maupun dipakai lagi — pesan ulang kalau masih mau berkunjung |
 | **Dibatalkan** | Booking dibatalkan. Tidak bisa dipakai maupun diubah |
 
@@ -333,8 +341,10 @@ perlu dilakukan:
 | **Debit Air** | Laju aliran air |
 | **Kartu GPS** | Koordinat, ketinggian, dan jumlah satelit |
 
-Tanda **—** berarti angkanya belum pernah terkirim; label *"tidak live"*
-berarti stasiunnya sedang tidak mengirim data.
+Tanda **--** berarti angkanya belum pernah terkirim; label **Offline**
+berarti stasiunnya sedang tidak mengirim data, sedangkan **Live** berarti
+gambarnya benar-benar masuk. Kedua label ini memang tampil dalam bahasa
+Inggris di kedua pilihan bahasa.
 
 ### 5.11 Menulis ulasan
 
@@ -363,14 +373,14 @@ atasnya:
 | **Nama** | Yang tercetak di tiket |
 | **No. Telepon** | Nomor kontak bawaan saat memesan |
 | **Kota** | Kota domisili |
-| **NIK** | 16 digit angka. Bentuknya diperiksa, bukan sekadar terisi |
+| **NIK** | Opsional, 16 digit angka. Bentuknya diperiksa, bukan sekadar terisi. Nomornya **tidak dicek ke Dukcapil**, disimpan hanya untuk pendataan pengunjung, dan cuma terlihat olehmu dan admin |
 | **Email terverifikasi** | Terpenuhi sendiri lewat jalur masuk dengan kode email |
 
 Batang kelengkapan menghitung kelima syarat di atas. Kolom yang belum terisi
 ditandai, jadi terlihat mana yang masih kurang. Tekan **Simpan** setelah
 mengubah.
 
-Di kartu yang sama ada **Tautkan Google** — menghubungkan akun ini dengan akun
+Di kartu yang sama ada **Hubungkan Google** — menghubungkan akun ini dengan akun
 Google supaya bisa masuk dengan satu klik. Kalau sudah tertaut, statusnya
 tampil sebagai keterangan.
 

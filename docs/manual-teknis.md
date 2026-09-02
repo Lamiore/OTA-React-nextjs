@@ -3,8 +3,15 @@
 **Manual Book · Sistem OTA "Nusa"**
 Pemasangan, arsitektur, referensi API, penerapan, dan pemeliharaan.
 
-Cakupan: aplikasi web `OTA/` (Next.js) beserta dua sub-sistem pendukungnya —
-server kamera AI (`Proyek_Karang/`) dan firmware stasiun sensor (`firmware/`).
+Cakupan: **aplikasi web `OTA/` (Next.js)** — pemasangan, arsitektur, dan
+pemeliharaannya.
+
+Sistem kamera AI (`Proyek_Karang/`) dan firmware stasiun sensor (`firmware/`)
+adalah sub-sistem terpisah yang **dikerjakan rekan peneliti**. Keduanya
+didokumentasikan di §15 dan §16 **sebatas antarmuka yang dipakai aplikasi web** —
+alamat endpoint, cara menautkannya, dan bentuk data yang dikonsumsi. Pelatihan
+model deteksi dan perakitan perangkat kerasnya berada di luar cakupan dokumen
+ini.
 
 > Untuk cara memakai aplikasinya dari sisi pengguna, lihat
 > **[Panduan Pengguna](panduan-pengguna.md)**.
@@ -63,6 +70,10 @@ Nusa terdiri dari tiga sub-sistem yang saling terhubung lewat Firebase.
    │ firmware/*.ino    │              │                          │
    └───────────────────┘              └──────────────────────────┘
 ```
+
+Dari ketiganya, yang dibahas dokumen ini adalah **kotak 1 (aplikasi web)**
+beserta seluruh integrasinya ke Firebase, server kamera, dan stasiun sensor.
+Kotak 3 dan ESP32 dikerjakan rekan peneliti — lihat catatan di §15 dan §16.
 
 Alur pihak luar tambahan:
 
@@ -225,14 +236,14 @@ proyek Vercel (produksi). Berkas contohnya: `.env.local.example`.
 | Variabel | Isi |
 |---|---|
 | `FIREBASE_ADMIN_SA_B64` | *Service account* JSON dalam base64. Dipakai `lib/firebaseAdmin.ts` |
-| `GOOGLE_APPLICATION_CREDENTIALS` | *Path* ke berkas *service account*. Hanya dipakai skrip probe di `scripts/`, bukan oleh aplikasi |
+| `GOOGLE_APPLICATION_CREDENTIALS` | *Path* ke berkas *service account*. Dipakai skrip probe di `scripts/`, **dan** oleh `lib/firebaseAdmin.ts` sebagai cadangan kalau `FIREBASE_ADMIN_SA_B64` kosong |
 
 ### Aplikasi
 
 | Variabel | Isi |
 |---|---|
 | `NEXT_PUBLIC_APP_URL` | Alamat pangkal aplikasi. Dipakai menyusun tautan di email. Lokal: `http://localhost:3000` |
-| `NEXT_PUBLIC_CAMERA_URL` | Alamat server kamera Flask. Contoh: `http://192.168.1.10:5001`. Di produksi, alamat yang dipakai halaman diambil dari dokumen `settings/cameraServer` di Firestore |
+| `NEXT_PUBLIC_CAMERA_URL` | **Tidak terpakai.** Peninggalan; masih tercantum di `.env.local.example` tetapi nol rujukan di kode. Alamat server kamera selalu dibaca dari dokumen Firestore `settings/cameraServer`, baik lokal maupun produksi |
 
 ### Email (SMTP)
 
@@ -264,6 +275,10 @@ proyek Vercel (produksi). Berkas contohnya: `.env.local.example`.
 | `GEMINI_API_KEY` | **Rahasia, tanpa `NEXT_PUBLIC_`.** Ambil di https://aistudio.google.com/apikey |
 | `GEMINI_MODEL` | Opsional. Bawaan `gemini-3.5-flash-lite` |
 
+Keduanya hanya dipakai asisten chat — fitur pendukung yang **tidak dibahas di
+naskah skripsi**. Dikosongkan berarti widget chat menjawab `503 not-configured`;
+sisa sistem tetap berjalan normal.
+
 ### Lain-lain
 
 | Variabel | Isi |
@@ -278,6 +293,7 @@ proyek Vercel (produksi). Berkas contohnya: `.env.local.example`.
 ```
 OTA/
 ├── app/                          ← ROUTING (App Router: folder = URL)
+│   ├── fonts/*.woff              Sisa boilerplate Next.js — tidak dirujuk kode
 │   ├── layout.tsx                Root layout: font, tema, bahasa, ChatWidget, SW
 │   ├── page.tsx                  "/" → redirect ke /beranda
 │   ├── beranda/page.tsx          Halaman utama (hero + katalog destinasi)
@@ -330,7 +346,8 @@ OTA/
 │   │   ├── Pengelola*Panel.tsx   Versi panel destinasi & statistik utk pengelola
 │   │   ├── CameraViewers.tsx     Daftar email penonton kamera per destinasi
 │   │   └── FotoUpload.tsx        Unggah foto destinasi (dipakai kedua panel)
-│   ├── cameras/                  CameraManager, VerificationForm, LiveModal
+│   ├── cameras/                  CameraManager, VerificationForm, CameraLiveModal,
+│   │                             CameraHistory, CameraStats, ServerAddressCard
 │   ├── destinations/             LiveMonitorPanel (kamera + sensor), Reviews
 │   ├── notifications/            NotificationBell, PaymentModal
 │   ├── profile/                  AuthForm, ProfileView, AccountSettings, dll.
@@ -366,17 +383,15 @@ OTA/
 ├── design.md                     Sistem desain (genre, tipografi, skala)
 ├── public/sw.js                  Service worker (mode luring)
 │
-├── Proyek_Karang/                ← SISTEM AI DETEKSI KARANG (Python)
-│   ├── kamera_deteksi.py         ★ Server multi-kamera + YOLO per kamera
+├── Proyek_Karang/                ← SISTEM AI DETEKSI KARANG (Python, rekan peneliti)
+│   ├── kamera_deteksi.py         ★ Server multi-kamera — sumber stream & statistik
 │   ├── coral_logic.py            Logika murni: kesehatan HSV + CoralTracker
 │   ├── app_web.py                Server kamera tunggal (versi lama/demo)
 │   ├── app_karang.py             Aplikasi desktop standalone
-│   ├── tools/train.py            Skrip pelatihan YOLOv8
 │   ├── tests/                    Uji unit (pytest)
-│   ├── data.yaml                 Konfigurasi kelas karang
-│   └── best.pt                   Bobot hasil pelatihan
+│   └── tools/, data.yaml, best.pt  Pelatihan model — di luar cakupan dokumen ini
 │
-└── firmware/                     ← ESP32
+└── firmware/                     ← ESP32 (rekan peneliti)
     └── WeatherStation_RTDB/*.ino Baca sensor → PUT ke RTDB tiap 5 detik
 ```
 
@@ -454,7 +469,7 @@ dulu**; kalau tidak, gambarnya gagal muat tanpa pesan yang menjelaskan kenapa.
 |---|---|---|
 | `users` | `uid` dari Auth | `name, email, role, phone, saved[], verification{}` |
 | `destinations` | auto-id | `name, location, tags[], priceItems[], images[], lat/lng, whatsapp, hasMonitoring, stationId, managerUid, cameraStreamId, parentId` |
-| `bookings` | auto-id (20 karakter) | `userId, destinationId, date, guests, items[], amount, status, paymentStatus, orderId, snapToken, holdUntil, paidAt, checkedInAt` |
+| `bookings` | auto-id (20 karakter) | `userId, destinationId, date, items[], amount, status, paymentStatus, orderId, snapToken, holdUntil, paidAt, checkedInAt`. Ditambah `guests` untuk booking lama — tidak pernah ditulis lagi, hanya cadangan tampilan kalau `items` belum ada |
 | `cameras` | auto-id | `cameraId (6 karakter), name, location, ownerUid, source, status, isPublic, viewers[]` |
 | `reviews` | **`{destinationId}_{userId}`** | `rating (1–5), comment, userName` |
 | `settings` | `cameraServer` | `baseUrl` server kamera |
@@ -681,8 +696,12 @@ Satu-satunya pintu tulis koleksi `bookings`. **Wajib** ID token dan
 | `too-many-unpaid` | Sudah ada 3 booking belum dibayar |
 | `already-paid` / `cancelled` | Booking tidak bisa diubah lagi |
 | `already-used` | Tiket sudah dipindai |
-| `unpaid` | Check-in ditolak karena belum dibayar |
+| `payment-pending` (409) | Aksi ditolak karena booking belum lunas — dipakai `checkin`, `update`, dan `cancel` |
+| `notfound` (404) | Booking tidak ada |
+| `destination-notfound` (404) | Destinasi rujukan tidak ada |
+| `no-items` / `bad-qty` / `bad-date` / `past-date` (400) | Item kosong, jumlah tidak masuk akal, tanggal salah bentuk, atau tanggal sudah lewat |
 | `missing-field` / `bad-request` / `bad-action` (400) | Masukan tidak lengkap atau tidak dikenali |
+| `bad-amount` (500) | Total hitungan ulang server tidak wajar — permintaan ditolak, bukan diteruskan ke Midtrans |
 | `gateway-error` (502) | Midtrans tidak bisa dihubungi |
 
 **Catatan penting:**
@@ -807,6 +826,10 @@ membocorkan email mana yang punya akun.
 
 ### `POST /api/chat`
 
+> **Di luar pembahasan skripsi.** Asisten chat adalah fitur pendukung yang ada
+> di sistem tetapi tidak dibahas dalam naskah skripsi. Didokumentasikan di sini
+> supaya manual mencerminkan sistem yang benar-benar berjalan.
+
 Proxy ke Google Gemini, dilengkapi konteks katalog destinasi.
 
 **Badan:** `{ "messages": [ { "role": "user"|"assistant", "text": "..." } ] }`
@@ -816,8 +839,10 @@ Percakapan dikirim dengan `store: false` sehingga tidak disimpan di sisi Google.
 Kalau pembacaan katalog gagal, bot tetap menjawab — hanya tidak bisa menyebut
 harga.
 
-**Galat:** `503 not-configured` (kunci API belum diset), `429 too-many-requests`,
-`400 bad-request`.
+**Galat:** `503 not-configured` (kunci API belum diset), `429 too-many-requests`
+(batas laju sendiri), `400 bad-request`, `429 quota` (kuota Gemini habis),
+`502 upstream-unreachable` (Gemini tidak bisa dihubungi), `502 upstream-error`
+(Gemini menjawab dengan galat), `502 empty-reply` (balasan Gemini kosong).
 
 ---
 
@@ -1010,6 +1035,11 @@ membuat *hot reload* tampak rusak.
 
 ## 15. Server Kamera dan Deteksi Karang
 
+> **Sistem eksternal.** Server kamera dan model deteksinya dikerjakan rekan
+> peneliti. Bab ini mendokumentasikan **antarmuka yang dipakai aplikasi web** —
+> cara menyalakan server saat demo, endpoint yang dikonsumsi, dan cara
+> menautkannya. Pelatihan model, dataset, dan bobotnya di luar cakupan.
+
 Sub-sistem terpisah di `Proyek_Karang/`. Berjalan di laptop atau VPS, **bukan**
 di Vercel.
 
@@ -1062,14 +1092,20 @@ ke `coral_logic.py` supaya bisa diuji tanpa kamera — lihat `Proyek_Karang/test
 |---|---|
 | `app_web.py` | Server kamera tunggal, versi lama/demo |
 | `app_karang.py` | Aplikasi desktop GUI standalone |
-| `tools/train.py` | Pelatihan model YOLOv8 |
-| `tools/augmentasi.py` | Augmentasi dataset |
-| `data.yaml` | Konfigurasi kelas karang |
-| `best.pt` | Bobot hasil pelatihan terbaik |
+
+Berkas pelatihan model (`tools/`, `data.yaml`, `best.pt`) tidak dirinci di sini —
+lihat `Proyek_Karang/README.md` milik rekan peneliti.
 
 ---
 
 ## 16. Firmware Stasiun Sensor
+
+> **Sistem eksternal.** Perakitan perangkat keras dan firmware stasiun sensor
+> dikerjakan rekan peneliti. Bab ini dirangkum di sini karena aplikasi web
+> membaca datanya — yang menjadi bagian aplikasi web adalah **jalur datanya**
+> (RTDB) dan kecocokan `STATION_ID` dengan kolom **ID stasiun** di dokumen
+> destinasi. Rincian pin, pustaka, kalibrasi, dan cara flash disertakan sebagai
+> rujukan operasional, bukan sebagai kontribusi penulis.
 
 Berkas: `firmware/WeatherStation_RTDB/WeatherStation_RTDB.ino`
 Papan: **ESP32**
@@ -1384,5 +1420,5 @@ Urutkan dugaan dari yang paling sering:
 | [audit-keamanan-2026-08-14.md](audit-keamanan-2026-08-14.md) | Laporan audit keamanan beserta status perbaikannya |
 | [firestore-rules-kamera-mitra.md](firestore-rules-kamera-mitra.md) | Catatan perubahan aturan akses kamera |
 | [design.md](../design.md) | Sistem desain: genre, tipografi, spasi, gerak |
-| [Proyek_Karang/README.md](../Proyek_Karang/README.md) | Dokumentasi server kamera dan pelatihan model |
+| [Proyek_Karang/README.md](../Proyek_Karang/README.md) | Dokumentasi server kamera dan pelatihan model — sub-sistem rekan peneliti |
 
