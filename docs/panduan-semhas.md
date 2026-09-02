@@ -153,7 +153,7 @@ halaman (`useAuth`, `useLocations`, `useSaved`, `useTheme`, `useLang`).
 
 ## 4. Model data
 
-### Firestore (7 koleksi)
+### Firestore (8 koleksi)
 
 | Koleksi | ID dokumen | Isi penting | Definisi tipe |
 |---|---|---|---|
@@ -164,6 +164,10 @@ halaman (`useAuth`, `useLocations`, `useSaved`, `useTheme`, `useLang`).
 | `reviews` | **`{destinationId}_{userId}`** | `rating(1-5), comment, userName` | `lib/firestore.ts:527-537` |
 | `settings` | `cameraServer` | `baseUrl` server kamera | `lib/firestore.ts:395-408` |
 | `monitoring_data` | — | legacy, tidak dipakai lagi | |
+| `loginCodes` | email | kode masuk 6 digit + hitungan percobaan, umur 10 menit | `lib/loginCode.ts` |
+
+Kalau ditanya "berapa koleksinya", jawab **delapan** — `firestore.rules` punya
+delapan blok `match` tingkat atas, dan `loginCodes` termasuk salah satunya.
 
 > **Titik cerdas yang layak dipamerkan:** ID dokumen ulasan sengaja
 > **deterministik** — `${destinationId}_${userId}` (`lib/firestore.ts:557`).
@@ -187,14 +191,18 @@ Pemetaan destinasi → cabang RTDB ada di `lib/realtime.ts:34-41` (`stationPath`
 Ada penanganan kompatibilitas mundur: stasiun pertama yang firmware-nya belum
 diberi ID tetap dibaca dari `monitoring/latest`.
 
-### Peran pengguna (4 tingkat)
+### Peran pengguna (3 tingkat)
 
 | Role | Bisa apa | Naik lewat |
 |---|---|---|
-| `user` | Cari, booking, ulas, simpan wishlist | otomatis saat daftar |
-| `mitra` | + daftarkan & pantau kamera sendiri | ajukan verifikasi di `/kamera` → disetujui admin |
-| `pengelola` | + dashboard: statistik, scan tiket, kamera di wilayahnya | ajukan di `/profile` → disetujui admin |
+| `user` | Cari, booking, ulas, simpan wishlist, tonton kamera yang emailnya didaftarkan | otomatis saat daftar |
+| `pengelola` | + dashboard: statistik, scan tiket, kelola destinasi & kamera kelolaannya | ajukan di `/profile` → disetujui admin |
 | `admin` | + kelola destinasi, kelola semua pengguna, ubah role | diset manual di database |
+
+> Kalau penguji menyebut role **`mitra`**, itu dari rancangan lama — role itu
+> **sudah dihapus** dan nol rujukan di kode maupun `firestore.rules`. Kamera
+> mitra sekarang ditangani lewat `ownerUid` dan daftar `viewers` di dokumen
+> kamera, bukan lewat role tersendiri.
 
 Sumbernya `users/{uid}.role`, dibaca real-time oleh `useUserRole()`
 (`lib/useAuth.ts:30-57`) — jadi kalau admin menurunkan role seseorang, UI orang
@@ -583,6 +591,13 @@ if (uid === callerUid) return 400;                                // ← admin t
 
 ### 7.1 Angka training (HAFALKAN)
 
+> **Sebut atribusinya dulu, baru angkanya.** Pelatihan model ini dikerjakan
+> rekan peneliti dan diangkat jadi jurnal tersendiri; kontribusi di skripsi ini
+> adalah platform dan integrasinya. Angka-angka di bawah tetap wajib dikuasai —
+> semhas membahas jurnal dan skripsi masing-masing — tapi jawab dengan pola
+> "pelatihannya dikerjakan rekan saya, angkanya begini…", jangan langsung
+> menyebut angka seolah pekerjaan sendiri.
+
 Sumber: `Proyek_Karang/runs/detect/train-2/results.csv` & `args.yaml`
 
 | Parameter | Nilai |
@@ -614,10 +629,11 @@ Kelas (`data.yaml`): `Acropora_formosa`, `Acropora_sp`, `Acropora_yongei`,
 > pertama, tapi folder `weights`-nya kosong: run itu tidak selesai.)
 >
 > ⚠ Satu hedge yang jujur: `data.yaml` menunjuk path Windows
-> (`C:/Proyek_Karang/train/images`) — training dijalankan di mesin lain. Angka
-> 400/100 di atas dihitung dari folder `train/` & `val/` yang ada di laptop ini,
-> jadi sebut sebagai *"sekitar 400 latih / 100 validasi"* kecuali kamu sempat
-> mengeceknya di mesin tempat training berjalan.
+> (`C:/Proyek_Karang/train/images`) — training dijalankan di mesin rekan
+> peneliti, bukan di laptop ini. Angka 400/100 di atas dihitung dari folder
+> `train/` & `val/` salinan yang ada di laptop ini, jadi sebut sebagai
+> *"sekitar 400 latih / 100 validasi"* kecuali kamu sempat mengonfirmasinya
+> ke rekan peneliti.
 
 **Kenapa YOLOv8n, bukan s/m/l?**
 > Karena sistem ini harus menginferensi **beberapa kamera sekaligus secara
@@ -770,41 +786,58 @@ menyadarinya.
 
 Susun jadi slide "Keterbatasan Sistem & Saran Pengembangan".
 
-### A. Pembayaran masih simulasi
+### A. ~~Pembayaran masih simulasi~~ — SUDAH DITUTUP, tapi masih Sandbox
 
-`payBooking()` (`lib/firestore.ts:516-523`) hanya menulis
-`paymentStatus: 'paid'` dari sisi klien. **Tidak ada payment gateway.**
+**Catatan lama sudah tidak berlaku.** Dulu bagian ini menulis bahwa
+`payBooking()` menulis `paymentStatus: 'paid'` langsung dari klien dan tidak ada
+payment gateway. Itu sudah tidak benar — **jangan mengatakannya di sidang.**
 
-> "Modul pembayaran masih berupa simulasi alur — belum terhubung ke payment
-> gateway. Untuk implementasi nyata perlu integrasi Midtrans atau Xendit,
-> dengan konfirmasi lewat **webhook dari sisi server**, bukan dari klien."
+Keadaan sekarang:
 
-Katakan ini duluan. Kalau penguji yang menemukan `payBooking` dan kamu belum
-menyebutnya, posisinya jauh lebih buruk.
+- `payBooking()` (`lib/firestore.ts:912`) hanya meminta sesi pembayaran ke
+  server dan mengembalikan `PaymentSession` — tidak menyentuh `paymentStatus`.
+- Satu-satunya yang menulis `'paid'` adalah `terapkanStatus()`
+  (`lib/pembayaran.ts`), dipanggil dari webhook Midtrans yang tanda tangannya
+  diverifikasi SHA512.
+- `firestore.rules` menutup tulis klien ke `bookings` sepenuhnya, jadi
+  memalsukan status lunas dari browser memang tidak mungkin.
 
-### B. Aturan koleksi `bookings` terlalu longgar
+Yang **masih** benar untuk diakui:
 
-`firestore.rules:101-109`:
+> "Integrasi pembayarannya nyata — Midtrans Snap dengan konfirmasi lewat webhook
+> server, bukan dari klien. Yang masih Sandbox adalah lingkungannya:
+> `MIDTRANS_IS_PRODUCTION` belum disetel, jadi transaksinya memakai kunci uji
+> dan tidak memindahkan uang sungguhan. Beralih ke produksi tinggal mengganti
+> kunci dan menyalakan tanda itu."
+
+Katakan bagian Sandbox ini duluan. Kalau penguji yang menemukannya lebih dulu,
+posisinya jauh lebih buruk.
+
+### B. ~~Aturan koleksi `bookings` terlalu longgar~~ — SUDAH DITUTUP
+
+**Catatan lama sudah tidak berlaku.** Dulu bagian ini mengutip
+`firestore.rules:101-109` dengan `allow create: if request.auth != null` dan
+`allow read: if request.auth != null`. Aturan itu **sudah diganti** — dan
+menariknya, "rencana perbaikan" yang dulu ditulis di sini justru sudah
+diimplementasikan. Jangan menyebut versi lamanya di sidang.
+
+Keadaan sekarang (`firestore.rules`, blok `match /bookings/{bookingId}`):
 
 ```
-allow create: if request.auth != null;   // tidak cek userId == uid
-allow read:   if request.auth != null;   // SETIAP user login bisa baca SEMUA booking
+allow create, update, delete: if false;   // tulis klien ditutup total
+allow read: if request.auth != null
+            && (resource.data.userId == request.auth.uid
+                || userRole() in ['admin','pengelola']);
 ```
 
-Konsekuensinya jujur:
-- Semua pengguna yang login secara teknis bisa membaca seluruh booking —
-  termasuk nama dan nomor telepon pemesan lain.
-- `amount`, `status`, `paymentStatus` tidak divalidasi saat create.
+Artinya: booking hanya bisa ditulis lewat Admin SDK di route API, dan seorang
+pengguna hanya bisa membaca booking miliknya sendiri. Kalau ditanya "kenapa
+tulisnya ditutup total, bukan divalidasi di rules", jawabannya: harga dihitung
+ulang di server dan tidak pernah diterima dari klien — memvalidasi `amount` di
+rules berarti memercayai angka kiriman browser.
 
-Rencana perbaikan yang bisa kamu sebutkan:
-```
-allow create: if request.auth != null
-              && request.resource.data.userId == request.auth.uid
-              && request.resource.data.status == 'confirmed'
-              && request.resource.data.paymentStatus == 'unpaid';
-allow read:   if resource.data.userId == request.auth.uid
-              || userRole() in ['admin','pengelola'];
-```
+> Jangan sebut nomor barisnya. `firestore.rules` ditulis ulang saat perbaikan
+> keamanan 15 Agustus dan semua nomor baris di catatan lama sudah bergeser.
 
 ### C. ~~Pengelola belum dibatasi ke wilayahnya di level aturan~~ — SUDAH DITUTUP
 
@@ -851,17 +884,31 @@ tidak tepercaya. Alasannya praktis: menanam sertifikat root di ESP32 menambah
 pemakaian memori dan sertifikatnya kedaluwarsa berkala. Cukup untuk demo, tidak
 untuk produksi.
 
-**Yang HARUS kamu cek dulu sebelum menyebutnya:** komentar di
-`WeatherStation_RTDB.ino:18` menulis *"Rules mode tes (read/write terbuka)"*.
-Kalau itu masih benar, siapa pun yang tahu URL RTDB bisa menulis data sensor
-palsu. **Tapi aturan RTDB tidak tersimpan di repo ini** — `firebase.json` hanya
-mendeklarasikan rules Firestore, jadi rules RTDB dikelola langsung di Firebase
-Console dan tidak bisa diverifikasi dari kode.
+**Soal rules RTDB: catatan lama sudah tidak berlaku.** Dulu bagian ini menulis
+bahwa aturan RTDB "tidak tersimpan di repo" dan menyuruh mengeceknya manual di
+Firebase Console. Itu sudah tidak benar — `firebase.json` mendeklarasikan
+`"database": { "rules": "database.rules.json" }`, dan berkasnya ada di repo
+sejak 15 Agustus. Komentar *"Rules mode tes"* di `WeatherStation_RTDB.ino:18`
+juga sudah usang.
 
-→ **Buka Firebase Console → Realtime Database → Rules sebelum sidang.** Jangan
-mengaku ada lubang keamanan yang mungkin sudah kamu tutup. Kalau ternyata masih
-terbuka, sebutkan sebagai keterbatasan dengan rencana perbaikan: `".read": true,
-".write": false` untuk publik, dan ESP32 menulis memakai token/secret.
+Keadaan sekarang (`database.rules.json`):
+
+```
+".read": false, ".write": false          // default seluruh pohon: tertutup
+monitoring: { ".read": true,             // hanya cabang ini yang boleh dibaca
+  latest:            { ".write": true }, // bentuk lama, satu stasiun
+  $stationId/latest: { ".write": true }  // bentuk sekarang, per stasiun
+}
+```
+
+Keterbatasan yang **masih** jujur untuk diakui:
+
+> "Data sensor boleh dibaca siapa saja tanpa login — itu disengaja, karena
+> angkanya memang ditampilkan di halaman publik. Yang belum tertutup: menulis ke
+> `monitoring/<stationId>/latest` belum menuntut identitas, jadi secara teori
+> orang yang tahu URL-nya bisa mengirim angka palsu. Blok `.validate` per-field
+> sudah disiapkan di berkasnya tapi sengaja belum dihidupkan sebelum bentuk
+> tulisan firmware dipastikan. Perbaikan berikutnya: ESP32 menulis memakai token."
 
 ### F. Kualitas dataset & indikasi overfitting
 
@@ -920,10 +967,16 @@ menunjukkan itu keputusan sadar, bukan kelalaian.
 | Lokasi | Batas yang diketahui | Jalur peningkatan |
 |---|---|---|
 | `app/api/chat/route.ts:78` | rate limit di memori, per-instance; hilang tiap cold start | pindah ke Firestore/Upstash |
+| `app/api/bookings/route.ts:139` | seluruh booking berbayar satu destinasi ikut terbaca saat menghitung kuota | agregasi terpisah kalau bookingnya sudah ribuan |
+| `app/api/bookings/route.ts:573` | pembatalan booking yang sudah lunas diizinkan, uangnya tidak otomatis kembali | alur refund lewat Midtrans |
+| `app/api/auth/request-code/route.ts:24` | rem hanya jeda 60 detik per email | tambah batas per-IP kalau ada spam |
 | `app/api/send-verification/route.ts:13` | belum ada rate limit per-IP | tambah kalau ada spam |
-| `lib/firestore.ts:600` | `fetchRatingSummaries()` membaca **semua** ulasan sekali jalan | denormalisasi rata-rata ke dokumen destinasi |
 | `app/manifest.ts:24` | satu SVG untuk semua ukuran ikon | ganti PNG 192/512 kalau prompt install tidak muncul |
+| `lib/firestore.ts:509` | pencarian nama kembar dibaca di luar batch | pindahkan ke dalam transaksi |
+| `lib/firestore.ts:1006` | `fetchRatingSummaries()` membaca **semua** ulasan sekali jalan | denormalisasi rata-rata ke dokumen destinasi |
+| `lib/storage.ts:39` | unggahan foto tanpa kompresi | kompres di klien kalau galeri mulai berat |
 | `lib/useLang.tsx:24` | bahasa dibaca setelah mount | |
+| `lib/destination.ts:428` | kuota per jam dihitung konservatif — sewa yang jamnya tidak bertabrakan tetap dianggap bentrok | hitung tumpang tindih per rentang jam |
 
 ### I. Skala
 
