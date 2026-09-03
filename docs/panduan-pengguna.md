@@ -1,16 +1,16 @@
-# Panduan Pengguna — Nusa
+# Panduan Pengguna — Sistem OTA
 
-**Guide Book · Sistem OTA "Nusa"**
+**Guide Book · Sistem OTA**
 Platform pemesanan tiket destinasi selam & pesisir dengan pemantauan kondisi
 perairan secara langsung.
 
-Berlaku untuk aplikasi web Nusa (Next.js).
+Berlaku untuk aplikasi web berbasis Next.js.
 
 ---
 
 ## Daftar Isi
 
-1. [Tentang Nusa](#1-tentang-nusa)
+1. [Tentang Sistem](#1-tentang-sistem)
 2. [Sebelum Mulai](#2-sebelum-mulai)
 3. [Mengenal Layar](#3-mengenal-layar)
 4. [Peran Akun](#4-peran-akun)
@@ -22,9 +22,9 @@ Berlaku untuk aplikasi web Nusa (Next.js).
 
 ---
 
-## 1. Tentang Nusa
+## 1. Tentang Sistem
 
-Nusa adalah platform **OTA (*Online Travel Agency*)** untuk destinasi selam dan
+Sistem ini adalah platform **OTA (*Online Travel Agency*)** untuk destinasi selam dan
 pesisir. Yang bisa dilakukan di sini:
 
 - **Mencari destinasi** wisata bahari beserta daftar harga tiket dan sewa alatnya.
@@ -35,7 +35,7 @@ pesisir. Yang bisa dilakukan di sini:
   data sensor lingkungan (suhu, kelembapan, curah hujan, kecepatan angin,
   arus air) dari stasiun IoT yang terpasang di lokasi.
 
-Yang membedakan Nusa dari OTA biasa adalah poin ketiga: calon pengunjung bisa
+Yang membedakan sistem ini dari OTA biasa adalah poin ketiga: calon pengunjung bisa
 melihat keadaan perairan sebelum memutuskan berangkat.
 
 ---
@@ -51,9 +51,9 @@ melihat keadaan perairan sebelum memutuskan berangkat.
 | Koneksi | Wajib untuk memesan dan membayar. Halaman yang pernah dibuka masih bisa dilihat sebagian saat sinyal hilang |
 | Kamera perangkat | Hanya diperlukan petugas yang memindai tiket (menu **Scan Tiket**) |
 
-### Memasang Nusa sebagai aplikasi (opsional)
+### Memasang aplikasi ke layar utama (opsional)
 
-Nusa adalah **PWA** — bisa dipasang ke layar utama supaya terbuka seperti
+Aplikasi ini adalah **PWA** — bisa dipasang ke layar utama supaya terbuka seperti
 aplikasi biasa, tanpa bilah alamat browser.
 
 - **Android (Chrome):** buka menu ⋮ → **Tambahkan ke layar utama**.
@@ -62,7 +62,7 @@ aplikasi biasa, tanpa bilah alamat browser.
 
 ### Bahasa dan tampilan
 
-Nusa tersedia dalam **Bahasa Indonesia** dan **English**, serta punya **mode
+Aplikasi ini tersedia dalam **Bahasa Indonesia** dan **English**, serta punya **mode
 terang dan mode gelap**. Keduanya diatur di **Profil › Pengaturan** dan
 tersimpan di perangkat masing-masing. Bawaannya: Bahasa Indonesia, mode terang.
 
@@ -70,9 +70,9 @@ tersimpan di perangkat masing-masing. Bawaannya: Bahasa Indonesia, mode terang.
 
 ## 3. Mengenal Layar
 
-Navigasi Nusa berisi empat tujuan yang sama, hanya tempatnya yang berbeda:
+Navigasi aplikasi berisi empat tujuan yang sama, hanya tempatnya yang berbeda:
 
-- **Di komputer** — bilah atas (kiri: logo Nusa; kanan: menu, lonceng
+- **Di komputer** — bilah atas (kiri: logo aplikasi; kanan: menu, lonceng
   notifikasi, dan avatar akun).
 - **Di ponsel** — bilah melayang di bawah layar, dengan tombol **Booking**
   berbentuk lingkaran di tengah.
@@ -116,15 +116,15 @@ Lencana peran tampil di kartu profil.
 
 ### 5.1 Masuk dan mendaftar
 
-Nusa **tidak memakai kata sandi**. Tidak ada pula pemisahan "daftar" dan
+Aplikasi ini **tidak memakai kata sandi**. Tidak ada pula pemisahan "daftar" dan
 "masuk" — keduanya satu jalur yang sama.
 
 **Cara masuk dengan kode email:**
 
 1. Buka **Profil**.
 2. Isi alamat email di kolom **Email**, tekan **Kirim kode**.
-3. Buka kotak masuk email. Ada pesan berisi **kode 6 digit** dari Nusa.
-4. Kembali ke halaman Nusa yang masih terbuka, ketik kodenya. Begitu digit
+3. Buka kotak masuk email. Ada pesan berisi **kode 6 digit** dari sistem.
+4. Kembali ke halaman yang masih terbuka, ketik kodenya. Begitu digit
    keenam masuk, verifikasi berjalan sendiri — tidak ada tombol yang perlu
    ditekan.
 5. Kalau emailnya belum punya akun, akun dibuat otomatis saat kodenya benar.
@@ -310,7 +310,7 @@ tidak selalu bisa diandalkan.
 
 ### 5.10 Menonton pantauan langsung
 
-Ada dua macam kamera di Nusa:
+Ada dua macam kamera di sistem ini:
 
 - **Kamera publik** — tayang di halaman destinasinya masing-masing, bisa
   ditonton siapa saja.
@@ -322,7 +322,7 @@ Ada dua macam kamera di Nusa:
 perlu dilakukan:
 
 1. Hubungi **pengelola destinasi** yang dituju.
-2. Minta **alamat emailmu** — persis seperti yang dipakai masuk ke Nusa —
+2. Minta **alamat emailmu** — persis seperti yang dipakai masuk ke aplikasi —
    didaftarkan sebagai penonton kameranya.
 3. Setelah didaftarkan, kameranya muncul sendiri di halaman Monitoring.
 
@@ -480,8 +480,8 @@ Menu ini memindai QR di tiket pengunjung.
 | **Belum dibayar** | Booking ada, pembayaran belum masuk | Tolak. Minta pengunjung menyelesaikan pembayaran di aplikasi |
 | **Sudah digunakan** | Tiket pernah dipindai. Waktu pemakaiannya ikut tampil | Tolak — kecuali kamu memang tahu ini pemindaian ulang yang sah |
 | **Dibatalkan** | Booking sudah dibatalkan | Tolak |
-| **Tidak ditemukan** | Kode tidak terdaftar | Periksa apakah QR-nya memang dari Nusa |
-| **QR tidak dikenali** | Bukan tiket Nusa | Minta pengunjung membuka tiket yang benar |
+| **Tidak ditemukan** | Kode tidak terdaftar | Periksa apakah QR-nya memang dari aplikasi ini |
+| **QR tidak dikenali** | Bukan tiket dari aplikasi ini | Minta pengunjung membuka tiket yang benar |
 
 **Pesan galat saat check-in:**
 
@@ -531,7 +531,7 @@ Yang bisa **kamu** lakukan:
 
 - **Mengatur daftar penonton** kamera milikmu — alamat email yang boleh
   menonton kamera khusus. Tambahkan email tamu yang mengambil paket monitoring
-  di sini, **persis** seperti yang mereka pakai masuk ke Nusa.
+  di sini, **persis** seperti yang mereka pakai masuk ke aplikasi.
 - **Melihat siaran, statistik, dan riwayat deteksi** kamera tersebut.
 
 Yang **hanya bisa dilakukan admin**:

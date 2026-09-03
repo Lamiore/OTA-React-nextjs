@@ -1,6 +1,6 @@
-# Manual Teknis — Nusa
+# Manual Teknis — Sistem OTA
 
-**Manual Book · Sistem OTA "Nusa"**
+**Manual Book · Sistem OTA**
 Pemasangan, arsitektur, referensi API, penerapan, dan pemeliharaan.
 
 Cakupan: **aplikasi web `OTA/` (Next.js)** — pemasangan, arsitektur, dan
@@ -44,7 +44,7 @@ ini.
 
 ## 1. Ringkasan Arsitektur
 
-Nusa terdiri dari tiga sub-sistem yang saling terhubung lewat Firebase.
+Sistem ini terdiri dari tiga sub-sistem yang saling terhubung lewat Firebase.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -253,7 +253,7 @@ proyek Vercel (produksi). Berkas contohnya: `.env.local.example`.
 | `SMTP_PORT` | Umumnya `587` |
 | `SMTP_USER` | Nama pengguna SMTP |
 | `SMTP_PASS` | Kata sandi SMTP |
-| `SMTP_FROM` | Alamat pengirim, mis. `Nusa <no-reply@contoh.com>` |
+| `SMTP_FROM` | Alamat pengirim, mis. `OTA <no-reply@contoh.com>` |
 
 > **Peringatan:** jangan bungkus nilai `SMTP_FROM` dengan tanda kutip tambahan
 > di dasbor Vercel. Tanda kutip yang ikut tersimpan pernah membuat pengiriman
@@ -356,7 +356,7 @@ OTA/
 ├── docs/                         ← DOKUMENTASI
 │   ├── panduan-pengguna.md       Guide Book (dokumen pendamping)
 │   ├── manual-teknis.md          Manual Book (dokumen ini)
-│   ├── *-Nusa.docx               Versi Word kedua dokumen di atas
+│   ├── *.docx                    Versi Word kedua dokumen di atas
 │   ├── panduan-semhas.md         Bahan seminar hasil (ditulis 7 Agustus 2026)
 │   ├── audit-keamanan-*.md       Laporan audit keamanan
 │   ├── firestore-rules-*.md      Catatan perubahan rules
