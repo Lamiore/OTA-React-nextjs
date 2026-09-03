@@ -22,6 +22,10 @@ export const metadata: Metadata = {
     "Platform OTA untuk destinasi selam dan pesisir — cari, pesan, dan pantau kondisi perairan secara langsung.",
   // iOS mengabaikan display:standalone di manifest — ini padanannya.
   appleWebApp: { capable: true, title: "Nusa", statusBarStyle: "default" },
+  // Chrome menganggap apple-mobile-web-app-capable usang dan meminta nama yang
+  // netral. Keduanya dipasang: yang lama tetap dibutuhkan Safari iOS, yang baru
+  // menghentikan peringatan konsol (cacat D-02).
+  other: { "mobile-web-app-capable": "yes" },
 };
 
 export const viewport: Viewport = {
