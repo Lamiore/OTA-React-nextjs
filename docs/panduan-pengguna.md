@@ -56,8 +56,8 @@ melihat keadaan perairan sebelum memutuskan berangkat.
 Aplikasi ini adalah **PWA** — bisa dipasang ke layar utama supaya terbuka seperti
 aplikasi biasa, tanpa bilah alamat browser.
 
-- **Android (Chrome):** buka menu ⋮ → **Tambahkan ke layar utama**.
-- **iPhone/iPad (Safari):** tombol Bagikan → **Tambahkan ke Layar Utama**.
+- **Android (Chrome):** buka menu **tiga titik** (⋮) lalu **Tambahkan ke layar utama**.
+- **iPhone/iPad (Safari):** tombol **Bagikan** lalu **Tambahkan ke Layar Utama**.
 - **Komputer (Chrome/Edge):** ikon pasang di ujung kanan bilah alamat.
 
 ### Bahasa dan tampilan
@@ -442,7 +442,7 @@ ulang" — tiket baru dibuka admin, sama seperti awal.
 Setelah jadi pengelola, kartu **Dashboard** muncul di halaman Profil. Klik
 untuk masuk, atau buka `/dashboard` langsung.
 
-Menu di bilah sisi (di ponsel: tombol ☰ di kiri atas):
+Menu di bilah sisi (di ponsel: tombol **tiga garis** ☰ di kiri atas):
 
 | Menu | Isi |
 |---|---|

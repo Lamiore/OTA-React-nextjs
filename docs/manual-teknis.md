@@ -8,7 +8,7 @@ pemeliharaannya.
 
 Sistem kamera AI (`Proyek_Karang/`) dan firmware stasiun sensor (`firmware/`)
 adalah sub-sistem terpisah yang **dikerjakan rekan peneliti**. Keduanya
-didokumentasikan di §15 dan §16 **sebatas antarmuka yang dipakai aplikasi web** —
+didokumentasikan di bagian 15 dan 16 **sebatas antarmuka yang dipakai aplikasi web** —
 alamat endpoint, cara menautkannya, dan bentuk data yang dikonsumsi. Pelatihan
 model deteksi dan perakitan perangkat kerasnya berada di luar cakupan dokumen
 ini.
@@ -73,7 +73,7 @@ Sistem ini terdiri dari tiga sub-sistem yang saling terhubung lewat Firebase.
 
 Dari ketiganya, yang dibahas dokumen ini adalah **kotak 1 (aplikasi web)**
 beserta seluruh integrasinya ke Firebase, server kamera, dan stasiun sensor.
-Kotak 3 dan ESP32 dikerjakan rekan peneliti — lihat catatan di §15 dan §16.
+Kotak 3 dan ESP32 dikerjakan rekan peneliti — lihat catatan di bagian 15 dan 16.
 
 Alur pihak luar tambahan:
 
